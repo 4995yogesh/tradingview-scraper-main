@@ -306,11 +306,11 @@ signal.signal(signal.SIGINT, signal_handler)
 if __name__ == "__main__":
     real_time_data = RealTimeData()
 
-    exchange_symbol = ["BINANCE:BTCUSDT", "BINANCE:ETHUSDT", "FXOPEN:XAUUSD"]  # Example symbol
+    exchange_symbol = ["OANDA:EURUSD", "OANDA:EURUSD", "OANDA:EURUSD"]  # Example symbol
 
     data_generator = real_time_data.get_latest_trade_info(exchange_symbol=exchange_symbol)
 
-    # data_generator = real_time_data.get_ohlcv(exchange_symbol="BINANCE:BTCUSDT")
+    # data_generator = real_time_data.get_ohlcv(exchange_symbol="OANDA:EURUSD")
 
     # Iterate over the generator to get real-time data
     for packet in data_generator:

@@ -188,53 +188,6 @@ export const timeframes = [
   { label: '1M', value: '1M' },
 ];
 
-export const indicators = [
-  { name: 'SMA', label: 'Simple Moving Average', category: 'Trend' },
-  { name: 'EMA', label: 'Exponential Moving Average', category: 'Trend' },
-  { name: 'BB', label: 'Bollinger Bands', category: 'Volatility' },
-  { name: 'RSI', label: 'Relative Strength Index', category: 'Oscillator' },
-  { name: 'MACD', label: 'MACD', category: 'Oscillator' },
-  { name: 'VWAP', label: 'Volume Weighted Avg Price', category: 'Volume' },
-  { name: 'ATR', label: 'Average True Range', category: 'Volatility' },
-  { name: 'Stoch', label: 'Stochastic', category: 'Oscillator' },
-  { name: 'Ichimoku', label: 'Ichimoku Cloud', category: 'Trend' },
-  { name: 'PSAR', label: 'Parabolic SAR', category: 'Trend' },
-];
 
-export function calculateSMA(data, period) {
-  const result = [];
-  for (let i = period - 1; i < data.length; i++) {
-    let sum = 0;
-    for (let j = 0; j < period; j++) sum += data[i - j].close;
-    result.push({ time: data[i].time, value: Number((sum / period).toFixed(2)) });
-  }
-  return result;
-}
-
-export function calculateEMA(data, period) {
-  const result = [];
-  const k = 2 / (period + 1);
-  let ema = data.slice(0, period).reduce((s, d) => s + d.close, 0) / period;
-  for (let i = period - 1; i < data.length; i++) {
-    if (i === period - 1) ema = data.slice(0, period).reduce((s, d) => s + d.close, 0) / period;
-    else ema = data[i].close * k + ema * (1 - k);
-    result.push({ time: data[i].time, value: Number(ema.toFixed(2)) });
-  }
-  return result;
-}
-
-export function calculateBB(data, period = 20, stdDev = 2) {
-  const upper = [], middle = [], lower = [];
-  for (let i = period - 1; i < data.length; i++) {
-    const slice = data.slice(i - period + 1, i + 1);
-    const mean = slice.reduce((s, d) => s + d.close, 0) / period;
-    const variance = slice.reduce((s, d) => s + Math.pow(d.close - mean, 2), 0) / period;
-    const std = Math.sqrt(variance);
-    middle.push({ time: data[i].time, value: Number(mean.toFixed(2)) });
-    upper.push({ time: data[i].time, value: Number((mean + stdDev * std).toFixed(2)) });
-    lower.push({ time: data[i].time, value: Number((mean - stdDev * std).toFixed(2)) });
-  }
-  return { upper, middle, lower };
-}
 
 export default generateCandlestickData;

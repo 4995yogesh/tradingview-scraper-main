@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import { createChart, CandlestickSeries, LineSeries, AreaSeries, BarSeries } from 'lightweight-charts';
-import { fetchLiveCandles, calculateSMA, calculateEMA, calculateBB } from '../../data/chartData';
+import { fetchLiveCandles } from '../../data/chartData';
 import { ChevronsRight } from 'lucide-react';
 
 // Sensible number of bars to fetch per timeframe so candles are visible at the initial zoom
@@ -29,12 +29,27 @@ const TF_BAR_SPACING = {
   '1M':  14,
 };
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 5 }, ref) => {
+// Sort ascending by time, then remove duplicates
+const sortAndDedupe = (data) => {
+  if (!data || data.length === 0) return [];
+  const sorted = [...data].sort((a, b) => {
+    const ta = typeof a.time === 'string' ? a.time : Number(a.time);
+    const tb = typeof b.time === 'string' ? b.time : Number(b.time);
+    if (ta < tb) return -1;
+    if (ta > tb) return 1;
+    return 0;
+  });
+  const result = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].time !== sorted[i - 1].time) result.push(sorted[i]);
+  }
+  return result;
+};
+
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 5 }, ref) => {
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
-  const indicatorSeriesRef = useRef([]);
-  const configRef = useRef(null);
   const isLoadingMoreRef = useRef(false);
 
   const [chartData, setChartData] = useState(null);
@@ -43,6 +58,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useImperativeHandle(ref, () => ({
     getChart: () => chartRef.current,
@@ -64,7 +80,6 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
     fitContent: () => { chartRef.current?.timeScale().fitContent(); },
   }));
 
-  // Track symbol+timeframe context to distinguish real reloads from silent refreshes
   const lastContextRef = useRef(`${symbol}:${timeframe}`);
   const hasDataRef = useRef(false);
 
@@ -75,13 +90,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
     const isContextChange = lastContextRef.current !== newContext;
     lastContextRef.current = newContext;
 
-    // Show loading overlay ONLY on first load or when symbol/timeframe changes
     if (isContextChange || !hasDataRef.current) {
       setLoading(true);
       setError(null);
       hasDataRef.current = false;
     }
-    // else: silent background refresh — don't touch loading/error state
 
     fetchLiveCandles(symbol, timeframe, TF_CANDLE_COUNT[timeframe] || 500)
       .then((data) => {
@@ -105,7 +118,6 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
     return () => { cancelled = true; };
   }, [symbol, timeframe, refreshKey, retryCount]);
 
-  // Auto-retry when backend is still doing initial gap-fill
   useEffect(() => {
     if (!error) return;
     const retryDelay = error.includes('Fetching initial') ? 8000 : null;
@@ -114,13 +126,12 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
     return () => clearTimeout(t);
   }, [error]);
 
-  // ── Live Polling: Fetch latest candles every 60 seconds (matches auto-refresh) ──
+  // ── Live Polling: Fetch latest candles every 60 seconds ──
   useEffect(() => {
     if (loading || error || !chartData) return;
 
     const pollInterval = setInterval(async () => {
       try {
-        // Fetch latest 5 candles to catch current live bar
         const latest = await fetchLiveCandles(symbol, timeframe, 5);
         if (latest && latest.candleData.length > 0 && seriesRef.current) {
           latest.candleData.forEach(candle => {
@@ -130,73 +141,20 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
               seriesRef.current.update(candle);
             }
           });
-
           const lastCandle = latest.candleData[latest.candleData.length - 1];
           onPriceUpdate?.(lastCandle);
         }
       } catch (err) {
         console.warn('Scroll-back fetch failed:', err?.message);
       }
-    }, 60000); // every 60 seconds
+    }, 60000);
 
     return () => clearInterval(pollInterval);
   }, [symbol, timeframe, loading, error, chartData, chartType, onPriceUpdate]);
 
+  // Structural Initialization of HTML Canvas ONLY
   const initChart = useCallback(() => {
-    if (!chartContainerRef.current || !chartData || chartData.candleData.length === 0) return;
-
-    // Sort ascending by time, then remove duplicates — required by lightweight-charts
-    const sortAndDedupe = (data) => {
-      if (!data || data.length === 0) return [];
-      const sorted = [...data].sort((a, b) => {
-        const ta = typeof a.time === 'string' ? a.time : Number(a.time);
-        const tb = typeof b.time === 'string' ? b.time : Number(b.time);
-        if (ta < tb) return -1;
-        if (ta > tb) return 1;
-        return 0;
-      });
-      const result = [sorted[0]];
-      for (let i = 1; i < sorted.length; i++) {
-        if (sorted[i].time !== sorted[i - 1].time) result.push(sorted[i]);
-      }
-      return result;
-    };
-
-    const candleData = sortAndDedupe(chartData.candleData);
-    const volumeData = sortAndDedupe(chartData.volumeData);
-
-    if (candleData.length === 0) return;
-
-    const newConfig = JSON.stringify({ symbol, timeframe, chartType, activeIndicators, logScale, chartSettings });
-    const isDataUpdateOnly = (configRef.current === newConfig) && chartRef.current;
-
-    if (isDataUpdateOnly) {
-      let mainSeries = seriesRef.current;
-      if (chartType === 'line' || chartType === 'area') {
-        mainSeries.setData(candleData.map(d => ({ time: d.time, value: d.close })));
-      } else {
-        mainSeries.setData(candleData);
-      }
-
-      let indicatorIdx = 0;
-      if (activeIndicators.includes('SMA')) {
-        indicatorSeriesRef.current[indicatorIdx++].setData(calculateSMA(candleData, 20));
-        indicatorSeriesRef.current[indicatorIdx++].setData(calculateSMA(candleData, 50));
-      }
-      if (activeIndicators.includes('EMA')) {
-        indicatorSeriesRef.current[indicatorIdx++].setData(calculateEMA(candleData, 12));
-        indicatorSeriesRef.current[indicatorIdx++].setData(calculateEMA(candleData, 26));
-      }
-      if (activeIndicators.includes('BB')) {
-        const bb = calculateBB(candleData, 20, 2);
-        indicatorSeriesRef.current[indicatorIdx++].setData(bb.upper);
-        indicatorSeriesRef.current[indicatorIdx++].setData(bb.middle);
-        indicatorSeriesRef.current[indicatorIdx++].setData(bb.lower);
-      }
-      return; 
-    }
-
-    configRef.current = newConfig;
+    if (!chartContainerRef.current) return;
 
     if (chartRef.current) {
       chartRef.current.remove();
@@ -212,45 +170,19 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
       width: container.clientWidth,
       height: container.clientHeight,
       localization: { locale: 'en-US' },
-      layout: {
-        background: { type: 'solid', color: bg },
-        textColor: chartSettings?.priceScaleColor || '#787B86',
-        fontSize: 11,
-        fontFamily: 'Inter, -apple-system, sans-serif',
-      },
-      grid: {
-        vertLines: { color: gridColor, style: 1 },
-        horzLines: { color: gridColor, style: 1 },
-      },
-      crosshair: {
-        mode: crosshairMode,
-        vertLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' },
-        horzLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' },
-      },
+      layout: { background: { type: 'solid', color: bg }, textColor: chartSettings?.priceScaleColor || '#787B86', fontSize: 11, fontFamily: 'Inter, -apple-system, sans-serif' },
+      grid: { vertLines: { color: gridColor, style: 1 }, horzLines: { color: gridColor, style: 1 } },
+      crosshair: { mode: crosshairMode, vertLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' }, horzLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' } },
       timeScale: {
-        borderColor: chartSettings?.priceScaleColor || '#2A2E39',
-        timeVisible: ['1m', '5m', '15m', '30m', '1h', '4h'].includes(timeframe),
-        secondsVisible: false,
-        rightOffset: 10,
-        barSpacing: TF_BAR_SPACING[timeframe] || 8,
-        minBarSpacing: 1,
-        // No fixLeftEdge — allows scrolling left to trigger historical backfill
+        borderColor: chartSettings?.priceScaleColor || '#2A2E39', timeVisible: ['1m', '5m', '15m', '30m', '1h', '4h'].includes(timeframe),
+        secondsVisible: false, rightOffset: 10, barSpacing: TF_BAR_SPACING[timeframe] || 8, minBarSpacing: 1,
       },
-      rightPriceScale: {
-        borderColor: chartSettings?.priceScaleColor || '#2A2E39',
-        scaleMargins: { top: 0.05, bottom: 0.05 },
-        mode: logScale ? 1 : 0, // 0=Normal, 1=Logarithmic
-        visible: true,
-        borderVisible: true,
-        autoScale: true,
-        entireTextOnly: false,
-      },
+      rightPriceScale: { borderColor: chartSettings?.priceScaleColor || '#2A2E39', scaleMargins: { top: 0.05, bottom: 0.05 }, mode: logScale ? 1 : 0, visible: true, borderVisible: true, autoScale: true, entireTextOnly: false },
       handleScroll: { vertTouchDrag: false },
     });
 
     chartRef.current = chart;
 
-    let mainSeries;
     const upColor = chartSettings?.upColor || '#26A69A';
     const downColor = chartSettings?.downColor || '#EF5350';
     const borderUp = chartSettings?.borderUpColor || upColor;
@@ -262,59 +194,23 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
     const minMove = 1 / Math.pow(10, precision);
     const priceFormat = { type: 'price', precision, minMove };
 
+    let mainSeries;
     if (chartType === 'line') {
       mainSeries = chart.addSeries(LineSeries, { color: '#2962FF', lineWidth: 2, priceFormat, crosshairMarkerVisible: true, crosshairMarkerRadius: 4 });
-      mainSeries.setData(candleData.map(d => ({ time: d.time, value: d.close })));
     } else if (chartType === 'area') {
       mainSeries = chart.addSeries(AreaSeries, { topColor: 'rgba(41,98,255,0.3)', bottomColor: 'rgba(41,98,255,0.02)', lineColor: '#2962FF', lineWidth: 2, priceFormat });
-      mainSeries.setData(candleData.map(d => ({ time: d.time, value: d.close })));
     } else if (chartType === 'bar') {
       mainSeries = chart.addSeries(BarSeries, { upColor, downColor, priceFormat });
-      mainSeries.setData(candleData);
     } else if (chartType === 'hollow') {
-      mainSeries = chart.addSeries(CandlestickSeries, {
-        upColor: 'transparent', downColor, borderUpColor: borderUp, borderDownColor: borderDown,
-        wickUpColor: wickUp, wickDownColor: wickDown, priceFormat
-      });
-      mainSeries.setData(candleData);
+      mainSeries = chart.addSeries(CandlestickSeries, { upColor: 'transparent', downColor, borderUpColor: borderUp, borderDownColor: borderDown, wickUpColor: wickUp, wickDownColor: wickDown, priceFormat });
     } else {
-      mainSeries = chart.addSeries(CandlestickSeries, {
-        upColor, downColor, borderUpColor: borderUp, borderDownColor: borderDown,
-        wickUpColor: wickUp, wickDownColor: wickDown, priceFormat
-      });
-      mainSeries.setData(candleData);
+      mainSeries = chart.addSeries(CandlestickSeries, { upColor, downColor, borderUpColor: borderUp, borderDownColor: borderDown, wickUpColor: wickUp, wickDownColor: wickDown, priceFormat });
     }
     seriesRef.current = mainSeries;
- 
-
-
-    indicatorSeriesRef.current = [];
-    if (activeIndicators.includes('SMA')) {
-      const s20 = chart.addSeries(LineSeries, { color: '#FF9800', lineWidth: 1, title: 'SMA 20' });
-      const s50 = chart.addSeries(LineSeries, { color: '#E91E63', lineWidth: 1, title: 'SMA 50' });
-      s20.setData(calculateSMA(candleData, 20));
-      s50.setData(calculateSMA(candleData, 50));
-      indicatorSeriesRef.current.push(s20, s50);
-    }
-    if (activeIndicators.includes('EMA')) {
-      const e12 = chart.addSeries(LineSeries, { color: '#00BCD4', lineWidth: 1, title: 'EMA 12' });
-      const e26 = chart.addSeries(LineSeries, { color: '#9C27B0', lineWidth: 1, title: 'EMA 26' });
-      e12.setData(calculateEMA(candleData, 12));
-      e26.setData(calculateEMA(candleData, 26));
-      indicatorSeriesRef.current.push(e12, e26);
-    }
-    if (activeIndicators.includes('BB')) {
-      const bb = calculateBB(candleData, 20, 2);
-      const bu = chart.addSeries(LineSeries, { color: '#787B8660', lineWidth: 1, lineStyle: 2 });
-      const bm = chart.addSeries(LineSeries, { color: '#787B86', lineWidth: 1 });
-      const bl = chart.addSeries(LineSeries, { color: '#787B8660', lineWidth: 1, lineStyle: 2 });
-      bu.setData(bb.upper); bm.setData(bb.middle); bl.setData(bb.lower);
-      indicatorSeriesRef.current.push(bu, bm, bl);
-    }
 
     chart.subscribeCrosshairMove((param) => {
       if (!param || !param.time) {
-        if (chartData.candleData.length > 0) onPriceUpdate?.(chartData.candleData[chartData.candleData.length - 1]);
+        if (chartDataRef.current?.candleData.length > 0) onPriceUpdate?.(chartDataRef.current.candleData[chartDataRef.current.candleData.length - 1]);
         return;
       }
       const d = param.seriesData?.get(mainSeries);
@@ -323,8 +219,6 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(async (logicalRange) => {
       if (!logicalRange) return;
-      // Only trigger when user has ACTUALLY scrolled past the leftmost bar
-      // (from < -5 means 5 bars of empty space visible to the left)
       if (logicalRange.from < -5 && !isLoadingMoreRef.current) {
         const currentData = chartDataRef.current;
         if (!currentData || currentData.candleData.length === 0) return;
@@ -334,7 +228,6 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
           const oldestTime = currentData.candleData[0].time;
           const newData = await fetchLiveCandles(symbol, timeframe, TF_CANDLE_COUNT[timeframe] || 500, oldestTime);
           if (newData.candleData.length > 0) {
-            // Merge and sort so there are zero ordering issues when React re-renders
             const mergeSort = (older, newer) => {
               const merged = [...older, ...newer];
               merged.sort((a, b) => {
@@ -342,41 +235,50 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
                 const tb = typeof b.time === 'string' ? b.time : Number(b.time);
                 return ta < tb ? -1 : ta > tb ? 1 : 0;
               });
-              // Deduplicate
               return merged.filter((c, i, arr) => i === 0 || c.time !== arr[i - 1].time);
             };
-            setChartData(prev => ({
-              candleData: mergeSort(newData.candleData, prev.candleData),
-              volumeData: mergeSort(newData.volumeData, prev.volumeData)
-            }));
+            setChartData(prev => ({ candleData: mergeSort(newData.candleData, prev.candleData), volumeData: mergeSort(newData.volumeData, prev.volumeData) }));
           }
         } finally {
-          // Add a short delay to prevent over-fetching on rapid scroll
           setTimeout(() => { isLoadingMoreRef.current = false; }, 500);
         }
       }
     });
-
-    // Initial view: fitContent first, then for short TFs zoom to last N bars
-    // so 1m candles don't get compressed to invisible dots
-    const INITIAL_BARS = { '1m': 100, '5m': 150, '15m': 200, '30m': 250 };
-    const initBars = INITIAL_BARS[timeframe];
-    if (initBars && candleData.length > initBars) {
-      chart.timeScale().setVisibleLogicalRange({
-        from: candleData.length - initBars,
-        to: candleData.length + 3,
-      });
-    } else {
-      chart.timeScale().fitContent();
-    }
-    if (chartData.candleData.length > 0) onPriceUpdate?.(chartData.candleData[chartData.candleData.length - 1]);
-  }, [chartData, chartType, activeIndicators, onPriceUpdate, logScale, chartSettings, timeframe, symbol, symbolPrecision]);
-
-  const handleResetView = useCallback(() => {
-    chartRef.current?.timeScale().scrollToRealTime();
-  }, []);
+  }, [chartType, logScale, chartSettings, timeframe, symbol, symbolPrecision, onPriceUpdate]);
 
   useEffect(() => { initChart(); }, [initChart]);
+
+  // Seamless Data Updates
+  useEffect(() => {
+    if (!chartData || chartData.candleData.length === 0 || !seriesRef.current) return;
+    
+    const chart = chartRef.current;
+    if (!chart) return;
+
+    // Determine if series is empty prior to adding data
+    const isFirstLoad = seriesRef.current.data().length === 0;
+
+    const candleData = sortAndDedupe(chartData.candleData);
+    if (chartType === 'line' || chartType === 'area') {
+      seriesRef.current.setData(candleData.map(d => ({ time: d.time, value: d.close })));
+    } else {
+      seriesRef.current.setData(candleData);
+    }
+
+    onPriceUpdate?.(candleData[candleData.length - 1]);
+
+    if (isFirstLoad) {
+      const INITIAL_BARS = { '1m': 100, '5m': 150, '15m': 200, '30m': 250 };
+      const initBars = INITIAL_BARS[timeframe];
+      if (initBars && candleData.length > initBars) {
+        chart.timeScale().setVisibleLogicalRange({ from: candleData.length - initBars, to: candleData.length + 3 });
+      } else {
+        chart.timeScale().fitContent();
+      }
+    }
+  }, [chartData, chartType, timeframe, onPriceUpdate]);
+
+  const handleResetView = useCallback(() => { chartRef.current?.timeScale().scrollToRealTime(); }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -392,14 +294,12 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
 
   return (
     <div className="w-full h-full relative">
-      {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#131722]">
           <div className="w-8 h-8 border-2 border-[#2962FF] border-t-transparent rounded-full animate-spin mb-3" />
           <span className="text-[#787B86] text-[12px]">Loading live data…</span>
         </div>
       )}
-      {/* Error overlay */}
       {error && !loading && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#131722]">
           <span className="text-[#EF5350] text-[13px] mb-1">{error}</span>
@@ -407,8 +307,6 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, activeIndicators
         </div>
       )}
       <div ref={chartContainerRef} className="w-full h-full" />
-      
-      {/* Reset button (Bottom Middle) */}
       {!loading && !error && (
         <button
           onClick={handleResetView}

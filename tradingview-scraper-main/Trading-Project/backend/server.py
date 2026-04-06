@@ -56,8 +56,8 @@ TIMEFRAME_MAP = {
     "1D": "1d", "1W": "1w",
 }
 
-# Timeframes stored in SQLite
-PERSISTENT_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d", "1w"]
+# Timeframes stored in SQLite via routine gap-fill (intra-day are derived from 5m)
+PERSISTENT_TIMEFRAMES = ["1m", "5m", "1d", "1w"]
 
 # Symbols to pre-load and gap-fill on startup
 PERSISTENT_SYMBOLS = [("OANDA", "EURUSD")]
@@ -128,6 +128,45 @@ def _format_candles_for_ui(raw_candles, timeframe: str):
     candle_data.sort(key=lambda x: x["time"])
     volume_data.sort(key=lambda x: x["time"])
     return candle_data, volume_data
+
+
+def resample_candles(source_candles: list, target_tf: str) -> list:
+    """
+    Dynamically aggregate high-density 5m candles into larger timeframes.
+    Supports intra-day and macro timeframes.
+    Expects source_candles to be chronological.
+    """
+    tf_minutes = {"15m": 15, "30m": 30, "1h": 60, "4h": 240, "1d": 1440, "1w": 10080}.get(target_tf)
+    if not tf_minutes or not source_candles:
+        return source_candles
+
+    bucket_size_secs = tf_minutes * 60
+    buckets = {}
+
+    for c in source_candles:
+        ts = int(c.get("ts", c.get("timestamp", c.get("time", 0))))
+        if not ts:
+            continue
+            
+        bucket_ts = (ts // bucket_size_secs) * bucket_size_secs
+        
+        if bucket_ts not in buckets:
+            buckets[bucket_ts] = {
+                "ts": bucket_ts,
+                "open": float(c["open"]),
+                "high": float(c["high"]),
+                "low": float(c["low"]),
+                "close": float(c["close"]),
+                "volume": float(c.get("volume", 0.0))
+            }
+        else:
+            b = buckets[bucket_ts]
+            b["high"] = max(b["high"], float(c["high"]))
+            b["low"] = min(b["low"], float(c["low"]))
+            b["close"] = float(c["close"])
+            b["volume"] += float(c.get("volume", 0.0))
+
+    return [buckets[k] for k in sorted(buckets.keys())]
 
 
 def _seed_storage(exchange: str, symbol: str, timeframe: str,
@@ -223,10 +262,9 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
         now_ts    = int(time.time())
         interval  = TF_INTERVAL_SECS.get(timeframe, 60)
 
-        # Sensible first-time limits per TF (not 20000 which hangs for minutes)
+        # Sensible first-time limits per TF (massively bump 5m to drive aggregation)
         FIRST_FETCH = {
-            "1m": 2000, "5m": 3000, "15m": 3000,
-            "1h": 3000, "4h": 3000, "1d": 2000, "1w": 1000,
+            "1m": 2000, "5m": 20000, "1d": 5000, "1w": 2000,
         }
 
         if latest_ts is None:
@@ -369,6 +407,37 @@ def get_ohlc(
 
     logger.info("OHLC → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
 
+    # ── Step 0: Aggregation Interception ──────────────────────────────────────
+    if timeframe in ["15m", "30m", "1h", "4h", "1d", "1w"]:
+        tf_minutes = {"15m": 15, "30m": 30, "1h": 60, "4h": 240, "1d": 1440, "1w": 10080}[timeframe]
+        multiplier = max(1, tf_minutes // 5)
+        needed_5m = candles * multiplier + int(multiplier * 0.5)  # 50% buffer for temporal gaps
+        
+        # 1d and 1w pass `end_time` as a 'YYYY-MM-DD' string, which breaks the 5m unix lookup.
+        end_ts_5m = parsed_end
+        if isinstance(end_ts_5m, str):
+            try:
+                dt = datetime.strptime(end_ts_5m, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                end_ts_5m = int(dt.timestamp())
+            except Exception:
+                pass
+        
+        db_raw_5m = candle_db.get_candles(exchange, symbol, "5m", count=needed_5m, end_ts=end_ts_5m)
+        resampled = resample_candles(db_raw_5m, timeframe)
+        
+        # If we successfully built ANY valid number of candles, serve them instantly!
+        # Do not force a high minimum limit. This prevents hanging the TV WebSocket connection
+        # if the 5m background thread is still actively downloading the 20,000 payload.
+        if resampled and len(resampled) > 0: 
+            final_resampled = resampled[-candles:] if len(resampled) > candles else resampled
+            logger.info("Aggregation hit: mathematically built %d %s candles from %d 5m DB candles", 
+                        len(final_resampled), timeframe, len(db_raw_5m))
+            cd, vd = _format_candles_for_ui(final_resampled, timeframe)
+            return {"status": "success", "candleData": cd, "volumeData": vd}
+        else:
+            logger.info("Aggregation fallback: Insufficient 5m candles (found %d) to build %s, fetching directly", 
+                        len(db_raw_5m), timeframe)
+
     # ── Step 1: RAM cache check ───────────────────────────────────────────────
     stored = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
 
@@ -418,6 +487,7 @@ def get_ohlc(
             symbol     = symbol,
             timeframe  = timeframe,
             limit      = fetch_limit,
+            start_date = parsed_end,
             chunk_size = 5000 if fetch_limit > 5000 else fetch_limit,
             delay_ms   = 250,
         )
@@ -510,4 +580,4 @@ def get_watchlist():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)

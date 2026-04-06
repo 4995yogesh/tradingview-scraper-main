@@ -84,10 +84,26 @@ class DashboardLauncher:
         except ValueError:
             pass # Handle closed file
 
+    def kill_port(self, port):
+        """Find and kill process running on specific port (Windows)."""
+        try:
+            result = subprocess.run(f'netstat -ano | findstr LISTENING | findstr :{port}', shell=True, capture_output=True, text=True)
+            if result.stdout:
+                for line in result.stdout.strip().split('\n'):
+                    parts = line.split()
+                    if len(parts) >= 5 and parts[1].endswith(f":{port}"):
+                        pid = parts[-1]
+                        if pid.isdigit() and int(pid) > 0:
+                            self.log(f"Cleaning up lingering process {pid} on port {port}...\n")
+                            subprocess.call(['taskkill', '/F', '/PID', pid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except Exception as e:
+            self.log(f"Error checking port {port}: {e}\n")
+
     def toggle_backend(self):
         if self.process_backend is None or self.process_backend.poll() is not None:
             # Start Backend
             self.log("Starting backend...\n")
+            self.kill_port(8000)
             try:
                 # Validation
                 if not os.path.exists(os.path.join(BACKEND_DIR, "server.py")):
@@ -121,6 +137,8 @@ class DashboardLauncher:
             except Exception as e:
                 self.log(f"Error terminating backend: {e}\n")
 
+            self.kill_port(8000)
+
             self.process_backend = None
             self.lbl_backend.config(text="Backend: Stopped", foreground="#ffb86c")
             self.btn_backend.config(text="Start Backend")
@@ -129,6 +147,7 @@ class DashboardLauncher:
         if self.process_frontend is None or self.process_frontend.poll() is not None:
             # Start Frontend
             self.log("Starting frontend...\n")
+            self.kill_port(3000)
             try:
                 # Find the full path to npm or yarn
                 exec_name = "yarn.cmd" if os.path.exists(os.path.join(FRONTEND_DIR, "yarn.lock")) else "npm.cmd"
@@ -142,6 +161,11 @@ class DashboardLauncher:
                 full_cmd = f'"{exec_path}" start'
                 self.log(f"Executing: {full_cmd}\n")
                 
+                # Suppress Node deprecation warnings
+                env = os.environ.copy()
+                env["NODE_NO_WARNINGS"] = "1"
+                env["NODE_OPTIONS"] = "--no-deprecation"
+                
                 self.process_frontend = subprocess.Popen(
                     full_cmd,
                     cwd=FRONTEND_DIR,
@@ -149,7 +173,8 @@ class DashboardLauncher:
                     stderr=subprocess.STDOUT,
                     stdin=subprocess.PIPE,
                     creationflags=creationflags,
-                    shell=True
+                    shell=True,
+                    env=env
                 )
                 
                 threading.Thread(target=self.read_output, args=(self.process_frontend, "FRONTEND"), daemon=True).start()
@@ -168,6 +193,9 @@ class DashboardLauncher:
                 time.sleep(0.5) # Give it a moment to die
             except Exception as e:
                 self.log(f"Error terminating frontend: {e}\n")
+            
+            self.kill_port(3000)
+
             self.process_frontend = None
             self.lbl_frontend.config(text="Frontend: Stopped", foreground="#ffb86c")
             self.btn_frontend.config(text="Start Frontend")
@@ -186,8 +214,9 @@ class DashboardLauncher:
         if self.process_frontend is not None:
             self.toggle_frontend()
         
-        # Aggressive cleanup for Windows: kill any remaining node or python processes in these folders?
-        # No, let's just stick to the PIDs for now but ensure they are cleared.
+        # Aggressive cleanup for Windows: Ensure ports are freed
+        self.kill_port(8000)
+        self.kill_port(3000)
 
     def on_closing(self):
         self.log("Shutting down processes...\n")

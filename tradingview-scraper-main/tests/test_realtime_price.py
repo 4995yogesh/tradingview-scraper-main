@@ -24,7 +24,7 @@ class TestRealTimeData(unittest.TestCase):
 
         # Instantiate the RealTimeData class
         real_time_data = RealTimeData()
-        exchange_symbol = ["BINANCE:BTCUSDT", "BINANCE:ETHUSDT", "FXOPEN:XAUUSD"]
+        exchange_symbol = ["OANDA:EURUSD", "OANDA:EURUSD", "OANDA:EURUSD"]
         
         # Get the generator
         time.sleep(3)
@@ -42,7 +42,7 @@ class TestRealTimeData(unittest.TestCase):
 
         # Instantiate the RealTimeData class
         real_time_data = RealTimeData()
-        exchange_symbol = ["BINANCE:BTCUSDT", "BINANCE:ETHUSDT", "FXOPEN:XAUUSD"]
+        exchange_symbol = ["OANDA:EURUSD", "OANDA:EURUSD", "OANDA:EURUSD"]
         
         # Get the generator
         time.sleep(3)

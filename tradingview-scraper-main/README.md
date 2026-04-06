@@ -366,7 +366,7 @@ from tradingview_scraper.symbols.stream import RealTimeData
 real_time_data = RealTimeData()
 
 # Retrieve OHLCV data for a specific symbol
-data_generator = real_time_data.get_ohlcv(exchange_symbol="BINANCE:BTCUSDT")
+data_generator = real_time_data.get_ohlcv(exchange_symbol="OANDA:EURUSD")
 ```
 #### Method 2: Streaming OHLC and Indicators Simultaneously
 - Streams both OHLC data and indicators
@@ -413,7 +413,7 @@ from tradingview_scraper.symbols.stream import RealTimeData
 real_time_data = RealTimeData()
 
 # Define the exchange symbols for which to fetch data
-exchange_symbol = ["BINANCE:BTCUSDT", "BINANCE:ETHUSDT", "FXOPEN:XAUUSD"]
+exchange_symbol = ["OANDA:EURUSD", "OANDA:EURUSD", "OANDA:EURUSD"]
 
 # Retrieve the latest trade information for a specific symbol
 data_generator = real_time_data.get_latest_trade_info(exchange_symbol=exchange_symbol)

@@ -34,8 +34,8 @@ class TestStreamerOHLC:
         )
         
         result = streamer.stream(
-            exchange="BINANCE",
-            symbol="BTCUSDT",
+            exchange="OANDA",
+            symbol="EURUSD",
             timeframe="1m",
             numb_price_candles=3
         )
@@ -64,8 +64,8 @@ class TestStreamerSingleIndicator:
         )
         
         result = streamer.stream(
-            exchange="BINANCE",
-            symbol="BTCUSDT",
+            exchange="OANDA",
+            symbol="EURUSD",
             indicators=[("STD;RSI", "37.0")],
             timeframe="1m",
             numb_price_candles=3
@@ -96,8 +96,8 @@ class TestStreamerMultipleIndicators:
         )
         
         result = streamer.stream(
-            exchange="BINANCE",
-            symbol="BTCUSDT",
+            exchange="OANDA",
+            symbol="EURUSD",
             indicators=[("STD;RSI", "37.0"), ("STD;MACD", "31.0")],
             timeframe="1m",
             numb_price_candles=3
@@ -132,8 +132,8 @@ class TestStreamerMultipleIndicators:
         )
         
         result = streamer.stream(
-            exchange="BINANCE",
-            symbol="BTCUSDT",
+            exchange="OANDA",
+            symbol="EURUSD",
             indicators=[
                 ("STD;RSI", "37.0"),
                 ("STD;MACD", "31.0"),
@@ -165,8 +165,8 @@ class TestStreamerDataStructure:
         )
         
         result = streamer.stream(
-            exchange="BINANCE",
-            symbol="BTCUSDT",
+            exchange="OANDA",
+            symbol="EURUSD",
             timeframe="1m",
             numb_price_candles=3
         )
@@ -189,8 +189,8 @@ class TestStreamerDataStructure:
         )
         
         result = streamer.stream(
-            exchange="BINANCE",
-            symbol="BTCUSDT",
+            exchange="OANDA",
+            symbol="EURUSD",
             indicators=[("STD;RSI", "37.0")],
             timeframe="1m",
             numb_price_candles=3
