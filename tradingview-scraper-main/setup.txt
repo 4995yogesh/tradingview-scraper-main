@@ -1,0 +1,29 @@
+echo "🚀 Starting setup..."
+
+# ----------------------------
+# Backend (Python)
+# ----------------------------
+echo "📦 Installing Python dependencies..."
+pip install requests fastapi pandas beautifulsoup4 pydantic websockets websocket-client python-dotenv setuptools
+
+# ----------------------------
+# Node + Yarn
+# ----------------------------
+echo "📦 Installing Yarn (if missing)..."
+npm install -g yarn
+
+# ----------------------------
+# Frontend
+# ----------------------------
+echo "📦 Installing frontend dependencies..."
+cd Trading-Project/frontend && yarn install
+
+# ----------------------------
+# Extra safety installs
+# ----------------------------
+echo "🔧 Installing additional frontend packages..."
+npm install lightweight-charts @radix-ui/react-icons lucide-react
+
+cd ../../
+
+echo "✅ Setup complete!"
