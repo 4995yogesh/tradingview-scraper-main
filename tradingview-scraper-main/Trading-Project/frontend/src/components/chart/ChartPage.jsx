@@ -42,10 +42,10 @@ export function getSymbolPrecision(symbol) {
 }
 
 const defaultPanes = [
-  { symbol: FIXED_SYMBOL, timeframe: '1d', chartType: 'candle', indicators: [] },
-  { symbol: FIXED_SYMBOL, timeframe: '4h', chartType: 'candle', indicators: [] },
-  { symbol: FIXED_SYMBOL, timeframe: '1h', chartType: 'candle', indicators: [] },
-  { symbol: FIXED_SYMBOL, timeframe: '15m', chartType: 'candle', indicators: [] },
+  { symbol: FIXED_SYMBOL, timeframe: '1d', chartType: 'hollow', indicators: [] },
+  { symbol: FIXED_SYMBOL, timeframe: '4h', chartType: 'hollow', indicators: [] },
+  { symbol: FIXED_SYMBOL, timeframe: '1h', chartType: 'hollow', indicators: [] },
+  { symbol: FIXED_SYMBOL, timeframe: '15m', chartType: 'hollow', indicators: [] },
 ];
 
 /**
@@ -81,7 +81,7 @@ const ChartPage = () => {
   // ── Persisted state (auto-saved to localStorage via useChartMemory) ──────────
   const symbol = FIXED_SYMBOL; // Symbol is permanently locked to EURUSD
   const [timeframe, setTimeframe] = useChartMemory('timeframe', '1d');
-  const [chartType, setChartType] = useChartMemory('chartType', 'candle');
+  const [chartType, setChartType] = useChartMemory('chartType', 'hollow');
   const [panes, setPanes] = useChartMemory('panes', defaultPanes);
 
   // ── Keyboard shortcut state ──────────────────────────────────────────────────
@@ -108,14 +108,16 @@ const ChartPage = () => {
   const [toastMsg, setToastMsg] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [countdown, setCountdown] = useState(AUTO_REFRESH_INTERVAL);
+  const [liveTickKey, setLiveTickKey] = useState(0);
 
   const symbolPrecision = getSymbolPrecision(symbol);
 
-  // ── Countdown synced to real wall-clock minute boundary ──────────────────
+  // ── 60-Second Auto Refresh ───────────────────────────────────────────────
   useEffect(() => {
     const getSecondsLeft = () => {
       const secs = new Date().getSeconds();
-      return secs === 0 ? 60 : 60 - secs;
+      const left = 60 - secs;
+      return left === 0 ? 60 : left; // Fallback safety though secs is 0-59
     };
 
     setCountdown(getSecondsLeft());
@@ -124,7 +126,7 @@ const ChartPage = () => {
       const left = getSecondsLeft();
       setCountdown(left);
       if (left === 60) {
-        setRefreshKey(prev => prev + 1);
+        setLiveTickKey(prev => prev + 1);
       }
     }, 1000);
 
@@ -178,11 +180,11 @@ const ChartPage = () => {
     }
   }, [setPanes, setTimeframe, setChartType]);
 
-  // Ensure all panes always have FIXED_SYMBOL
+  // Ensure all panes share the global symbol and chartType
   useEffect(() => {
     setPanes(prev => prev.map((p, i) => {
-      const update = { ...p, symbol: FIXED_SYMBOL };
-      if (i === 0) { update.timeframe = timeframe; update.chartType = chartType; }
+      const update = { ...p, symbol: FIXED_SYMBOL, chartType: chartType };
+      if (i === 0) { update.timeframe = timeframe; }
       return update;
     }));
   }, [timeframe, chartType, setPanes]);
@@ -339,6 +341,7 @@ const ChartPage = () => {
           refreshKey={refreshKey}
           symbolPrecision={panePrecision}
           swingSettings={swingSettings}
+          liveTickKey={liveTickKey}
         />
         {/* Show mini toolbar for every pane in multi-layout */}
         {activeLayout !== '1' && (
@@ -410,6 +413,7 @@ const ChartPage = () => {
             refreshKey={refreshKey}
             symbolPrecision={symbolPrecision}
             swingSettings={getSwingSettings(panes[0] || {})}
+            liveTickKey={liveTickKey}
           />
         </div>
       );

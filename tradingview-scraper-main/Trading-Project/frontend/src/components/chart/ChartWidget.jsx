@@ -50,7 +50,7 @@ const sortAndDedupe = (data) => {
   return result;
 };
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 5, swingSettings }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 5, swingSettings, liveTickKey }, ref) => {
   const chartContainerRef = useRef(null);
   const chartRef          = useRef(null);
   const seriesRef         = useRef(null);
@@ -132,11 +132,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     return () => clearTimeout(t);
   }, [error]);
 
-  // ── Live Polling: Fetch latest candles every 60 seconds ──
+  // ── Live Polling: Fetch latest candles synchronized by ChartPage ──
   useEffect(() => {
-    if (loading || error || !chartData) return;
+    if (loading || error || !chartData || typeof liveTickKey === 'undefined' || liveTickKey === 0) return;
 
-    const pollInterval = setInterval(async () => {
+    (async () => {
       try {
         const latest = await fetchLiveCandles(symbol, timeframe, 5);
         if (latest && latest.candleData.length > 0 && seriesRef.current) {
@@ -151,12 +151,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           onPriceUpdate?.(lastCandle);
         }
       } catch (err) {
-        console.warn('Scroll-back fetch failed:', err?.message);
+        console.warn('Live fetch failed:', err?.message);
       }
-    }, 60000);
-
-    return () => clearInterval(pollInterval);
-  }, [symbol, timeframe, loading, error, chartData, chartType, onPriceUpdate]);
+    })();
+  }, [liveTickKey]);
 
   // Structural Initialization of HTML Canvas ONLY
   const initChart = useCallback(() => {
@@ -178,13 +176,36 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     const chart = createChart(container, {
       width: container.clientWidth,
       height: container.clientHeight,
-      localization: { locale: 'en-US' },
+      localization: { 
+        locale: 'en-IN',
+        timeFormatter: (time) => {
+          if (typeof time === 'string') return time;
+          return new Date(time * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false, month: 'short', day: 'numeric', year: 'numeric' });
+        }
+      },
       layout: { background: { type: 'solid', color: bg }, textColor: chartSettings?.priceScaleColor || '#787B86', fontSize: 11, fontFamily: 'Inter, -apple-system, sans-serif' },
       grid: { vertLines: { color: gridColor, style: 1 }, horzLines: { color: gridColor, style: 1 } },
       crosshair: { mode: crosshairMode, vertLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' }, horzLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' } },
       timeScale: {
-        borderColor: chartSettings?.priceScaleColor || '#2A2E39', timeVisible: ['1m', '5m', '15m', '30m', '1h', '4h'].includes(timeframe),
+        borderColor: chartSettings?.priceScaleColor || '#2A2E39', 
+        timeVisible: ['1m', '5m', '15m', '30m', '1h', '4h'].includes(timeframe),
         secondsVisible: false, rightOffset: 10, barSpacing: TF_BAR_SPACING[timeframe] || 8, minBarSpacing: 1,
+        tickMarkFormatter: (time, tickMarkType, locale) => {
+          if (typeof time === 'string') return time;
+          const date = new Date(time * 1000);
+          const parts = new Intl.DateTimeFormat('en-IN', { 
+            timeZone: 'Asia/Kolkata', 
+            year: 'numeric', month: 'short', day: 'numeric', 
+            hour: '2-digit', minute: '2-digit', hour12: false 
+          }).formatToParts(date);
+          const p = {};
+          parts.forEach(obj => p[obj.type] = obj.value);
+          
+          if (tickMarkType === 0) return p.year;
+          if (tickMarkType === 1) return p.month;
+          if (tickMarkType === 2) return `${p.day}`; // e.g. "15"
+          return `${p.hour}:${p.minute}`;
+        }
       },
       rightPriceScale: { borderColor: chartSettings?.priceScaleColor || '#2A2E39', scaleMargins: { top: 0.05, bottom: 0.05 }, mode: logScale ? 1 : 0, visible: true, borderVisible: true, autoScale: true, entireTextOnly: false },
       handleScroll: { vertTouchDrag: false },
@@ -192,12 +213,18 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     chartRef.current = chart;
 
-    const upColor = chartSettings?.upColor || '#26A69A';
-    const downColor = chartSettings?.downColor || '#EF5350';
-    const borderUp = chartSettings?.borderUpColor || upColor;
-    const borderDown = chartSettings?.borderDownColor || downColor;
-    const wickUp = chartSettings?.wickUpColor || upColor;
-    const wickDown = chartSettings?.wickDownColor || downColor;
+    const baseUpColor = chartSettings?.upColor || '#26A69A';
+    const baseDownColor = chartSettings?.downColor || '#EF5350';
+    const showBody = chartSettings?.showBody !== false;
+    const borderVisible = chartSettings?.showBorders !== false;
+    const wickVisible = chartSettings?.showWick !== false;
+
+    let upColor = showBody ? baseUpColor : 'transparent';
+    let downColor = showBody ? baseDownColor : 'transparent';
+    const borderUp = chartSettings?.borderUpColor || baseUpColor;
+    const borderDown = chartSettings?.borderDownColor || baseDownColor;
+    const wickUp = chartSettings?.wickUpColor || baseUpColor;
+    const wickDown = chartSettings?.wickDownColor || baseDownColor;
 
     const precision = symbolPrecision;
     const minMove = 1 / Math.pow(10, precision);
@@ -211,9 +238,19 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     } else if (chartType === 'bar') {
       mainSeries = chart.addSeries(BarSeries, { upColor, downColor, priceFormat });
     } else if (chartType === 'hollow') {
-      mainSeries = chart.addSeries(CandlestickSeries, { upColor: 'transparent', downColor, borderUpColor: borderUp, borderDownColor: borderDown, wickUpColor: wickUp, wickDownColor: wickDown, priceFormat });
+      mainSeries = chart.addSeries(CandlestickSeries, { 
+        upColor: 'transparent', downColor, 
+        borderUpColor: borderUp, borderDownColor: borderDown, 
+        wickUpColor: wickUp, wickDownColor: wickDown, 
+        borderVisible, wickVisible, priceFormat 
+      });
     } else {
-      mainSeries = chart.addSeries(CandlestickSeries, { upColor, downColor, borderUpColor: borderUp, borderDownColor: borderDown, wickUpColor: wickUp, wickDownColor: wickDown, priceFormat });
+      mainSeries = chart.addSeries(CandlestickSeries, { 
+        upColor, downColor, 
+        borderUpColor: borderUp, borderDownColor: borderDown, 
+        wickUpColor: wickUp, wickDownColor: wickDown, 
+        borderVisible, wickVisible, priceFormat 
+      });
     }
     seriesRef.current = mainSeries;
 

@@ -164,7 +164,7 @@ const ChartToolbar = ({
           >
             <div className="w-1.5 h-1.5 rounded-full bg-[#787B86]" style={{ animation: 'pulse 2s ease-in-out infinite' }} />
             <span className="text-[11px] font-mono text-[#787B86]">
-              {String(countdown).padStart(2, '0')}s
+              Next sync: {String(countdown).padStart(2, '0')}s
             </span>
           </div>
         )}

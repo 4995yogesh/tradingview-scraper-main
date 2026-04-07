@@ -46,20 +46,31 @@ class DataStorage:
             self._ensure_paths(exchange, symbol, timeframe)
             dq = self.candles[exchange][symbol][timeframe]
             
-            # Simple deduplication / update latest
-            if len(dq) > 0:
-                last_candle = dq[-1]
-                if last_candle["time"] == candle["time"]:
-                    # Update existing
-                    dq[-1] = candle
-                    return
-                elif candle["time"] < last_candle["time"]:
-                    # Out of order, handled by validator, ignore here for now
-                    pass
-                else:
-                    dq.append(candle)
-            else:
+            if len(dq) == 0:
                 dq.append(candle)
+                return
+                
+            last_candle = dq[-1]
+            if candle["time"] == last_candle["time"]:
+                dq[-1] = candle
+            elif candle["time"] > last_candle["time"]:
+                dq.append(candle)
+            else:
+                # Candle is older than the last one. Let's find it in the deque and update it.
+                # Since deque is small (e.g. 500-1000 items), backwards scan is very fast.
+                inserted = False
+                for i in range(len(dq) - 1, -1, -1):
+                    if dq[i]["time"] == candle["time"]:
+                        dq[i] = candle
+                        inserted = True
+                        break
+                    elif dq[i]["time"] < candle["time"]:
+                        # If we wanted to forcefully insert out-of-order candles we'd insert here
+                        # using dq.insert(). But since our data arrives fully sorted from HistoricalFetcher,
+                        # this usually just means it's a bulk refill updating old history.
+                        # For performance reasons we aren't enforcing strict in-place insertion here,
+                        # just updating matches.
+                        break
 
     def get_candles(self, exchange: str, symbol: str, timeframe: str, count: int = 100, end_time=None) -> List[dict]:
         """Fetch the last 'count' candles, optionally older than end_time."""

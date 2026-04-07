@@ -22,7 +22,7 @@ const TF_CONFIG = {
 export async function fetchLiveCandles(symbol, timeframe = "1d", candles = 1000, endTime = null) {
   const { exchange, tvSymbol } = resolveSymbol(symbol);
   try {
-    let url = `${API_BASE}/ohlc?exchange=${exchange}&symbol=${tvSymbol}&timeframe=${timeframe}&candles=${candles}`;
+    let url = `${API_BASE}/ohlc?exchange=${exchange}&symbol=${tvSymbol}&timeframe=${timeframe}&candles=${candles}&_t=${Date.now()}`;
     if (endTime) {
       url += `&end_time=${endTime}`;
     }

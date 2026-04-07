@@ -28,7 +28,8 @@ load_dotenv()
 
 from typing import List, Optional
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+IST = timezone(timedelta(hours=5, minutes=30))
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -101,10 +102,10 @@ def _format_candles_for_ui(raw_candles, timeframe: str):
         # Accept 'ts' (from DB rows), 'timestamp' (from HistoricalFetcher), or 'time' (RAM storage)
         if "ts" in c:
             ts = int(c["ts"])
-            time_val = ts if use_timestamp else datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+            time_val = ts if use_timestamp else datetime.fromtimestamp(ts, tz=IST).strftime("%Y-%m-%d")
         elif "timestamp" in c:
             ts = int(c["timestamp"])
-            time_val = ts if use_timestamp else datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+            time_val = ts if use_timestamp else datetime.fromtimestamp(ts, tz=IST).strftime("%Y-%m-%d")
         else:
             time_val = c["time"]
 
@@ -188,7 +189,7 @@ def _seed_storage(exchange: str, symbol: str, timeframe: str,
         if use_timestamp:
             time_val = ts
         else:
-            dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+            dt = datetime.fromtimestamp(ts, tz=IST)
             time_val = dt.strftime("%Y-%m-%d")
 
         formatted.append({
@@ -227,7 +228,7 @@ def _load_db_into_ram(exchange: str, symbol: str, timeframe: str):
 
     for row in db_rows:
         ts = int(row["ts"])
-        time_val = ts if use_timestamp else datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d")
+        time_val = ts if use_timestamp else datetime.fromtimestamp(ts, tz=IST).strftime("%Y-%m-%d")
         storage.candles[exchange][symbol][timeframe].append({
             "time":   time_val,
             "open":   row["open"],
@@ -408,8 +409,8 @@ def get_ohlc(
     logger.info("OHLC → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
 
     # ── Step 0: Aggregation Interception ──────────────────────────────────────
-    if timeframe in ["15m", "30m", "1h", "4h", "1d", "1w"]:
-        tf_minutes = {"15m": 15, "30m": 30, "1h": 60, "4h": 240, "1d": 1440, "1w": 10080}[timeframe]
+    if timeframe in ["15m", "30m", "1h"]:
+        tf_minutes = {"15m": 15, "30m": 30, "1h": 60}[timeframe]
         multiplier = max(1, tf_minutes // 5)
         needed_5m = candles * multiplier + int(multiplier * 0.5)  # 50% buffer for temporal gaps
         
@@ -417,7 +418,7 @@ def get_ohlc(
         end_ts_5m = parsed_end
         if isinstance(end_ts_5m, str):
             try:
-                dt = datetime.strptime(end_ts_5m, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                dt = datetime.strptime(end_ts_5m, "%Y-%m-%d").replace(tzinfo=IST)
                 end_ts_5m = int(dt.timestamp())
             except Exception:
                 pass
@@ -445,7 +446,7 @@ def get_ohlc(
     if is_recent and stored:
         last_fetch = storage.last_refresh.get(exchange, {}).get(symbol, {}).get(timeframe, 0.0)
         age        = time.time() - last_fetch
-        if age < 55.0:
+        if age < 10.0:
             logger.info("Cache hit: serving %d candles (age=%.0fs)", len(stored), age)
             cd, vd = _format_candles_for_ui(stored, timeframe)
             return {"status": "success", "candleData": cd, "volumeData": vd}

@@ -3,7 +3,8 @@ import json
 import logging
 import sys
 from time import sleep
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+IST = timezone(timedelta(hours=5, minutes=30))
 from typing import Optional, Union, List
 
 from websocket import WebSocketConnectionClosedException, WebSocketTimeoutException
@@ -58,11 +59,11 @@ class HistoricalFetcher:
         target_timestamp = 0
         if start_date:
             if isinstance(start_date, str):
-                dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                dt = datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=IST)
                 target_timestamp = int(dt.timestamp())
             elif isinstance(start_date, datetime):
                 if start_date.tzinfo is None:
-                    start_date = start_date.replace(tzinfo=timezone.utc)
+                    start_date = start_date.replace(tzinfo=IST)
                 target_timestamp = int(start_date.timestamp())
 
         # If neither limit nor start_date is set, fallback to a sensible default limit
