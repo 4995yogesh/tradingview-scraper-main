@@ -30,7 +30,7 @@ const TF_SHORTCUT_MAP = {
 const FIXED_SYMBOL = 'EURUSD';
 
 // Auto-refresh interval in seconds
-const AUTO_REFRESH_INTERVAL = 60;
+const AUTO_REFRESH_INTERVAL = 15;
 
 // Symbol precision map
 const SYMBOL_PRECISION = {
@@ -112,20 +112,24 @@ const ChartPage = () => {
 
   const symbolPrecision = getSymbolPrecision(symbol);
 
-  // ── 60-Second Auto Refresh ───────────────────────────────────────────────
+  // ── 15-Second Auto Refresh ───────────────────────────────────────────────
   useEffect(() => {
+    let lastPeriod = Math.floor(new Date().getSeconds() / 15);
+
     const getSecondsLeft = () => {
-      const secs = new Date().getSeconds();
-      const left = 60 - secs;
-      return left === 0 ? 60 : left; // Fallback safety though secs is 0-59
+      const secs = new Date().getSeconds() % 15;
+      const left = 15 - secs;
+      return left === 0 ? 15 : left;
     };
 
     setCountdown(getSecondsLeft());
 
     const tick = setInterval(() => {
-      const left = getSecondsLeft();
-      setCountdown(left);
-      if (left === 60) {
+      setCountdown(getSecondsLeft());
+      
+      const currentPeriod = Math.floor(new Date().getSeconds() / 15);
+      if (currentPeriod !== lastPeriod) {
+        lastPeriod = currentPeriod;
         setLiveTickKey(prev => prev + 1);
       }
     }, 1000);

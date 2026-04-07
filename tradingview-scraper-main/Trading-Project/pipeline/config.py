@@ -8,7 +8,7 @@ class Config:
     def __init__(self):
         # Timeframes to monitor
         self.BASE_TIMEFRAME = os.getenv("BASE_TIMEFRAME", "1m")
-        self.MTF_TIMEFRAMES = os.getenv("MTF_TIMEFRAMES", "5m,15m,1h,4h").split(",")
+        self.MTF_TIMEFRAMES = os.getenv("MTF_TIMEFRAMES", "5m,15m,1h").split(",")
         
         # Ring buffer sizes — 500k allows years of 1m data in RAM after DB load
         self.STORAGE_CANDLE_LIMIT = int(os.getenv("STORAGE_CANDLE_LIMIT", 500000))

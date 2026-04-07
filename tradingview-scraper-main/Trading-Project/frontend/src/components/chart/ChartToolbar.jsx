@@ -159,12 +159,12 @@ const ChartToolbar = ({
         {/* Candle-close countdown — lives in the toolbar, no overlap */}
         {countdown != null && (
           <div
-            className="flex items-center gap-1.5 px-2.5 h-[26px] rounded-full bg-[#1E222D] border border-[#363A45] mr-1"
-            title="Next candle close"
+            className="flex items-center gap-2 px-3 h-[28px] rounded-[4px] bg-[#2962FF15] border border-[#2962FF40] mr-2 shadow-[0_0_8px_rgba(41,98,255,0.15)]"
+            title="Next data sync"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-[#787B86]" style={{ animation: 'pulse 2s ease-in-out infinite' }} />
-            <span className="text-[11px] font-mono text-[#787B86]">
-              Next sync: {String(countdown).padStart(2, '0')}s
+            <div className="w-2 h-2 rounded-full bg-[#2962FF] shadow-[0_0_6px_#2962FF]" style={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
+            <span className="text-[12px] font-mono font-bold text-[#2962FF] tracking-wider">
+              SYNC IN {String(countdown).padStart(2, '0')}s
             </span>
           </div>
         )}

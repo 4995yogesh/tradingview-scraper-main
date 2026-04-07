@@ -138,17 +138,26 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     (async () => {
       try {
-        const latest = await fetchLiveCandles(symbol, timeframe, 5);
-        if (latest && latest.candleData.length > 0 && seriesRef.current) {
-          latest.candleData.forEach(candle => {
-            if (chartType === 'line' || chartType === 'area') {
-              seriesRef.current.update({ time: candle.time, value: candle.close });
-            } else {
-              seriesRef.current.update(candle);
-            }
+        const latest = await fetchLiveCandles(symbol, timeframe, 50);
+        if (latest && latest.candleData.length > 0) {
+          setChartData(prev => {
+            if (!prev) return latest;
+            const mergeSort = (older, newer) => {
+              const olderMap = new Map(older.map(c => [c.time, c]));
+              newer.forEach(c => olderMap.set(c.time, c)); // overwrite or append
+              const merged = Array.from(olderMap.values());
+              merged.sort((a, b) => {
+                const ta = typeof a.time === 'string' ? a.time : Number(a.time);
+                const tb = typeof b.time === 'string' ? b.time : Number(b.time);
+                return ta < tb ? -1 : ta > tb ? 1 : 0;
+              });
+              return merged;
+            };
+            return {
+              candleData: mergeSort(prev.candleData, latest.candleData),
+              volumeData: mergeSort(prev.volumeData, latest.volumeData)
+            };
           });
-          const lastCandle = latest.candleData[latest.candleData.length - 1];
-          onPriceUpdate?.(lastCandle);
         }
       } catch (err) {
         console.warn('Live fetch failed:', err?.message);

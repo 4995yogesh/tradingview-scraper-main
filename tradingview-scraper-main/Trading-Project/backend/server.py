@@ -58,7 +58,7 @@ TIMEFRAME_MAP = {
 }
 
 # Timeframes stored in SQLite via routine gap-fill (intra-day are derived from 5m)
-PERSISTENT_TIMEFRAMES = ["1m", "5m", "1d", "1w"]
+PERSISTENT_TIMEFRAMES = ["1m", "5m", "1h", "4h", "1d", "1w"]
 
 # Symbols to pre-load and gap-fill on startup
 PERSISTENT_SYMBOLS = [("OANDA", "EURUSD")]
@@ -328,6 +328,65 @@ def _run_all_gap_fills():
             time.sleep(2)   # brief pause between WebSocket sessions
 
 
+# ── Periodic live refresh (runs every 60 s) ───────────────────────────────────
+
+def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int = 20):
+    """
+    Fetch the very latest `limit` candles from TradingView and merge them
+    into SQLite + RAM cache.  Intended to be called by the periodic refresh
+    thread so the RAM cache is always < 60 s stale.
+    """
+    key = (exchange, symbol, timeframe)
+    with _gap_filling_lock:
+        if key in _gap_filling:
+            return   # gap-fill already running; skip
+        _gap_filling.add(key)
+    try:
+        cookie_value = os.getenv("TRADINGVIEW_COOKIE", "").strip()
+        jwt_value    = os.getenv("TV_JWT_TOKEN", "unauthorized_user_token")
+        fetcher      = HistoricalFetcher(websocket_jwt_token=jwt_value, cookie=cookie_value)
+        raw = fetcher.fetch_historical_data(
+            exchange=exchange, symbol=symbol, timeframe=timeframe,
+            limit=limit, chunk_size=limit, delay_ms=100,
+        )
+        if raw:
+            _seed_storage(exchange, symbol, timeframe, raw)
+            logger.info("[periodic] ✓ %s:%s [%s] refreshed %d candles",
+                        exchange, symbol, timeframe, len(raw))
+        else:
+            logger.warning("[periodic] %s:%s [%s] — TV returned no candles", exchange, symbol, timeframe)
+    except Exception as exc:
+        logger.error("[periodic] %s:%s [%s] failed: %s", exchange, symbol, timeframe, exc)
+    finally:
+        with _gap_filling_lock:
+            _gap_filling.discard(key)
+
+
+_stop_refresh = threading.Event()
+
+def _periodic_refresh_loop():
+    """
+    Background thread: wakes at the top of every minute and refreshes the
+    latest candles for every persistent symbol/timeframe pair.
+    Uses short-duration fetches (20 bars) so each round-trip is fast.
+    """
+    # Wait for the initial gap-fill to settle before starting periodic work
+    time.sleep(30)
+    while not _stop_refresh.is_set():
+        now = time.time()
+        # Align to the next 15-second boundary
+        next_period = (int(now) // 15 + 1) * 15
+        sleep_secs  = max(0, next_period - time.time())
+        if _stop_refresh.wait(timeout=sleep_secs):
+            break   # Stop was requested
+
+        logger.info("[periodic] Running live-candle refresh for all series")
+        for exchange, symbol in PERSISTENT_SYMBOLS:
+            for tf in PERSISTENT_TIMEFRAMES:
+                _fetch_latest_candles(exchange, symbol, tf, limit=20)
+                time.sleep(1)   # avoid hammering TV in quick succession
+
+
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
 @asynccontextmanager
@@ -350,8 +409,19 @@ async def lifespan(app: FastAPI):
     gap_thread.start()
     logger.info("=== Gap-fill thread started — server accepting requests ===")
 
+    # 4. Start periodic live refresh (fires at the top of every minute)
+    _stop_refresh.clear()
+    refresh_thread = threading.Thread(
+        target=_periodic_refresh_loop,
+        name="periodic-refresh",
+        daemon=True,
+    )
+    refresh_thread.start()
+    logger.info("=== Periodic refresh thread started ===")
+
     yield  # Server is live
 
+    _stop_refresh.set()
     pipeline.stop()
 
 
@@ -382,6 +452,32 @@ def db_summary():
     return {"status": "ok", "series": rows}
 
 
+def _sync_tick(payload: dict, exchange: str, symbol: str, timeframe: str, is_recent: bool) -> dict:
+    """
+    Overwrites the 'close' price of the final candle in any timeframe 
+    with the exact real-time close price of the '1m' timeframe.
+    This guarantees 100% price parity across all UI panes continuously.
+    """
+    if not is_recent or timeframe == "1m" or payload.get("status") != "success":
+        return payload
+    
+    cd = payload.get("candleData")
+    vd = payload.get("volumeData")
+    if not cd:
+        return payload
+        
+    latest_1m = storage.get_candles(exchange, symbol, "1m", count=1)
+    if latest_1m:
+        tick = latest_1m[0]["close"]
+        cd[-1]["close"] = tick
+        cd[-1]["high"] = max(cd[-1]["high"], tick)
+        cd[-1]["low"] = min(cd[-1]["low"], tick)
+        if vd:
+            vd[-1]["color"] = "rgba(38,166,154,0.5)" if cd[-1]["close"] >= cd[-1]["open"] else "rgba(239,83,80,0.5)"
+            
+    return payload
+
+
 @app.get("/api/ohlc")
 def get_ohlc(
     exchange: str = Query("OANDA"),
@@ -393,7 +489,7 @@ def get_ohlc(
     """
     Return OHLCV candles for the given symbol/timeframe.
 
-    Fast path  : serve from RAM cache if data is fresh (< 55 s since last TV fetch).
+    Fast path  : serve from RAM cache if data is fresh (< 12 s since last TV fetch).
     Slow path  : fetch from TradingView → persist to SQLite → update RAM → serve.
     Fallback   : if TV fetch fails but DB has data, serve stale DB data rather than 500.
     """
@@ -407,6 +503,8 @@ def get_ohlc(
     parsed_end    = int(end_time) if end_time and use_timestamp else end_time
 
     logger.info("OHLC → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
+    
+    is_recent = end_time is None
 
     # ── Step 0: Aggregation Interception ──────────────────────────────────────
     if timeframe in ["15m", "30m", "1h"]:
@@ -434,7 +532,7 @@ def get_ohlc(
             logger.info("Aggregation hit: mathematically built %d %s candles from %d 5m DB candles", 
                         len(final_resampled), timeframe, len(db_raw_5m))
             cd, vd = _format_candles_for_ui(final_resampled, timeframe)
-            return {"status": "success", "candleData": cd, "volumeData": vd}
+            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
         else:
             logger.info("Aggregation fallback: Insufficient 5m candles (found %d) to build %s, fetching directly", 
                         len(db_raw_5m), timeframe)
@@ -442,14 +540,13 @@ def get_ohlc(
     # ── Step 1: RAM cache check ───────────────────────────────────────────────
     stored = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
 
-    is_recent = end_time is None
     if is_recent and stored:
         last_fetch = storage.last_refresh.get(exchange, {}).get(symbol, {}).get(timeframe, 0.0)
         age        = time.time() - last_fetch
-        if age < 10.0:
+        if age < 12.0:   # serve from RAM as long as data is < 12 s old
             logger.info("Cache hit: serving %d candles (age=%.0fs)", len(stored), age)
             cd, vd = _format_candles_for_ui(stored, timeframe)
-            return {"status": "success", "candleData": cd, "volumeData": vd}
+            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
         logger.info("Cache stale (%.0fs) — re-fetching from TradingView", age)
 
     # ── Step 2: DB check — serve from DB while fetching fresh data ───────────
@@ -461,7 +558,7 @@ def get_ohlc(
             cd, vd = _format_candles_for_ui(db_candles, timeframe)
             # Also push into RAM for next call
             _load_db_into_ram(exchange, symbol, timeframe)
-            return {"status": "success", "candleData": cd, "volumeData": vd}
+            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
 
     # ── Step 3: Fetch from TradingView ───────────────────────────────────────
     # If a gap-fill is already running for this series, don't race with it
@@ -471,7 +568,7 @@ def get_ohlc(
         db_snap = candle_db.get_candles(exchange, symbol, timeframe, count=candles)
         if db_snap:
             cd, vd = _format_candles_for_ui(db_snap, timeframe)
-            return {"status": "success", "candleData": cd, "volumeData": vd}
+            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
         return {"status": "loading", "candleData": [], "volumeData": [],
                 "message": "Initial data fetch in progress — please wait"}
 
@@ -499,14 +596,14 @@ def get_ohlc(
                                          end_ts=int(end_time) if end_time else None)
         if fallback:
             cd, vd = _format_candles_for_ui(fallback, timeframe)
-            return {"status": "success", "candleData": cd, "volumeData": vd, "warning": "Live fetch failed — serving cached data"}
+            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd, "warning": "Live fetch failed — serving cached data"}, exchange, symbol, timeframe, is_recent)
         raise HTTPException(500, f"Failed to fetch OHLC data: {exc}")
 
     if not raw_candles:
         fallback = candle_db.get_candles(exchange, symbol, timeframe, count=candles)
         if fallback:
             cd, vd = _format_candles_for_ui(fallback, timeframe)
-            return {"status": "success", "candleData": cd, "volumeData": vd}
+            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
         return {"status": "success", "candleData": [], "volumeData": []}
 
     # Persist to SQLite + update RAM cache
@@ -515,7 +612,7 @@ def get_ohlc(
 
     final = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
     cd, vd = _format_candles_for_ui(final, timeframe)
-    return {"status": "success", "candleData": cd, "volumeData": vd}
+    return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
 
 
 @app.get("/api/features")
