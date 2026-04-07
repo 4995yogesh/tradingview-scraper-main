@@ -1,18 +1,39 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  ChevronDown, Menu, Settings, Maximize2, Layout, RotateCw
+  ChevronDown, Menu, Settings, Maximize2, Layout, RotateCw, Keyboard, Activity
 } from 'lucide-react';
 import { symbolInfo, timeframes } from '../../data/chartData';
 import LayoutSelector from './LayoutSelector';
+
+// TradingView-style shortcut map (same as ChartPage)
+const TF_SHORTCUT_MAP = {
+  '1': '1m', '5': '5m', '15': '15m', '30': '30m',
+  '60': '1h', 'H': '1h', '1H': '1h',
+  '4': '4h', '4H': '4h',
+  'D': '1d', '1D': '1d',
+  'W': '1w', '1W': '1w',
+  'M': '1M', '1M': '1M',
+};
 
 const ChartToolbar = ({
   symbol, timeframe, onTimeframeChange,
   priceData, symbolPrecision = 5, onFullscreen,
   onSettings, onRefresh,
-  activeLayout, onLayoutChange, showLayout, onToggleLayout
+  activeLayout, onLayoutChange, showLayout, onToggleLayout,
+  showIndicators, onToggleIndicators, panes,
+  countdown,
 }) => {
   const [showTimeframes, setShowTimeframes] = useState(false);
+  const [showTfInput, setShowTfInput] = useState(false);
+  const [tfInputVal, setTfInputVal] = useState('');
+  const tfInputRef = useRef(null);
   const tfRef = useRef(null);
+
+  // Count total active indicators across all panes (for badge)
+  const totalActiveIndicators = (panes || []).reduce(
+    (sum, p) => sum + ((p.indicators || []).filter(i => i.enabled).length),
+    0
+  );
 
   const info = symbolInfo[symbol] || { name: symbol, exchange: '', type: '' };
   const lastPrice = priceData?.close || priceData?.value || 0;
@@ -24,11 +45,22 @@ const ChartToolbar = ({
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (tfRef.current && !tfRef.current.contains(e.target)) setShowTimeframes(false);
+      if (tfRef.current && !tfRef.current.contains(e.target)) {
+        setShowTimeframes(false);
+        setShowTfInput(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const commitTfInput = () => {
+    const raw = tfInputVal.trim().toUpperCase();
+    const resolved = TF_SHORTCUT_MAP[raw];
+    if (resolved) onTimeframeChange(resolved);
+    setTfInputVal('');
+    setShowTfInput(false);
+  };
 
   // Get display label for current timeframe
   const currentTfLabel = timeframes.find(t => t.value === timeframe)?.label || 'D';
@@ -52,9 +84,9 @@ const ChartToolbar = ({
         <div className="w-px h-[22px] bg-[#2A2E39] mx-[2px]" />
 
         {/* Timeframe selector */}
-        <div className="relative" ref={tfRef}>
+        <div className="relative flex items-center gap-0.5" ref={tfRef}>
           <button
-            onClick={() => setShowTimeframes(!showTimeframes)}
+            onClick={() => { setShowTimeframes(!showTimeframes); setShowTfInput(false); }}
             className={`flex items-center gap-0.5 px-2 h-[30px] rounded-[4px] transition-colors text-[13px] font-medium ${
               showTimeframes ? 'bg-[#2962FF20] text-[#2962FF]' : 'text-[#D1D4DC] hover:bg-[#2A2E3960]'
             }`}
@@ -62,6 +94,36 @@ const ChartToolbar = ({
             {currentTfLabel}
             <ChevronDown size={11} className="text-[#787B86] ml-0.5" />
           </button>
+
+          {/* Keyboard input toggle */}
+          <button
+            title="Type timeframe (e.g. 15, 4H, D)"
+            onClick={() => {
+              setShowTfInput(s => !s);
+              setShowTimeframes(false);
+              setTimeout(() => tfInputRef.current?.focus(), 50);
+            }}
+            className={`w-[26px] h-[26px] flex items-center justify-center rounded-[4px] transition-colors ${
+              showTfInput ? 'text-[#2962FF] bg-[#2962FF15]' : 'text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960]'
+            }`}
+          >
+            <Keyboard size={12} />
+          </button>
+
+          {showTfInput && (
+            <input
+              ref={tfInputRef}
+              value={tfInputVal}
+              onChange={e => setTfInputVal(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') commitTfInput();
+                if (e.key === 'Escape') { setShowTfInput(false); setTfInputVal(''); }
+              }}
+              onBlur={() => { commitTfInput(); }}
+              placeholder="5m…"
+              className="w-[48px] h-[26px] text-[12px] bg-[#1E222D] border border-[#2962FF60] rounded px-1.5 text-white outline-none placeholder-[#4A4E59] font-mono"
+            />
+          )}
 
           {showTimeframes && (
             <div className="absolute top-full left-0 mt-1 w-[200px] bg-[#1E222D] rounded-md shadow-2xl border border-[#363A45] z-50 py-1">
@@ -93,6 +155,37 @@ const ChartToolbar = ({
 
         {/* Spacer */}
         <div className="flex-1" />
+
+        {/* Candle-close countdown — lives in the toolbar, no overlap */}
+        {countdown != null && (
+          <div
+            className="flex items-center gap-1.5 px-2.5 h-[26px] rounded-full bg-[#1E222D] border border-[#363A45] mr-1"
+            title="Next candle close"
+          >
+            <div className="w-1.5 h-1.5 rounded-full bg-[#787B86]" style={{ animation: 'pulse 2s ease-in-out infinite' }} />
+            <span className="text-[11px] font-mono text-[#787B86]">
+              {String(countdown).padStart(2, '0')}s
+            </span>
+          </div>
+        )}
+
+        {/* Indicators button */}
+        <div className="relative">
+          <button
+            onClick={onToggleIndicators}
+            className={`w-[30px] h-[30px] flex items-center justify-center rounded-[4px] transition-colors relative ${
+              showIndicators ? 'text-[#2962FF] bg-[#2962FF15]' : 'text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960]'
+            }`}
+            title="Indicators"
+          >
+            <Activity size={14} />
+            {totalActiveIndicators > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-[14px] h-[14px] bg-[#27a7b0] text-[#131722] text-[8px] font-bold rounded-full flex items-center justify-center leading-none">
+                {totalActiveIndicators}
+              </span>
+            )}
+          </button>
+        </div>
 
         {/* Layout actions */}
         <div className="relative">

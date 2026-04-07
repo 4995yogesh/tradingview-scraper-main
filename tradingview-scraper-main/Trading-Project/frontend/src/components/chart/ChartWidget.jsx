@@ -2,6 +2,10 @@ import React, { useEffect, useRef, useCallback, useState, forwardRef, useImperat
 import { createChart, CandlestickSeries, LineSeries, AreaSeries, BarSeries } from 'lightweight-charts';
 import { fetchLiveCandles } from '../../data/chartData';
 import { ChevronsRight } from 'lucide-react';
+import {
+  aggregateCandles, detectSwings, getHigherTfs, saveSwingsToMemory,
+  normalizeTimeForChart,
+} from '../../lib/swingLevels';
 
 // Sensible number of bars to fetch per timeframe so candles are visible at the initial zoom
 const TF_CANDLE_COUNT = {
@@ -46,11 +50,13 @@ const sortAndDedupe = (data) => {
   return result;
 };
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 5 }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 5, swingSettings }, ref) => {
   const chartContainerRef = useRef(null);
-  const chartRef = useRef(null);
-  const seriesRef = useRef(null);
-  const isLoadingMoreRef = useRef(false);
+  const chartRef          = useRef(null);
+  const seriesRef         = useRef(null);
+  const isLoadingMoreRef  = useRef(false);
+  const swingSeriesRef    = useRef([]); // tracks active LineSeries swing segments for cleanup
+  const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
 
   const [chartData, setChartData] = useState(null);
   const chartDataRef = useRef(null);
@@ -161,6 +167,9 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       chartRef.current = null;
     }
 
+    // Clear swing series reference since the chart (and all its series) is destroyed
+    swingSeriesRef.current = [];
+
     const container = chartContainerRef.current;
     const bg = chartSettings?.background || '#131722';
     const gridColor = chartSettings?.showGrid !== false ? (chartSettings?.gridColor || '#1E222D') : 'transparent';
@@ -217,6 +226,9 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       if (d) onPriceUpdate?.(d);
     });
 
+    // Signal that a new series instance is ready (triggers swing re-draw)
+    setChartKey(k => k + 1);
+
     chart.timeScale().subscribeVisibleLogicalRangeChange(async (logicalRange) => {
       if (!logicalRange) return;
       if (logicalRange.from < -5 && !isLoadingMoreRef.current) {
@@ -247,6 +259,142 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   }, [chartType, logScale, chartSettings, timeframe, symbol, symbolPrecision, onPriceUpdate]);
 
   useEffect(() => { initChart(); }, [initChart]);
+
+  // ── Swing Levels drawing (finite segments, stop at mitigation time) ─────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+
+    // Guard: need chart, candles, and swing indicator enabled
+    if (!swingSettings?.enabled || !chart || !chartData?.candleData?.length) {
+      // Cleanup on disable
+      if (swingSeriesRef.current.length > 0 && chartRef.current) {
+        swingSeriesRef.current.forEach(s => {
+          try { chartRef.current.removeSeries(s); } catch { /* already removed */ }
+        });
+        swingSeriesRef.current = [];
+      }
+      return;
+    }
+
+    const candles  = chartData.candleData;
+    const settings = swingSettings.settings || {};
+
+    // Remove previous swing segments before redrawing
+    swingSeriesRef.current.forEach(s => {
+      try { chart.removeSeries(s); } catch { /* stale */ }
+    });
+    swingSeriesRef.current = [];
+
+    const hideFilled     = settings.hideFilled ?? true;
+    const showHighs      = settings.showHighs  !== false;
+    const showLows       = settings.showLows   !== false;
+    const lastCandleTime = candles[candles.length - 1].time;
+
+    // ── Snap a unix-second HTF time to the nearest real LTF candle ─────────────
+    const snapToLtf = (unixSec) => {
+      const norm = normalizeTimeForChart(unixSec, timeframe);
+      for (const c of candles) {
+        if (c.time >= norm) return c.time;
+      }
+      return norm;
+    };
+
+    /**
+     * processTf — detect swings for one TF and draw finite segments.
+     *
+     * isCurrentTf = true  → htfCandles IS the chart candles; times already in
+     *                        chart-native format, so no snapToLtf needed.
+     * isCurrentTf = false → htfCandles is aggregated; need snapToLtf for start
+     *                        and scan LTF candles for exact mitigation end.
+     */
+    const processTf = (tf, htfCandles, isCurrentTf) => {
+      const tfCfg  = settings.tfs?.[tf];
+      if (tfCfg?.enabled === false) return;
+
+      const color    = tfCfg?.color    ?? '#ffffff';
+      const lookback = tfCfg?.lookback ?? 50;
+
+      const { highs, lows } = detectSwings(htfCandles, lookback);
+      saveSwingsToMemory(symbol, tf, highs, lows);
+
+      const drawSegment = (swingTime, price, isHigh) => {
+        let startTs, endTs, isMitigated = false;
+
+        if (isCurrentTf) {
+          // Current TF: times already in chart format — scan directly from pivot
+          const swingIdx = candles.findIndex(c => c.time === swingTime);
+          startTs = swingTime;
+          endTs   = lastCandleTime;
+          for (let i = (swingIdx >= 0 ? swingIdx + 1 : 0); i < candles.length; i++) {
+            const c = candles[i];
+            if (isHigh ? c.high >= price : c.low <= price) {
+              endTs = c.time; isMitigated = true; break;
+            }
+          }
+        } else {
+          // HTF: snap start to nearest LTF candle; scan LTF from next HTF boundary
+          const swingIdx    = htfCandles.findIndex(c => c.time === swingTime);
+          const nextHtfStart = (swingIdx >= 0 && swingIdx < htfCandles.length - 1)
+            ? htfCandles[swingIdx + 1].time : null;
+          startTs = snapToLtf(swingTime);
+          endTs   = lastCandleTime;
+          if (nextHtfStart !== null) {
+            const boundary = snapToLtf(nextHtfStart);
+            const ltfIdx   = candles.findIndex(c => c.time === boundary);
+            if (ltfIdx >= 0) {
+              for (let i = ltfIdx; i < candles.length; i++) {
+                const c = candles[i];
+                if (isHigh ? c.high >= price : c.low <= price) {
+                  endTs = c.time; isMitigated = true; break;
+                }
+              }
+            }
+          }
+        }
+
+        if (isMitigated && hideFilled) return;
+        if (startTs === endTs) return;
+
+        const [t1, t2] = startTs <= endTs ? [startTs, endTs] : [endTs, startTs];
+
+        try {
+          const seg = chart.addSeries(LineSeries, {
+            color,
+            lineWidth:              1,
+            lineStyle:              0, // Solid for all
+            priceLineVisible:       false,
+            lastValueVisible:       false,
+            crosshairMarkerVisible: false,
+          });
+          seg.setData([
+            { time: t1, value: price },
+            { time: t2, value: price },
+          ]);
+          swingSeriesRef.current.push(seg);
+        } catch { /* chart torn down */ }
+      };
+
+      if (showHighs) highs.forEach(s => drawSegment(s.time, s.price, true));
+      if (showLows)  lows.forEach(s  => drawSegment(s.time, s.price, false));
+    };
+
+    // Draw current TF first (bottom z-layer), then higher TFs in ascending order
+    // so the highest TF lines render last and appear visually on top.
+    processTf(timeframe, candles, true);
+
+    const higherTfs = [...getHigherTfs(timeframe)].reverse(); // LTF→HTF order
+    for (const tf of higherTfs) {
+      const htfCandles = aggregateCandles(candles, tf);
+      if (htfCandles.length >= 3) processTf(tf, htfCandles, false);
+    }
+
+    return () => {
+      swingSeriesRef.current.forEach(s => {
+        try { chartRef.current?.removeSeries(s); } catch { /* ignore */ }
+      });
+      swingSeriesRef.current = [];
+    };
+  }, [chartData, swingSettings, timeframe, symbol, chartKey]);
 
   // Seamless Data Updates
   useEffect(() => {
