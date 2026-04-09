@@ -384,7 +384,7 @@ def _periodic_refresh_loop():
         for exchange, symbol in PERSISTENT_SYMBOLS:
             for tf in PERSISTENT_TIMEFRAMES:
                 _fetch_latest_candles(exchange, symbol, tf, limit=20)
-                time.sleep(1)   # avoid hammering TV in quick succession
+                time.sleep(0.3)   # short pause — 6 TFs × 0.3 s = ~2 s total per cycle
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -432,7 +432,7 @@ app = FastAPI(title="TradingView Scraper API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,   # Must be False when origins=["*"]
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -645,35 +645,48 @@ def get_indicators(
 
 
 @app.get("/api/watchlist")
-def get_watchlist():
-    results   = []
-    ind_scraper = Indicators()
-    for item in WATCHLIST_SYMBOLS:
+async def get_watchlist():
+    """
+    Async watchlist — runs blocking Indicators.scrape() in a thread pool
+    so it never blocks the uvicorn event loop.
+    """
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+
+    def _fetch_one(item: dict) -> dict:
         exchange, symbol = item["exchange"], item["symbol"]
         try:
-            resp    = ind_scraper.scrape(exchange=exchange, symbol=symbol,
-                                         timeframe="1d",
-                                         indicators=["close", "open", "change", "Perf.W"])
-            data    = resp.get("data", {})
-            close   = data.get("close",  0)
-            open_   = data.get("open",   close)
-            change  = data.get("change", 0)
-            perf_w  = data.get("Perf.W", 0)
-            results.append({
-                "exchange":  exchange, "symbol": symbol,
-                "price":     round(close,  5),
-                "open":      round(open_,  5),
-                "change":    round(change, 5),
-                "changePct": round(perf_w, 2),
-                "isUp":      change >= 0,
-            })
+            resp   = Indicators().scrape(
+                exchange=exchange, symbol=symbol, timeframe="1d",
+                indicators=["close", "open", "change", "Perf.W"],
+            )
+            data   = resp.get("data", {})
+            close  = data.get("close",  0)
+            open_  = data.get("open",   close)
+            change = data.get("change", 0)
+            perf_w = data.get("Perf.W", 0)
+            return {
+                "exchange": exchange, "symbol": symbol,
+                "price":    round(close,  5),
+                "open":     round(open_,  5),
+                "change":   round(change, 5),
+                "changePct":round(perf_w, 2),
+                "isUp":     change >= 0,
+            }
         except Exception as exc:
             logger.warning("Watchlist failed for %s:%s — %s", exchange, symbol, exc)
-            results.append({"exchange": exchange, "symbol": symbol,
-                            "price": 0, "open": 0, "change": 0, "changePct": 0,
-                            "isUp": True, "error": str(exc)})
+            return {
+                "exchange": exchange, "symbol": symbol,
+                "price": 0, "open": 0, "change": 0, "changePct": 0,
+                "isUp": True, "error": str(exc),
+            }
 
-    return {"status": "success", "data": results}
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor(max_workers=len(WATCHLIST_SYMBOLS) or 1) as pool:
+        tasks   = [loop.run_in_executor(pool, _fetch_one, item) for item in WATCHLIST_SYMBOLS]
+        results = await asyncio.gather(*tasks)
+
+    return {"status": "success", "data": list(results)}
 
 
 if __name__ == "__main__":
