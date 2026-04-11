@@ -50,7 +50,7 @@ const sortAndDedupe = (data) => {
   return result;
 };
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 5, swingSettings, liveTickKey }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, liveTickKey }, ref) => {
   const chartContainerRef = useRef(null);
   const chartRef          = useRef(null);
   const seriesRef         = useRef(null);
@@ -192,7 +192,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           return new Date(time * 1000).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false, month: 'short', day: 'numeric', year: 'numeric' });
         }
       },
-      layout: { background: { type: 'solid', color: bg }, textColor: chartSettings?.priceScaleColor || '#787B86', fontSize: 11, fontFamily: 'Inter, -apple-system, sans-serif' },
+      layout: { background: { type: 'solid', color: bg }, textColor: chartSettings?.priceScaleColor || '#787B86', fontSize: 9, fontFamily: 'Inter, -apple-system, sans-serif' },
       grid: { vertLines: { color: gridColor, style: 1 }, horzLines: { color: gridColor, style: 1 } },
       crosshair: { mode: crosshairMode, vertLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' }, horzLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' } },
       timeScale: {
@@ -216,7 +216,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           return `${p.hour}:${p.minute}`;
         }
       },
-      rightPriceScale: { borderColor: chartSettings?.priceScaleColor || '#2A2E39', scaleMargins: { top: 0.05, bottom: 0.05 }, mode: logScale ? 1 : 0, visible: true, borderVisible: true, autoScale: true, entireTextOnly: false },
+      rightPriceScale: { borderColor: chartSettings?.priceScaleColor || '#2A2E39', scaleMargins: { top: 0.05, bottom: 0.05 }, mode: logScale ? 1 : 0, visible: true, borderVisible: true, autoScale: true, entireTextOnly: false, minimumWidth: 25 },
       handleScroll: { vertTouchDrag: false },
     });
 
@@ -306,141 +306,124 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
   useEffect(() => { initChart(); }, [initChart]);
 
-  // ── Swing Levels drawing (finite segments, stop at mitigation time) ─────────────
+  // ── Consolidation Boxes Drawing ─────────────
+  const [consolidations, setConsolidations] = useState([]);
+
+  useEffect(() => {
+    let interval;
+    const fetchConsolidations = async () => {
+      try {
+        const res = await fetch('http://localhost:8001/consolidations');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.status === 'ok') {
+          // Deep compare to prevent infinite re-renders or state churn if needed,
+          // but React will handle new state identities correctly with useEffect dependencies.
+          setConsolidations(data.zones || []);
+        }
+      } catch (err) {}
+    };
+
+    fetchConsolidations();
+    interval = setInterval(fetchConsolidations, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const chart = chartRef.current;
+    if (!chart || !chartData?.candleData?.length) return;
 
-    // Guard: need chart, candles, and swing indicator enabled
-    if (!swingSettings?.enabled || !chart || !chartData?.candleData?.length) {
-      // Cleanup on disable
-      if (swingSeriesRef.current.length > 0 && chartRef.current) {
-        swingSeriesRef.current.forEach(s => {
-          try { chartRef.current.removeSeries(s); } catch { /* already removed */ }
-        });
-        swingSeriesRef.current = [];
-      }
-      return;
-    }
-
-    const candles  = chartData.candleData;
-    const settings = swingSettings.settings || {};
-
-    // Remove previous swing segments before redrawing
+    // Remove previous boxes before redrawing
     swingSeriesRef.current.forEach(s => {
       try { chart.removeSeries(s); } catch { /* stale */ }
     });
     swingSeriesRef.current = [];
 
-    const hideFilled     = settings.hideFilled ?? true;
-    const showHighs      = settings.showHighs  !== false;
-    const showLows       = settings.showLows   !== false;
-    const lastCandleTime = candles[candles.length - 1].time;
+    const candles = chartData.candleData;
+    const timeMap = new Set(candles.map(c => c.time));
 
-    // ── Snap a unix-second HTF time to the nearest real LTF candle ─────────────
+    // Snap target ms to the nearest real chart Unix time
     const snapToLtf = (unixSec) => {
-      const norm = normalizeTimeForChart(unixSec, timeframe);
+      let nearest = null;
+      let minDiff = Infinity;
       for (const c of candles) {
-        if (c.time >= norm) return c.time;
+        const diff = Math.abs(c.time - unixSec);
+        if (diff < minDiff) { minDiff = diff; nearest = c.time; }
       }
-      return norm;
+      return nearest || unixSec;
     };
 
-    /**
-     * processTf — detect swings for one TF and draw finite segments.
-     *
-     * isCurrentTf = true  → htfCandles IS the chart candles; times already in
-     *                        chart-native format, so no snapToLtf needed.
-     * isCurrentTf = false → htfCandles is aggregated; need snapToLtf for start
-     *                        and scan LTF candles for exact mitigation end.
-     */
-    const processTf = (tf, htfCandles, isCurrentTf) => {
-      const tfCfg  = settings.tfs?.[tf];
-      if (tfCfg?.enabled === false) return;
+    // Normalize: backend uses "1H"/"4H", frontend uses "1h"/"4h"
+    const normTf = (tf) => tf.toLowerCase();
+    const zones = consolidations.filter(z => normTf(z.timeframe) === normTf(timeframe));
 
-      const color    = tfCfg?.color    ?? '#ffffff';
-      const lookback = tfCfg?.lookback ?? 50;
+    zones.forEach(zone => {
+      const startSec = Math.floor(zone.timeStart / 1000);
+      const endSec = Math.floor(zone.timeEnd / 1000);
 
-      const { highs, lows } = detectSwings(htfCandles, lookback);
-      saveSwingsToMemory(symbol, tf, highs, lows);
+      const t1 = snapToLtf(startSec);
+      const t2 = snapToLtf(endSec);
+      if (t1 === t2) return;
 
-      const drawSegment = (swingTime, price, isHigh) => {
-        let startTs, endTs, isMitigated = false;
+      const s1 = Math.min(t1, t2);
+      const s2 = Math.max(t1, t2);
 
-        if (isCurrentTf) {
-          // Current TF: times already in chart format — scan directly from pivot
-          const swingIdx = candles.findIndex(c => c.time === swingTime);
-          startTs = swingTime;
-          endTs   = lastCandleTime;
-          for (let i = (swingIdx >= 0 ? swingIdx + 1 : 0); i < candles.length; i++) {
-            const c = candles[i];
-            if (isHigh ? c.high >= price : c.low <= price) {
-              endTs = c.time; isMitigated = true; break;
-            }
-          }
-        } else {
-          // HTF: snap start to nearest LTF candle; scan LTF from next HTF boundary
-          const swingIdx    = htfCandles.findIndex(c => c.time === swingTime);
-          const nextHtfStart = (swingIdx >= 0 && swingIdx < htfCandles.length - 1)
-            ? htfCandles[swingIdx + 1].time : null;
-          startTs = snapToLtf(swingTime);
-          endTs   = lastCandleTime;
-          if (nextHtfStart !== null) {
-            const boundary = snapToLtf(nextHtfStart);
-            const ltfIdx   = candles.findIndex(c => c.time === boundary);
-            if (ltfIdx >= 0) {
-              for (let i = ltfIdx; i < candles.length; i++) {
-                const c = candles[i];
-                if (isHigh ? c.high >= price : c.low <= price) {
-                  endTs = c.time; isMitigated = true; break;
-                }
-              }
-            }
-          }
-        }
+      const validPoints = candles.filter(c => c.time >= s1 && c.time <= s2).map(c => c.time);
+      if (validPoints.length < 2) return;
 
-        if (isMitigated && hideFilled) return;
-        if (startTs === endTs) return;
+      try {
+        // Top border line
+        const topLine = chart.addSeries(LineSeries, {
+          color: 'rgba(41, 98, 255, 0.9)',
+          lineWidth: 2,
+          lineStyle: 0,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+        });
 
-        const [t1, t2] = startTs <= endTs ? [startTs, endTs] : [endTs, startTs];
+        // Bottom border line
+        const botLine = chart.addSeries(LineSeries, {
+          color: 'rgba(41, 98, 255, 0.9)',
+          lineWidth: 2,
+          lineStyle: 0,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+        });
 
-        try {
-          const seg = chart.addSeries(LineSeries, {
-            color,
-            lineWidth:              1,
-            lineStyle:              0, // Solid for all
-            priceLineVisible:       false,
-            lastValueVisible:       false,
-            crosshairMarkerVisible: false,
-          });
-          seg.setData([
-            { time: t1, value: price },
-            { time: t2, value: price },
-          ]);
-          swingSeriesRef.current.push(seg);
-        } catch { /* chart torn down */ }
-      };
+        // Fill line — horizontal line at mid, used with area fill trick
+        // Draw mid-price flat line spanning zone width as shaded band
+        const midFill = chart.addSeries(AreaSeries, {
+          topColor: 'rgba(41, 98, 255, 0.12)',
+          bottomColor: 'rgba(41, 98, 255, 0.03)',
+          lineColor: 'transparent',
+          lineWidth: 0,
+          priceLineVisible: false,
+          lastValueVisible: false,
+          crosshairMarkerVisible: false,
+        });
 
-      if (showHighs) highs.forEach(s => drawSegment(s.time, s.price, true));
-      if (showLows)  lows.forEach(s  => drawSegment(s.time, s.price, false));
-    };
+        const topData = validPoints.map(t => ({ time: t, value: zone.priceHigh }));
+        const botData = validPoints.map(t => ({ time: t, value: zone.priceLow }));
 
-    // Draw current TF first (bottom z-layer), then higher TFs in ascending order
-    // so the highest TF lines render last and appear visually on top.
-    processTf(timeframe, candles, true);
+        topLine.setData(topData);
+        botLine.setData(botData);
+        midFill.setData(topData); // AreaSeries fills DOWN from priceHigh; gives a subtle shade
 
-    const higherTfs = [...getHigherTfs(timeframe)].reverse(); // LTF→HTF order
-    for (const tf of higherTfs) {
-      const htfCandles = aggregateCandles(candles, tf);
-      if (htfCandles.length >= 3) processTf(tf, htfCandles, false);
-    }
+        swingSeriesRef.current.push(topLine, botLine, midFill);
+      } catch (e) {
+        console.warn('Failed drawing consolidation box:', e);
+      }
+    });
 
     return () => {
       swingSeriesRef.current.forEach(s => {
-        try { chartRef.current?.removeSeries(s); } catch { /* ignore */ }
+        try { chartRef.current?.removeSeries(s); } catch {}
       });
       swingSeriesRef.current = [];
     };
-  }, [chartData, swingSettings, timeframe, symbol, chartKey]);
+  }, [chartData, consolidations, timeframe, chartKey]);
 
   // Seamless Data Updates
   useEffect(() => {

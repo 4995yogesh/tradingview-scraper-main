@@ -6,11 +6,13 @@ Changes:
   2. Eliminates duplicate get_candles() calls per cycle (fetch once, reuse)
   3. Extracts consolidation zones per-timeframe and pushes them to the API
   4. Uses update_engine_output() for thread-safe state writes
-  5. Mock feed produces more realistic data (directional trend with consolidation)
+  5. Fetch logic uses dashboard chart source via backend API, running continuously
 """
 import asyncio
 import logging
 import time
+import json
+import urllib.request
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -19,7 +21,6 @@ from data.fetcher import fetcher_instance
 from scenarios import generator
 from confirmation import mtf
 from alerts.manager import alert_manager
-from strategy.consolidation import detect_consolidation
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,20 +71,19 @@ async def run_engine_cycle() -> None:
         candles = candles_by_tf[tf]
         scenarios = confirmed_scenarios[tf]
 
-        # Extract consolidation zone for this TF (for the API /consolidations endpoint)
+        from strategy.consolidation import detect_all_consolidations
+        # Extract consolidation zones for this API endpoint
         consolidations_for_tf = []
-        if len(candles) >= 5:
-            zone = detect_consolidation(candles)
-            if zone["valid"] and candles:
-                ts_latest = candles[-1]["timestamp"]
-                ts_start  = candles[max(0, len(candles) - 15)]["timestamp"]
-                consolidations_for_tf = [{
+        if len(candles) >= 8:
+            active_boxes = detect_all_consolidations(candles)
+            for box in active_boxes:
+                consolidations_for_tf.append({
                     "timeframe":  tf,
-                    "priceHigh":  zone["high"],
-                    "priceLow":   zone["low"],
-                    "timeStart":  ts_start,
-                    "timeEnd":    ts_latest,
-                }]
+                    "priceHigh":  box["top"],
+                    "priceLow":   box["bottom"],
+                    "timeStart":  box["timeStart"],
+                    "timeEnd":    box["timeEnd"],
+                })
 
         await update_engine_output(tf, scenarios, candles, consolidations_for_tf)
 
@@ -93,73 +93,68 @@ async def run_engine_cycle() -> None:
             await alert_manager.process_scenarios(tf, scenarios, ts)
 
 
-# ── Mock feed (used when no real data source is connected) ───────────────────
+# ── Live Data Feed ──────────────────────────────────────────────────────────
 
-def _generate_mock_candles(n: int = 60) -> list:
-    """
-    Generates realistic mock EURUSD-like candles:
-    - Rising trend for first 30 bars
-    - Tight consolidation for next 20 bars
-    - Breakout on bar 51+
-    """
-    import math, random
-    now_ms = int(time.time() * 1000)
-    candles = []
-    price   = 1.08500
+def _fetch_from_api(tf: str) -> list:
+    url = f"http://localhost:8000/api/ohlc?exchange=OANDA&symbol=EURUSD&timeframe={tf.lower()}&candles=200"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            if resp.status == 200:
+                body = json.loads(resp.read().decode('utf-8'))
+                if body.get("status") == "success":
+                    return body.get("candleData", [])
+    except Exception as e:
+        logger.error("API fetch failed for %s: %s", tf, e)
+    return []
 
-    for i in range(n):
-        ts = now_ms - (n - i) * 60_000   # 1m bars
-        # Trend phase
-        if i < 30:
-            drift = 0.00008 * math.sin(i * 0.2) + 0.000015
-        # Consolidation phase
-        elif i < 50:
-            drift = random.uniform(-0.00005, 0.00005)
-        # Breakout phase
-        else:
-            drift = 0.00020
+async def _live_feed_loop() -> None:
+    """Continuously poll backend (dashboard chart source) and run engine cycle."""
+    logger.info("Connecting engine to dashboard chart source (localhost:8000)...")
+    while True:
+        try:
+            for tf in TIMEFRAMES:
+                raw_candles = await asyncio.to_thread(_fetch_from_api, tf)
+                for c in raw_candles:
+                    t = c["time"]
+                    if isinstance(t, (int, float)):
+                        ts_ms = int(t * 1000)
+                    else:
+                        from datetime import datetime, timezone
+                        try:
+                            dt = datetime.strptime(str(t), "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                            ts_ms = int(dt.timestamp() * 1000)
+                        except Exception:
+                            ts_ms = int(time.time() * 1000)
 
-        noise = random.gauss(0, 0.00004)
-        open_p = price
-        close  = round(price + drift + noise, 5)
-        high   = round(max(open_p, close) + abs(random.gauss(0, 0.00008)), 5)
-        low    = round(min(open_p, close) - abs(random.gauss(0, 0.00008)), 5)
-        vol    = random.randint(800, 2500)
+                    formatted = {
+                        "timestamp": ts_ms,
+                        "open": c["open"],
+                        "high": c["high"],
+                        "low": c["low"],
+                        "close": c["close"],
+                        "volume": 0,  # volume not strictly needed by engine, but could parse if present
+                        "is_closed": True
+                    }
+                    fetcher_instance.add_candle(tf, formatted)
+            
+            await run_engine_cycle()
+        except Exception as e:
+            logger.error("Live feed loop error: %s", e)
+        
+        await asyncio.sleep(15)
 
-        candles.append({
-            "timestamp": ts,
-            "open":      open_p,
-            "high":      high,
-            "low":       low,
-            "close":     close,
-            "volume":    vol,
-            "is_closed": True,
-        })
-        price = close
-
-    return candles
-
-
-async def _populate_mock_feed() -> None:
-    """Seed all timeframes with synthetic candles so the engine has real data to work on."""
-    logger.info("Seeding mock candle data for all timeframes…")
-    mock = _generate_mock_candles(60)
-    for tf in TIMEFRAMES:
-        for candle in mock:
-            fetcher_instance.add_candle(tf, candle)
-    logger.info("Mock feed ready — %d candles per timeframe", len(mock))
-
-
-# ── FastAPI lifespan (replaces deprecated @app.on_event) ────────────────────
+# ── FastAPI lifespan ──────────────────────────────────────────────────────────
 
 @asynccontextmanager
 async def engine_lifespan(app):
     logger.info("=== Starting Multi-Timeframe Trading Intelligence Engine ===")
-    await _populate_mock_feed()
-    await run_engine_cycle()   # Initial cycle on startup
-    logger.info("=== Engine ready ===")
+    task = asyncio.create_task(_live_feed_loop())
+    logger.info("=== Engine live feed started ===")
     yield
+    task.cancel()
     logger.info("=== Engine shutting down ===")
+
 
 # Wire lifespan into the app
 app.router.lifespan_context = engine_lifespan

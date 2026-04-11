@@ -12,6 +12,17 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+/* Hide Emergent Logo */
+#emergent-logo,
+.emergent-logo,
+[class*="emergent"],
+[class*="Emergent"] {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 code {
     font-family:
         source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;

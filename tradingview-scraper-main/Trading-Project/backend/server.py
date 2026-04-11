@@ -27,6 +27,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from typing import List, Optional
+import pandas as pd
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 IST = timezone(timedelta(hours=5, minutes=30))
@@ -35,16 +36,20 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 # ── Package path setup ────────────────────────────────────────────────────────
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-PIPE = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+ROOT    = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+PIPE    = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+PROJECT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "project"))
 sys.path.insert(0, ROOT)
 sys.path.insert(0, PIPE)
+sys.path.insert(0, PROJECT)   # exposes indicators/, api/, etc.
+
 
 from tradingview_scraper.symbols.technicals import Indicators
 from tradingview_scraper.symbols.historical import HistoricalFetcher
 from pipeline.main import pipeline
 from pipeline.data.storage import storage
 from pipeline.data.db import candle_db          # ← SQLite layer
+from indicators.consolidation import consolidation_boxes  # PROJECT path active now
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -204,8 +209,8 @@ def _seed_storage(exchange: str, symbol: str, timeframe: str,
     if prepend:
         storage.prepend_candles(exchange, symbol, timeframe, formatted)
     else:
-        for f in formatted:
-            storage.append_candle(exchange, symbol, timeframe, f)
+        for candle in formatted:
+            storage.append_candle(exchange, symbol, timeframe, candle)
 
     # ── 3. Stamp last refresh ─────────────────────────────────────────────────
     with storage.lock:
@@ -452,6 +457,24 @@ def db_summary():
     return {"status": "ok", "series": rows}
 
 
+@app.get("/api/timeframes")
+def get_timeframes():
+    """Return list of timeframes for infinite canvas (5 fixed)."""
+    return {"status": "ok", "timeframes": ["1m", "5m", "15m", "1h", "4h"]}
+
+
+@app.get("/api/chart-data")
+def get_chart_data(
+    exchange: str = Query("OANDA"),
+    symbol:   str = Query("EURUSD"),
+    timeframe: str = Query("1d"),
+    candles:  int = Query(500, ge=10, le=100000),
+    end_time: Optional[str] = Query(None),
+):
+    """Thin proxy to /api/ohlc — used by InfiniteCanvas per-timeframe fetch."""
+    return get_ohlc(exchange=exchange, symbol=symbol, timeframe=timeframe, candles=candles, end_time=end_time)
+
+
 def _sync_tick(payload: dict, exchange: str, symbol: str, timeframe: str, is_recent: bool) -> dict:
     """
     Overwrites the 'close' price of the final candle in any timeframe 
@@ -613,6 +636,32 @@ def get_ohlc(
     final = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
     cd, vd = _format_candles_for_ui(final, timeframe)
     return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
+
+
+@app.get("/api/consolidation")
+def get_consolidation(
+    exchange: str = Query("OANDA"),
+    symbol:   str = Query("EURUSD"),
+    timeframe: str = Query("1d"),
+    candles:  int = Query(500, ge=10, le=100000),
+    end_time: Optional[str] = Query(None),
+):
+    """Return consolidation boxes for given series.
+    Uses same parameters as /api/ohlc.
+    """
+    # fetch candles similar to get_ohlc
+    use_timestamp = timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]
+    parsed_end = int(end_time) if end_time and use_timestamp else end_time
+    stored = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
+    if not stored:
+        raise HTTPException(404, "No candle data available for consolidation")
+    df = pd.DataFrame(stored)
+    if use_timestamp:
+        df.set_index(pd.to_datetime(df["time"], unit='s'), inplace=True)
+    else:
+        df.set_index(pd.to_datetime(df["time"]).dt.date, inplace=True)
+    boxes_df = consolidation_boxes(df)
+    return {"status": "success", "boxes": boxes_df.to_dict(orient="records")}
 
 
 @app.get("/api/features")

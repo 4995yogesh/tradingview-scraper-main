@@ -1,320 +1,141 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import ChartCanvas from './ChartCanvas';
-import LayerController from './LayerController';
-import StatusBar from './StatusBar';
-import { useDataFetcher } from './useDataFetcher';
-import { TF_ORDER, COLORS } from './canvasUtils';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import { useCanvasStore } from '../../hooks/useCanvasStore';
+import DecisionCluster from './DecisionCluster';
 
-/**
- * InfiniteCanvasPage – full-screen decision visualization engine.
- *
- * Route: /canvas
- */
 export default function InfiniteCanvasPage() {
-  const [activeTimeframes, setActiveTimeframes] = useState([...TF_ORDER]);
-  const [showLayers, setShowLayers] = useState(true);
-  const [showHelp, setShowHelp] = useState(false);
-
-  const { scenarios, candles, consolidations, error, lastUpdated } = useDataFetcher();
-
-  const toggleTimeframe = useCallback((tf) => {
-    setActiveTimeframes(prev =>
-      prev.includes(tf) ? prev.filter(t => t !== tf) : [...prev, tf]
-    );
-  }, []);
-
-  // Hide help after 5s
-  useEffect(() => {
-    const t = setTimeout(() => setShowHelp(false), 5000);
-    setShowHelp(true);
-    return () => clearTimeout(t);
-  }, []);
+  const navigate = useNavigate();
+  const clusters = useCanvasStore(state => state.clusters);
 
   return (
-    <div style={styles.root}>
-      {/* ── Top bar ─────────────────────────────────────────────────────── */}
-      <div style={styles.topBar}>
-        <div style={styles.topLeft}>
-          <div style={styles.logoMark}>
-            <span style={styles.logoIcon}>◈</span>
-            <span style={styles.logoText}>Decision Canvas</span>
-          </div>
-          <div style={styles.topSep} />
-          <span style={styles.symbolBadge}>EURUSD</span>
+    <div style={s.root}>
+      {/* ── Top bar (Fixed overlay) ── */}
+      <div style={s.topBar}>
+        <div style={s.topLeft}>
+          <button style={s.backBtn} onClick={() => navigate(-1)}>← Back</button>
+          <div style={s.sep} />
+          <span style={s.logo}>◈</span>
+          <span style={s.title}>Decision Canvas <span style={{ color: '#787B86', fontWeight: 400 }}>(Infinite Surface)</span></span>
         </div>
-
-        <div style={styles.topRight}>
-          {/* Toggle layers sidebar */}
-          <button
-            style={{
-              ...styles.iconBtn,
-              background: showLayers ? 'rgba(74,144,217,0.2)' : 'transparent',
-              borderColor: showLayers ? 'rgba(74,144,217,0.4)' : 'rgba(255,255,255,0.08)',
-            }}
-            onClick={() => setShowLayers(v => !v)}
-            title="Toggle layer panel"
-          >
-            ⊞
-          </button>
-
-          {/* Quick TF toggles in top bar */}
-          <div style={styles.tfQuickRow}>
-            {TF_ORDER.map(tf => (
-              <button
-                key={tf}
-                onClick={() => toggleTimeframe(tf)}
-                style={{
-                  ...styles.tfQuickBtn,
-                  color: activeTimeframes.includes(tf) ? getTypeColor(scenarios[tf]) : '#2a3050',
-                  borderColor: activeTimeframes.includes(tf) ? `${getTypeColor(scenarios[tf])}44` : 'rgba(255,255,255,0.06)',
-                  background: activeTimeframes.includes(tf) ? `${getTypeColor(scenarios[tf])}12` : 'transparent',
-                }}
-              >
-                {tf}
-              </button>
-            ))}
-          </div>
+        <div style={s.topRight}>
+          <span style={s.hint}>SPACE + DRAG to pan · WHEEL to zoom</span>
         </div>
       </div>
 
-      {/* ── Main area ───────────────────────────────────────────────────── */}
-      <div style={styles.mainArea}>
-        {/* Canvas */}
-        <div style={styles.canvasWrap}>
-          <ChartCanvas
-            candles={candles}
-            scenarios={scenarios}
-            consolidations={consolidations}
-            activeTimeframes={activeTimeframes}
-          />
-
-          {/* Zoom hint */}
-          {showHelp && (
-            <div style={styles.helpBadge}>
-              Scroll to zoom · Drag to pan
-            </div>
-          )}
-
-          {/* Scenario legend overlay (top-right corner of canvas) */}
-          <div style={styles.canvasOverlay}>
-            <ScenarioSummary scenarios={scenarios} activeTimeframes={activeTimeframes} />
-          </div>
-        </div>
-
-        {/* Layer panel */}
-        {showLayers && (
-          <div style={styles.layerPanel}>
-            <LayerController
-              activeTimeframes={activeTimeframes}
-              onToggle={toggleTimeframe}
-              scenarios={scenarios}
-            />
-          </div>
-        )}
-      </div>
-
-      {/* ── Status bar ─────────────────────────────────────────────────── */}
-      <StatusBar
-        scenarios={scenarios}
-        lastUpdated={lastUpdated}
-        error={error}
-        activeTimeframes={activeTimeframes}
-      />
-    </div>
-  );
-}
-
-// ── Compact scenario summary in canvas top-right ───────────────────────────
-function ScenarioSummary({ scenarios, activeTimeframes }) {
-  const activeTfs = TF_ORDER.filter(tf => activeTimeframes.includes(tf));
-
-  return (
-    <div style={summaryStyles.wrap}>
-      {activeTfs.map(tf => {
-        const tfScenarios = scenarios[tf] || [];
-        if (!tfScenarios.length) return null;
-
-        return (
-          <div key={tf} style={summaryStyles.row}>
-            <span style={summaryStyles.tfTag}>{tf}</span>
-            {tfScenarios.map((s, i) => (
-              <div key={i} style={{
-                ...summaryStyles.typeBadge,
-                background: `${COLORS[s.type] || COLORS.none}22`,
-                borderColor: `${COLORS[s.type] || COLORS.none}55`,
-                color: s.confirmed ? '#ffd700' : (COLORS[s.type] || COLORS.none),
-                boxShadow: s.confirmed ? `0 0 8px ${COLORS[s.type]}55` : 'none',
-              }}>
-                {s.type.toUpperCase()}
-                {s.confirmed && ' ★'}
+      {/* ── Infinite Workspace ── */}
+      <div style={s.workspace}>
+        <TransformWrapper
+          initialScale={0.3}
+          initialPositionX={200}
+          initialPositionY={100}
+          minScale={0.05}
+          maxScale={2}
+          centerZoomedOut={false}
+          wheel={{ step: 0.0005, smoothStep: 0.0002 }}
+          panning={{ velocityMultiplier: 0.5, excluded: ['chart-box', 'tv-lightweight-charts'] }}
+          doubleClick={{ disabled: true }} // allow chart double clicking independently
+        >
+          {({ zoomIn, zoomOut, resetTransform }) => (
+            <>
+              {/* Floating controls in bottom center */}
+              <div style={s.zoomControls}>
+                <button style={s.zBtn} onClick={() => zoomIn(0.1)}>+</button>
+                <button style={s.zBtn} onClick={() => zoomOut(0.1)}>-</button>
+                <button style={s.zBtn} onClick={() => resetTransform()}>Reset</button>
               </div>
-            ))}
-          </div>
-        );
-      })}
+
+              {/* The massive scrollable DOM wrapper */}
+              <TransformComponent
+                wrapperStyle={{ width: '100vw', height: '100vh', touchAction: 'none' }}
+                contentStyle={{ width: '20000px', height: '20000px' }} // practically infinite
+              >
+
+                {/* Dot grid background */}
+                <div style={s.dotGrid} />
+
+                {/* Render each cluster based on spatial rules */}
+                {clusters.map(cluster => (
+                  <DecisionCluster key={cluster.id} cluster={cluster} />
+                ))}
+
+              </TransformComponent>
+            </>
+          )}
+        </TransformWrapper>
+      </div>
     </div>
   );
 }
 
-function getTypeColor(tfScenarios = []) {
-  const types = tfScenarios.map(s => s.type);
-  if (types.includes('buy')) return COLORS.buy;
-  if (types.includes('sell')) return COLORS.sell;
-  return COLORS.none;
-}
-
-// ── Styles ─────────────────────────────────────────────────────────────────
-const styles = {
+// ── Styles ───────────────────────────────────────────────────────────────────
+const s = {
   root: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    width: '100vw',
-    background: '#0d0f17',
+    display: 'flex', flexDirection: 'column',
+    width: '100vw', height: '100vh',
+    background: '#0a0d14',
     fontFamily: "'Inter', 'Roboto', sans-serif",
-    color: '#d4daf7',
-    overflow: 'hidden',
+    color: '#d4daf7', overflow: 'hidden',
   },
   topBar: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '0 16px',
-    height: 44,
-    background: 'rgba(10,12,20,0.97)',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
-    flexShrink: 0,
-    zIndex: 10,
+    position: 'absolute', top: 0, left: 0, right: 0,
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '0 16px', height: 48,
+    background: 'rgba(10, 13, 20, 0.9)',
+    backdropFilter: 'blur(10px)',
+    borderBottom: '1px solid rgba(255,255,255,0.06)', zIndex: 100,
   },
-  topLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
+  topLeft: { display: 'flex', alignItems: 'center', gap: 12 },
+  topRight: { display: 'flex', alignItems: 'center', gap: 12 },
+  backBtn: {
+    background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
+    color: '#e2e8f0', borderRadius: 6, padding: '6px 14px',
+    fontSize: 12, cursor: 'pointer', letterSpacing: '0.04em',
+    transition: 'background 0.2s',
   },
-  logoMark: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 7,
-  },
-  logoIcon: {
-    fontSize: 16,
-    color: '#4a90d9',
-    textShadow: '0 0 10px #4a90d9',
-  },
-  logoText: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: '#8892b8',
-    letterSpacing: '0.02em',
-  },
-  topSep: {
-    width: 1,
-    height: 18,
-    background: 'rgba(255,255,255,0.08)',
-  },
-  symbolBadge: {
-    fontSize: 13,
-    fontWeight: 700,
-    color: '#d4daf7',
-    letterSpacing: '0.04em',
-  },
-  topRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconBtn: {
-    padding: '5px 9px',
-    borderRadius: 6,
-    border: '1px solid',
-    cursor: 'pointer',
-    fontSize: 14,
-    color: '#8892b8',
-    transition: 'all 0.15s',
-    lineHeight: 1,
-  },
-  tfQuickRow: {
-    display: 'flex',
-    gap: 4,
-  },
-  tfQuickBtn: {
-    padding: '4px 8px',
-    borderRadius: 5,
-    border: '1px solid',
-    cursor: 'pointer',
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: '0.04em',
-    transition: 'all 0.15s',
-    lineHeight: 1,
-  },
-  mainArea: {
-    display: 'flex',
+  sep: { width: 1, height: 20, background: 'rgba(255,255,255,0.1)' },
+  logo: { fontSize: 18, color: '#3B82F6', textShadow: '0 0 12px rgba(59,130,246,0.6)' },
+  title: { fontSize: 14, fontWeight: 700, color: '#f8fafc', letterSpacing: '0.03em' },
+  hint: { fontSize: 11, color: 'rgba(148,163,184,0.6)', letterSpacing: '0.02em', background: '#ffffff0a', padding: '4px 10px', borderRadius: 12 },
+
+  workspace: {
     flex: 1,
-    overflow: 'hidden',
-    position: 'relative',
+    width: '100%',
+    height: '100%',
+    position: 'relative'
   },
-  canvasWrap: {
-    flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  layerPanel: {
-    padding: 12,
-    flexShrink: 0,
-    display: 'flex',
-    alignItems: 'flex-start',
-    paddingTop: 14,
-    background: 'rgba(8,10,18,0.8)',
-    borderLeft: '1px solid rgba(255,255,255,0.05)',
-  },
-  helpBadge: {
+
+  dotGrid: {
     position: 'absolute',
-    bottom: 16,
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundImage: `radial-gradient(circle at 2px 2px, rgba(255,255,255,0.06) 1px, transparent 0)`,
+    backgroundSize: '40px 40px',
+    pointerEvents: 'none', // Don't block interactions
+    zIndex: -2,
+  },
+
+  zoomControls: {
+    position: 'absolute',
+    bottom: 32,
     left: '50%',
     transform: 'translateX(-50%)',
-    background: 'rgba(0,0,0,0.6)',
+    display: 'flex',
+    gap: 8,
+    zIndex: 100,
+    background: 'rgba(16, 20, 31, 0.8)',
+    padding: 6,
+    borderRadius: 8,
     border: '1px solid rgba(255,255,255,0.08)',
-    color: '#4a5480',
-    fontSize: 11,
-    padding: '5px 14px',
-    borderRadius: 20,
-    pointerEvents: 'none',
-    animation: 'fadeOut 5s forwards',
+    backdropFilter: 'blur(10px)',
   },
-  canvasOverlay: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
-    pointerEvents: 'none',
-  },
-};
-
-const summaryStyles = {
-  wrap: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-  },
-  row: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 5,
-  },
-  tfTag: {
-    fontSize: 9,
-    color: '#3a4160',
-    fontWeight: 700,
-    letterSpacing: '0.06em',
-    minWidth: 24,
-  },
-  typeBadge: {
-    fontSize: 8,
-    fontWeight: 700,
-    letterSpacing: '0.08em',
-    padding: '2px 5px',
-    borderRadius: 3,
-    border: '1px solid',
-    lineHeight: 1,
-  },
+  zBtn: {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    color: '#fff',
+    padding: '6px 14px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 'bold',
+  }
 };

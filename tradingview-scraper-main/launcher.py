@@ -428,11 +428,11 @@ class DashboardLauncher:
             C_GREEN,
         )
 
-        # Poll for readiness, then open canvas
+        # Poll for readiness, then open chart (localhost:3000)
         self._stop_frontend_poll.clear()
         threading.Thread(
             target=self._poll_ready,
-            args=(URL_FRONTEND, "frontend", self._stop_frontend_poll, URL_CANVAS),
+            args=(URL_FRONTEND, "frontend", self._stop_frontend_poll, URL_FRONTEND),
             kwargs={"timeout_s": 120},
             daemon=True,
         ).start()
@@ -503,14 +503,35 @@ class DashboardLauncher:
     # ── Start All / Stop All ──────────────────────────────────────────────────
 
     def _start_all(self):
-        """Start Backend → Frontend → Intel in sequence with brief gaps."""
+        """Start Backend → Frontend → Intel strictly sequentially based on port readiness."""
         def _seq():
+            # 1. Start Backend
             if self.process_backend is None or self.process_backend.poll() is not None:
                 self.root.after(0, self._start_backend)
-            time.sleep(1)
+                
+            # Block until backend responds or timeout (approx 30s)
+            self._log_ts("Waiting for backend to become ready...\n", C_YELLOW)
+            for _ in range(30):
+                if _http_ok(URL_BACKEND):
+                    break
+                time.sleep(1)
+            else:
+                self._log_ts("WARN  Backend startup timeout, proceeding anyway...\n", C_ORANGE)
+
+            # 2. Start Frontend
             if self.process_frontend is None or self.process_frontend.poll() is not None:
                 self.root.after(0, self._start_frontend)
-            time.sleep(1)
+                
+            # Block until frontend responds or timeout (CRA can take longer, e.g. 60-90s)
+            self._log_ts("Waiting for frontend to become ready...\n", C_YELLOW)
+            for _ in range(90):
+                if _http_ok(URL_FRONTEND):
+                    break
+                time.sleep(1)
+            else:
+                self._log_ts("WARN  Frontend startup timeout, proceeding anyway...\n", C_ORANGE)
+
+            # 3. Start Intel Engine
             if self.process_intel is None or self.process_intel.poll() is not None:
                 self.root.after(0, self._start_intel)
 
@@ -539,4 +560,6 @@ class DashboardLauncher:
 if __name__ == "__main__":
     root = tk.Tk()
     app  = DashboardLauncher(root)
+    if "--auto" in sys.argv:
+        app._start_all()
     root.mainloop()

@@ -1,0 +1,130 @@
+//@version=5
+indicator("Consolidation Zones [Antigravity]", overlay=true, max_boxes_count=500)
+
+// ── Inputs ───────────────────────────────────────────────────────────────
+lookback_min = input.int(10, title="Lookback Min", group="Lookback Window")
+lookback_max = input.int(30, title="Lookback Max", group="Lookback Window")
+atr_length = input.int(14, title="ATR Length", group="Volatility Filter")
+atr_multiplier = input.float(1.5, title="ATR Multiplier", group="Volatility Filter")
+overlap_threshold = input.float(0.6, title="Overlap Threshold", group="Structure Filter")
+body_threshold = input.float(0.7, title="Strong Body Threshold", group="Structure Filter")
+min_consolidation_candles = input.int(8, title="Min Consolidation Candles", group="Restrictions")
+
+// Use max_consolidation_candles for general bounding, we'll bound our loop by lookback_max.
+// ─────────────────────────────────────────────────────────────────────────────
+
+float atr = ta.atr(atr_length)
+
+// Core Detection Function: Check window bounds and constraints
+f_is_consolidation(int window) =>
+    float top = ta.highest(high, window)
+    float bottom = ta.lowest(low, window)
+    float zone_range = top - bottom
+    
+    // 1. ATR Filter
+    bool isLowVolatility = zone_range < (atr_multiplier * atr)
+    
+    // 2. Overlap Detection
+    int overlapCount = 0
+    for i = 1 to window - 1
+        float prevHigh = high[i]
+        float prevLow = low[i]
+        float currHigh = high[i-1]
+        float currLow = low[i-1]
+        
+        if currLow <= prevHigh and currHigh >= prevLow
+            overlapCount += 1
+            
+    float overlapRatio = overlapCount / window
+    bool isOverlapping = overlapRatio > overlap_threshold
+    
+    // 3. Strong Candle Filter
+    int strongCount = 0
+    for i = 0 to window - 1
+        float body = math.abs(close[i] - open[i])
+        float rangeCandle = high[i] - low[i]
+        // Guard against zero-division for perfectly flat candles or dojis
+        if rangeCandle > 0 and body > (body_threshold * rangeCandle)
+            strongCount += 1
+            
+    bool isWeakStructure = strongCount < (window * 0.3)
+    
+    // Final Validations
+    bool valid = isLowVolatility and isOverlapping and isWeakStructure and window >= min_consolidation_candles
+    [valid, top, bottom]
+
+// ── Drawing Logic ────────────────────────────────────────────────────────────
+var box[] active_boxes = array.new_box()
+
+bool found_new_zone = false
+int best_window = 0
+float best_top = na
+float best_bottom = na
+
+// Scanning logic execution (Scan backwards to find largest valid zone)
+// TradingView requires explicit bar processing. We process every bar once closed.
+if barstate.isconfirmed
+    for w = lookback_max to lookback_min
+        [valid, top, bottom] = f_is_consolidation(w)
+        if valid
+            found_new_zone := true
+            best_window := w
+            best_top := top
+            best_bottom := bottom
+            break // Break early to preserve the largest valid window found
+            
+    if found_new_zone
+        int start_index = bar_index - best_window
+        int end_index = bar_index
+        
+        bool overlaps_past = false
+        // Determine whether to extend an existing box or create a new one
+        if array.size(active_boxes) > 0
+            box bg = array.last(active_boxes)
+            int bg_right = box.get_right(bg)
+            
+            // If the start index overlaps with the timeline of our last box, extend it.
+            if start_index <= bg_right
+                overlaps_past := true
+                box.set_right(bg, end_index)
+                
+                // Optional: Adjust top and bottom boundaries to encapsulate slight wicks naturally during extension
+                box.set_top(bg, math.max(box.get_top(bg), best_top))
+                box.set_bottom(bg, math.min(box.get_bottom(bg), best_bottom))
+        
+        if not overlaps_past
+            // Draw an entirely new box
+            box b = box.new(
+                 left=start_index, 
+                 right=end_index, 
+                 top=best_top, 
+                 bottom=best_bottom, 
+                 border_color=color.blue, 
+                 bgcolor=color.new(color.blue, 85)
+             )
+            array.push(active_boxes, b)
+
+// ── Alerts & Breakouts ───────────────────────────────────────────────────────
+// We establish traps/breakouts logically based off active boxes memory.
+
+float last_top = na
+float last_bottom = na
+if array.size(active_boxes) > 0
+    box bg = array.last(active_boxes)
+    last_top := box.get_top(bg)
+    last_bottom := box.get_bottom(bg)
+
+// Breakout Checks
+bool bullishBreakout = close > last_top and close[1] <= last_top
+bool bearishBreakout = close < last_bottom and close[1] >= last_bottom
+
+// Trap Detection
+// Interpretation of explicit rules: a trap handles cases where a breakout happens intra-bar or preceding bar but immediately closes contrary inside.
+bool trapUp = (high > last_top and close < last_top) or (close[1] > last_top and close < last_top)
+bool trapDown = (low < last_bottom and close > last_bottom) or (close[1] < last_bottom and close > last_bottom)
+
+// Alert hooks for UI or external systems
+alertcondition(bullishBreakout, title="Bullish Breakout", message="Price closing robustly above consolidation top")
+alertcondition(bearishBreakout, title="Bearish Breakout", message="Price closing robustly below consolidation bottom")
+alertcondition(trapUp, title="Bull Trap", message="Price spiked above consolidation top but rejected/closed within")
+alertcondition(trapDown, title="Bear Trap", message="Price spiked below consolidation bottom but rejected/closed within")
