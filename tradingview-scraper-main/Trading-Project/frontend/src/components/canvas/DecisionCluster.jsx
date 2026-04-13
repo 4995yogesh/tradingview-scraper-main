@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ChartWidget from '../chart/ChartWidget';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
+import { useTransformContext } from 'react-zoom-pan-pinch';
 
 const BIAS_COLORS = {
   base: '#3B82F6',   // Blue
@@ -18,9 +19,19 @@ export default function DecisionCluster({ cluster }) {
 
   const mainNode = nodes.find(n => n.type === 'main');
 
+  // Read live canvas scale from react-zoom-pan-pinch context
+  const { transformState } = useTransformContext();
+
+  // Live tick: increment every 30s so canvas charts auto-update
+  const [liveTickKey, setLiveTickKey] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setLiveTickKey(k => k + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const handlePointerDown = (e) => {
     e.stopPropagation();
-    e.preventDefault(); // prevent pan
+    e.preventDefault();
     const target = e.currentTarget;
     target.setPointerCapture(e.pointerId);
 
@@ -29,20 +40,10 @@ export default function DecisionCluster({ cluster }) {
     const initialX = cluster.x;
     const initialY = cluster.y;
 
-    const getScale = () => {
-      const wrapper = document.querySelector('.react-transform-component');
-      if (!wrapper) return 1;
-      const style = window.getComputedStyle(wrapper.firstElementChild);
-      if (style.transform && style.transform !== 'none') {
-        return parseFloat(style.transform.split('(')[1].split(',')[0]);
-      }
-      return 1;
-    };
-
     const pointerMove = (ev) => {
-      const scale = getScale();
-      const dx = (ev.clientX - startX) / (scale || 1);
-      const dy = (ev.clientY - startY) / (scale || 1);
+      const scale = transformState.scale || 1;
+      const dx = (ev.clientX - startX) / scale;
+      const dy = (ev.clientY - startY) / scale;
       setClusterPosition(cluster.id, initialX + dx, initialY + dy);
     };
 
@@ -74,6 +75,7 @@ export default function DecisionCluster({ cluster }) {
           forkNode={forkNode} 
           removeFork={removeFork} 
           cluster={cluster} 
+          liveTickKey={liveTickKey}
         />
       ))}
 
@@ -111,7 +113,7 @@ const STATIC_CHART_SETTINGS = {
   gridColor: 'rgba(255, 255, 255, 0.05)',
 };
 
-function ChartBoxContainer({ node, forkNode, removeFork, cluster }) {
+function ChartBoxContainer({ node, forkNode, removeFork, cluster, liveTickKey }) {
   const boxRef = React.useRef(null);
   const isMain = node.type === 'main';
   
@@ -181,6 +183,9 @@ function ChartBoxContainer({ node, forkNode, removeFork, cluster }) {
           timeframe={cluster.tf} 
           chartType="candlestick" 
           chartSettings={STATIC_CHART_SETTINGS}
+          isSubchart={!isMain}
+          liveTickKey={liveTickKey}
+          initialBars={isMain ? 60 : 30}
         />
       </div>
       

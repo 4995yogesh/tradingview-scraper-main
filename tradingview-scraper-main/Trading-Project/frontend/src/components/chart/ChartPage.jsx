@@ -263,9 +263,9 @@ const ChartPage = () => {
 
     return (
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-1 px-2 py-1 bg-[#131722E0] border-b border-[#2A2E39]" onClick={e => e.stopPropagation()}>
-        <span className="text-[11px] font-semibold text-white">{FIXED_SYMBOL}</span>
+        <span className="text-[6px] font-semibold text-white">{FIXED_SYMBOL}</span>
         <div className="relative">
-          <button onClick={() => { setShowTf(!showTf); setShowInput(false); }} className="text-[10px] text-[#787B86] hover:text-white bg-[#2A2E39] px-1.5 py-0.5 rounded transition-colors">
+          <button onClick={() => { setShowTf(!showTf); setShowInput(false); }} className="text-[5px] text-[#787B86] hover:text-white bg-[#2A2E39] px-1.5 py-0.5 rounded transition-colors">
             {tfLabels[pane.timeframe] || '1D'}
           </button>
           {showTf && (
@@ -283,7 +283,7 @@ const ChartPage = () => {
         <button
           title="Type timeframe (e.g. 5, 15, 4H, D)"
           onClick={() => { setShowInput(s => !s); setShowTf(false); setTimeout(() => inputRef.current?.focus(), 50); }}
-          className="text-[9px] text-[#787B86] hover:text-[#2962FF] bg-[#1E222D] border border-[#363A45] px-1 py-0.5 rounded transition-colors"
+          className="text-[4px] text-[#787B86] hover:text-[#2962FF] bg-[#1E222D] border border-[#363A45] px-1 py-0.5 rounded transition-colors"
         >T</button>
         {showInput && (
           <input
@@ -303,7 +303,7 @@ const ChartPage = () => {
         {activeIndicators.map((ind, i) => (
           <span
             key={ind.id || i}
-            className={`text-[8px] font-bold px-1 py-0.5 rounded leading-none uppercase transition-opacity ${
+            className={`text-[4px] font-bold px-1 py-0.5 rounded leading-none uppercase transition-opacity ${
               ind.enabled ? 'opacity-100' : 'opacity-40'
             }`}
             style={{ backgroundColor: '#27a7b020', color: '#27a7b0', border: '1px solid #27a7b040' }}

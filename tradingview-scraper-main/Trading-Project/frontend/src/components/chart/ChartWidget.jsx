@@ -50,7 +50,7 @@ const sortAndDedupe = (data) => {
   return result;
 };
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, liveTickKey }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, liveTickKey, isSubchart, initialBars }, ref) => {
   const chartContainerRef = useRef(null);
   const chartRef          = useRef(null);
   const seriesRef         = useRef(null);
@@ -216,7 +216,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           return `${p.hour}:${p.minute}`;
         }
       },
-      rightPriceScale: { borderColor: chartSettings?.priceScaleColor || '#2A2E39', scaleMargins: { top: 0.05, bottom: 0.05 }, mode: logScale ? 1 : 0, visible: true, borderVisible: true, autoScale: true, entireTextOnly: false, minimumWidth: 25 },
+      rightPriceScale: { borderColor: chartSettings?.priceScaleColor || '#2A2E39', scaleMargins: { top: 0.3, bottom: 0.3 }, mode: logScale ? 1 : 0, visible: true, borderVisible: true, autoScale: true, entireTextOnly: false, minimumWidth: 25 },
       handleScroll: { vertTouchDrag: false },
     });
 
@@ -445,12 +445,25 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     onPriceUpdate?.(candleData[candleData.length - 1]);
 
     if (isFirstLoad) {
-      const INITIAL_BARS = { '1m': 100, '5m': 150, '15m': 200, '30m': 250 };
-      const initBars = INITIAL_BARS[timeframe];
-      if (initBars && candleData.length > initBars) {
-        chart.timeScale().setVisibleLogicalRange({ from: candleData.length - initBars, to: candleData.length + 3 });
+      if (initialBars) {
+        // Explicit override (e.g. canvas charts)
+        chart.timeScale().setVisibleLogicalRange({
+          from: candleData.length - initialBars,
+          to: candleData.length + 3
+        });
+      } else if (isSubchart) {
+        chart.timeScale().setVisibleLogicalRange({ 
+          from: candleData.length - 45, 
+          to: candleData.length + 3 
+        });
       } else {
-        chart.timeScale().fitContent();
+        const INITIAL_BARS = { '1m': 100, '5m': 150, '15m': 200, '30m': 250 };
+        const initBars = INITIAL_BARS[timeframe];
+        if (initBars && candleData.length > initBars) {
+          chart.timeScale().setVisibleLogicalRange({ from: candleData.length - initBars, to: candleData.length + 3 });
+        } else {
+          chart.timeScale().fitContent();
+        }
       }
     }
   }, [chartData, chartType, timeframe, onPriceUpdate]);
@@ -487,11 +500,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       {!loading && !error && (
         <button
           onClick={handleResetView}
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 px-3 py-1.5 bg-[#1E222D] hover:bg-[#2A2E39] text-[#D1D4DC] hover:text-white border border-[#363A45] rounded-full shadow-lg transition-all active:scale-95 group"
+          className={`absolute ${isSubchart ? 'bottom-2 right-2' : 'bottom-6 left-1/2 -translate-x-1/2'} z-20 flex items-center gap-1.5 ${isSubchart ? 'px-2 py-1' : 'px-3 py-1.5'} bg-[#1E222D] hover:bg-[#2A2E39] text-[#D1D4DC] hover:text-white border border-[#363A45] rounded-full shadow-lg transition-all active:scale-95 group`}
           title="Back to Latest"
         >
-          <span className="text-[11px] font-medium">Latest</span>
-          <ChevronsRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+          <span className={`${isSubchart ? 'text-[9px]' : 'text-[11px]'} font-medium`}>Latest</span>
+          <ChevronsRight size={isSubchart ? 10 : 14} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
       )}
     </div>

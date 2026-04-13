@@ -26,15 +26,14 @@ export default function InfiniteCanvasPage() {
       {/* ── Infinite Workspace ── */}
       <div style={s.workspace}>
         <TransformWrapper
-          initialScale={0.3}
-          initialPositionX={200}
-          initialPositionY={100}
+          initialScale={0.2}
+          centerOnInit={true}
           minScale={0.05}
           maxScale={2}
           centerZoomedOut={false}
           wheel={{ step: 0.0005, smoothStep: 0.0002 }}
-          panning={{ velocityMultiplier: 0.5, excluded: ['chart-box', 'tv-lightweight-charts'] }}
-          doubleClick={{ disabled: true }} // allow chart double clicking independently
+          panning={{ velocityMultiplier: 0.5, excluded: ['tv-lightweight-charts'] }}
+          doubleClick={{ disabled: true }}
         >
           {({ zoomIn, zoomOut, resetTransform }) => (
             <>

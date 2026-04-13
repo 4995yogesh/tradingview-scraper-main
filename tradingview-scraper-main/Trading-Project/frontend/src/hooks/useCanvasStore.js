@@ -7,11 +7,11 @@ function generateId() {
 
 // Initial predefined clusters and their locations on the infinite plane
 const INITIAL_CLUSTERS = [
-  { id: 'cluster_4h', tf: '4h', x: 0, y: 0 },
-  { id: 'cluster_1h', tf: '1h', x: 0, y: 1000 },
-  { id: 'cluster_15m', tf: '15m', x: 0, y: 2000 },
-  { id: 'cluster_5m', tf: '5m', x: 0, y: 3000 },
-  { id: 'cluster_1m', tf: '1m', x: 0, y: 4000 },
+  { id: 'cluster_4h',  tf: '4h',  x: 6200,  y: 9500 },
+  { id: 'cluster_1h',  tf: '1h',  x: 8100,  y: 9500 },
+  { id: 'cluster_15m', tf: '15m', x: 10000, y: 9500 },
+  { id: 'cluster_5m',  tf: '5m',  x: 11900, y: 9500 },
+  { id: 'cluster_1m',  tf: '1m',  x: 13800, y: 9500 },
 ];
 
 const INITIAL_NODES = INITIAL_CLUSTERS.map(c => ({
@@ -60,7 +60,7 @@ export const useCanvasStore = create(
 
       removeFork: (nodeId) => {
         set(state => ({
-          nodes: state.nodes.filter(n => n.id !== nodeId && n.type !== 'main') // prevent deleting main
+          nodes: state.nodes.filter(n => n.id !== nodeId || n.type === 'main') // prevent deleting main
         }));
       },
 
@@ -74,7 +74,7 @@ export const useCanvasStore = create(
 
     }),
     {
-      name: 'canvas-storage-v4', // bump version to reset layout
+      name: 'canvas-storage-v7', // bumped to reset corrupted state
     }
   )
 );
