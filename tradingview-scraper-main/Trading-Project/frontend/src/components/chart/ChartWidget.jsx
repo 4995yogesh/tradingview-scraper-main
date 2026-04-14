@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
-import { createChart, CandlestickSeries, LineSeries, AreaSeries, BarSeries } from 'lightweight-charts';
+import { createChart, CandlestickSeries, LineSeries, AreaSeries, BarSeries, BaselineSeries } from 'lightweight-charts';
 import { fetchLiveCandles } from '../../data/chartData';
 import { ChevronsRight } from 'lucide-react';
 import {
-  aggregateCandles, detectSwings, getHigherTfs, saveSwingsToMemory,
-  normalizeTimeForChart,
+  aggregateCandles, detectSwings, getHigherTfs, ALL_TFS,
+  normalizeTimeForChart, TF_COLORS, FILLED_COLOR,
 } from '../../lib/swingLevels';
 
 // Sensible number of bars to fetch per timeframe so candles are visible at the initial zoom
@@ -33,7 +33,6 @@ const TF_BAR_SPACING = {
   '1M':  14,
 };
 
-// Sort ascending by time, then remove duplicates
 const sortAndDedupe = (data) => {
   if (!data || data.length === 0) return [];
   const sorted = [...data].sort((a, b) => {
@@ -50,12 +49,45 @@ const sortAndDedupe = (data) => {
   return result;
 };
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, liveTickKey, isSubchart, initialBars }, ref) => {
-  const chartContainerRef = useRef(null);
-  const chartRef          = useRef(null);
-  const seriesRef         = useRef(null);
-  const isLoadingMoreRef  = useRef(false);
-  const swingSeriesRef    = useRef([]); // tracks active LineSeries swing segments for cleanup
+// Fast O(1) merge for live tick appending (skips sorting entirely if strictly newer)
+const fastMergeSort = (older, newer) => {
+  if (!older?.length) return newer;
+  if (!newer?.length) return older;
+
+  const lastOld = older[older.length - 1].time;
+  const firstNew = newer[0].time;
+
+  // Optimized append-only
+  if (firstNew > lastOld) return older.concat(newer);
+  
+  // Optimized single-item overwrite
+  if (newer.length === 1 && newer[0].time === lastOld) {
+    const copy = [...older];
+    copy[copy.length - 1] = newer[0];
+    return copy;
+  }
+
+  // Fallback map + sort for messy overlap (scroll loading)
+  const map = new Map();
+  for (let i = 0; i < older.length; i++) map.set(older[i].time, older[i]);
+  for (let i = 0; i < newer.length; i++) map.set(newer[i].time, newer[i]);
+  
+  const merged = Array.from(map.values());
+  merged.sort((a, b) => {
+    const ta = typeof a.time === 'string' ? a.time : Number(a.time);
+    const tb = typeof b.time === 'string' ? b.time : Number(b.time);
+    return ta < tb ? -1 : ta > tb ? 1 : 0;
+  });
+  return merged;
+};
+
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, liveTickKey, isSubchart, initialBars }, ref) => {
+  const chartContainerRef      = useRef(null);
+  const chartRef               = useRef(null);
+  const seriesRef              = useRef(null);
+  const isLoadingMoreRef       = useRef(false);
+  const swingSeriesRef         = useRef([]); // swing level LineSeries
+  const consolidationSeriesRef = useRef([]); // consolidation box series
   const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
 
   const [chartData, setChartData] = useState(null);
@@ -142,20 +174,9 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         if (latest && latest.candleData.length > 0) {
           setChartData(prev => {
             if (!prev) return latest;
-            const mergeSort = (older, newer) => {
-              const olderMap = new Map(older.map(c => [c.time, c]));
-              newer.forEach(c => olderMap.set(c.time, c)); // overwrite or append
-              const merged = Array.from(olderMap.values());
-              merged.sort((a, b) => {
-                const ta = typeof a.time === 'string' ? a.time : Number(a.time);
-                const tb = typeof b.time === 'string' ? b.time : Number(b.time);
-                return ta < tb ? -1 : ta > tb ? 1 : 0;
-              });
-              return merged;
-            };
             return {
-              candleData: mergeSort(prev.candleData, latest.candleData),
-              volumeData: mergeSort(prev.volumeData, latest.volumeData)
+              candleData: fastMergeSort(prev.candleData, latest.candleData),
+              volumeData: fastMergeSort(prev.volumeData, latest.volumeData)
             };
           });
         }
@@ -174,8 +195,9 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       chartRef.current = null;
     }
 
-    // Clear swing series reference since the chart (and all its series) is destroyed
+    // Clear indicator series refs since the chart (and all its series) is destroyed
     swingSeriesRef.current = [];
+    consolidationSeriesRef.current = [];
 
     const container = chartContainerRef.current;
     const bg = chartSettings?.background || '#131722';
@@ -286,16 +308,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           const oldestTime = currentData.candleData[0].time;
           const newData = await fetchLiveCandles(symbol, timeframe, TF_CANDLE_COUNT[timeframe] || 500, oldestTime);
           if (newData.candleData.length > 0) {
-            const mergeSort = (older, newer) => {
-              const merged = [...older, ...newer];
-              merged.sort((a, b) => {
-                const ta = typeof a.time === 'string' ? a.time : Number(a.time);
-                const tb = typeof b.time === 'string' ? b.time : Number(b.time);
-                return ta < tb ? -1 : ta > tb ? 1 : 0;
-              });
-              return merged.filter((c, i, arr) => i === 0 || c.time !== arr[i - 1].time);
-            };
-            setChartData(prev => ({ candleData: mergeSort(newData.candleData, prev.candleData), volumeData: mergeSort(newData.volumeData, prev.volumeData) }));
+            setChartData(prev => ({ 
+              candleData: fastMergeSort(newData.candleData, prev.candleData), 
+              volumeData: fastMergeSort(newData.volumeData, prev.volumeData) 
+            }));
           }
         } finally {
           setTimeout(() => { isLoadingMoreRef.current = false; }, 500);
@@ -306,124 +322,269 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
   useEffect(() => { initChart(); }, [initChart]);
 
-  // ── Consolidation Boxes Drawing ─────────────
+  // ── Fetch Consolidation Zones + Swing Levels from backend ─────────────────
   const [consolidations, setConsolidations] = useState([]);
+  const [swingLevels, setSwingLevels]       = useState([]);
 
   useEffect(() => {
-    let interval;
-    const fetchConsolidations = async () => {
+    let iv;
+    const poll = async () => {
       try {
-        const res = await fetch('http://localhost:8001/consolidations');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.status === 'ok') {
-          // Deep compare to prevent infinite re-renders or state churn if needed,
-          // but React will handle new state identities correctly with useEffect dependencies.
-          setConsolidations(data.zones || []);
+        const [cRes, sRes] = await Promise.all([
+          fetch('http://localhost:8000/consolidations'),
+          fetch('http://localhost:8000/swings'),
+        ]);
+        if (cRes.ok) {
+          const d = await cRes.json();
+          if (d.status === 'ok') {
+            setConsolidations(prev => JSON.stringify(prev) === JSON.stringify(d.zones) ? prev : (d.zones || []));
+          }
         }
-      } catch (err) {}
+        if (sRes.ok) {
+          const d = await sRes.json();
+          if (d.status === 'ok') {
+            setSwingLevels(prev => JSON.stringify(prev) === JSON.stringify(d.swings) ? prev : (d.swings || []));
+          }
+        }
+      } catch (_) {}
     };
-
-    fetchConsolidations();
-    interval = setInterval(fetchConsolidations, 5000);
-    return () => clearInterval(interval);
+    poll();
+    iv = setInterval(poll, 10000);
+    return () => clearInterval(iv);
   }, []);
 
+  // ── Consolidation Boxes Drawing ───────────────────────────────────────────
   useEffect(() => {
     const chart = chartRef.current;
-    if (!chart || !chartData?.candleData?.length) return;
+    consolidationSeriesRef.current.forEach(s => { try { chart?.removeSeries(s); } catch {} });
+    consolidationSeriesRef.current = [];
 
-    // Remove previous boxes before redrawing
-    swingSeriesRef.current.forEach(s => {
-      try { chart.removeSeries(s); } catch { /* stale */ }
+    if (!chart || !chartDataRef.current?.candleData?.length || !consolidationSettings?.enabled) return;
+
+    const candles  = chartDataRef.current.candleData;
+    const getUnix  = (t) => typeof t === 'string' ? new Date(t).getTime() / 1000 : Number(t);
+    const normTf   = (tf) => tf.toLowerCase();
+    const lastUnix = getUnix(candles[candles.length - 1].time);
+    const chartTf  = normTf(timeframe);
+
+    // Same TF filter logic as swing indicator:
+    // Show consolidation zones from same TF or any higher TF, except:
+    //   - Skip 15m zones on 5m chart
+    //   - Skip 5m zones on 1m chart
+    const chartTfIdx = ALL_TFS.indexOf(chartTf);
+    const zones = consolidations.filter(z => {
+      const ztf = normTf(z.timeframe);
+      if (chartTf === '5m' && ztf === '15m') return false;
+      if (chartTf === '1m' && ztf === '5m')  return false;
+      const ztfIdx = ALL_TFS.indexOf(ztf);
+      return ztfIdx !== -1 && ztfIdx <= chartTfIdx;
     });
-    swingSeriesRef.current = [];
+    if (!zones.length) return;
 
-    const candles = chartData.candleData;
-    const timeMap = new Set(candles.map(c => c.time));
-
-    // Snap target ms to the nearest real chart Unix time
-    const snapToLtf = (unixSec) => {
-      let nearest = null;
-      let minDiff = Infinity;
-      for (const c of candles) {
-        const diff = Math.abs(c.time - unixSec);
-        if (diff < minDiff) { minDiff = diff; nearest = c.time; }
-      }
-      return nearest || unixSec;
+    // Pre-build sorted unix-second array once — reused for all O(log N) lookups
+    const unixArr    = candles.map(c => getUnix(c.time));
+    const bisectLeft = (arr, target) => {
+      let lo = 0, hi = arr.length;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (arr[mid] < target) lo = mid + 1; else hi = mid; }
+      return lo;
+    };
+    const snapToChart = (unixSec) => {
+      if (!unixArr.length) return null;
+      const idx = bisectLeft(unixArr, unixSec);
+      if (idx === 0) return candles[0].time;
+      if (idx >= unixArr.length) return candles[candles.length - 1].time;
+      const before = unixArr[idx - 1], after = unixArr[idx];
+      return (unixSec - before <= after - unixSec) ? candles[idx - 1].time : candles[idx].time;
     };
 
-    // Normalize: backend uses "1H"/"4H", frontend uses "1h"/"4h"
-    const normTf = (tf) => tf.toLowerCase();
-    const zones = consolidations.filter(z => normTf(z.timeframe) === normTf(timeframe));
-
     zones.forEach(zone => {
-      const startSec = Math.floor(zone.timeStart / 1000);
-      const endSec = Math.floor(zone.timeEnd / 1000);
+      const startUnix = Math.floor(zone.timeStart / 1000);
+      const endUnix   = Math.floor(zone.timeEnd   / 1000);
 
-      const t1 = snapToLtf(startSec);
-      const t2 = snapToLtf(endSec);
-      if (t1 === t2) return;
+      const t1 = snapToChart(startUnix);
+      // Extend to current bar if zone is still active
+      const t2 = endUnix >= lastUnix ? candles[candles.length - 1].time : snapToChart(endUnix);
+      if (!t1 || !t2 || t1 === t2) return;
 
-      const s1 = Math.min(t1, t2);
-      const s2 = Math.max(t1, t2);
+      const s1 = Math.min(getUnix(t1), getUnix(t2));
+      const s2 = Math.max(getUnix(t1), getUnix(t2));
 
-      const validPoints = candles.filter(c => c.time >= s1 && c.time <= s2).map(c => c.time);
-      if (validPoints.length < 2) return;
+      const lo     = bisectLeft(unixArr, s1);
+      const hi     = bisectLeft(unixArr, s2 + 1);
+      const points = candles.slice(lo, hi).map(c => c.time);
+      if (points.length < 2) return;
 
       try {
-        // Top border line
+        // ── Style: light-blue borders (1px thin), solid light-blue fill ──────
+        const borderColor = 'rgba(144, 202, 249, 0.85)';  // #90CAF9
+        const fillColor   = 'rgba(144, 202, 249, 0.15)';
+
         const topLine = chart.addSeries(LineSeries, {
-          color: 'rgba(41, 98, 255, 0.9)',
-          lineWidth: 2,
-          lineStyle: 0,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          crosshairMarkerVisible: false,
+          color: borderColor, lineWidth: 1, lineStyle: 0,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
-
-        // Bottom border line
         const botLine = chart.addSeries(LineSeries, {
-          color: 'rgba(41, 98, 255, 0.9)',
-          lineWidth: 2,
-          lineStyle: 0,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          crosshairMarkerVisible: false,
+          color: borderColor, lineWidth: 1, lineStyle: 0,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
 
-        // Fill line — horizontal line at mid, used with area fill trick
-        // Draw mid-price flat line spanning zone width as shaded band
-        const midFill = chart.addSeries(AreaSeries, {
-          topColor: 'rgba(41, 98, 255, 0.12)',
-          bottomColor: 'rgba(41, 98, 255, 0.03)',
-          lineColor: 'transparent',
+        topLine.setData(points.map(t => ({ time: t, value: zone.priceHigh })));
+        botLine.setData(points.map(t => ({ time: t, value: zone.priceLow  })));
+
+        // Solid uniform fill — baseValue at priceLow, data at priceHigh
+        // → entire zone height is "above baseline" → full fill top-to-bottom
+        const fillArea = chart.addSeries(BaselineSeries, {
+          baseValue:        { type: 'price', price: zone.priceLow },
+          topLineColor:     'transparent',
+          topFillColor1:    fillColor,
+          topFillColor2:    fillColor,
+          bottomLineColor:  'transparent',
+          bottomFillColor1: 'transparent',
+          bottomFillColor2: 'transparent',
           lineWidth: 0,
-          priceLineVisible: false,
-          lastValueVisible: false,
-          crosshairMarkerVisible: false,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
+        fillArea.setData(points.map(t => ({ time: t, value: zone.priceHigh })));
 
-        const topData = validPoints.map(t => ({ time: t, value: zone.priceHigh }));
-        const botData = validPoints.map(t => ({ time: t, value: zone.priceLow }));
-
-        topLine.setData(topData);
-        botLine.setData(botData);
-        midFill.setData(topData); // AreaSeries fills DOWN from priceHigh; gives a subtle shade
-
-        swingSeriesRef.current.push(topLine, botLine, midFill);
+        consolidationSeriesRef.current.push(topLine, botLine, fillArea);
       } catch (e) {
-        console.warn('Failed drawing consolidation box:', e);
+        console.warn('Consolidation box draw error:', e);
       }
     });
 
     return () => {
-      swingSeriesRef.current.forEach(s => {
-        try { chartRef.current?.removeSeries(s); } catch {}
-      });
+      consolidationSeriesRef.current.forEach(s => { try { chartRef.current?.removeSeries(s); } catch {} });
+      consolidationSeriesRef.current = [];
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consolidations, timeframe, chartKey, consolidationSettings?.enabled]);
+
+
+
+  // ── Swing Levels Drawing ──────────────────────────────────────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    swingSeriesRef.current.forEach(s => { try { chart?.removeSeries(s); } catch {} });
+    swingSeriesRef.current = [];
+
+    if (!chart || !chartDataRef.current?.candleData?.length || !swingSettings?.enabled) return;
+
+    const candles    = chartDataRef.current.candleData;
+    const settings   = swingSettings.settings || {};
+    const tfSettings = settings.tfs || {};
+    const getUnix    = (t) => typeof t === 'string' ? new Date(t).getTime() / 1000 : Number(t);
+    const normTf     = (tf) => tf.toLowerCase();
+
+    // Pre-build sorted unix array for O(log N) binary search
+    const unixArr    = candles.map(c => getUnix(c.time));
+    const bisectLeft = (arr, target) => {
+      let lo = 0, hi = arr.length;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (arr[mid] < target) lo = mid + 1; else hi = mid; }
+      return lo;
+    };
+
+    // RULE 1: only show swing if its TF <= chart TF (same or higher timeframe, not lower)
+    const chartTfIdx = ALL_TFS.indexOf(normTf(timeframe));
+    const enabledTfs = Object.entries(tfSettings)
+      .filter(([, cfg]) => cfg.enabled !== false)
+      .map(([tf]) => tf);
+
+    const relevantSwings = swingLevels.filter(sw => {
+      const swTf = normTf(sw.timeframe);
+      if (enabledTfs.length > 0 && !enabledTfs.includes(swTf)) return false;
+      
+      const chartTf = normTf(timeframe);
+      if (chartTf === '5m' && swTf === '15m') return false;
+      if (chartTf === '1m' && swTf === '5m') return false;
+      
+      const swTfIdx = ALL_TFS.indexOf(swTf);
+      // swTfIdx <= chartTfIdx: 1h(3) on 15m(4) → 3<=4 ✓ | 1h(3) on 4h(2) → 3<=2 ✗
+      return swTfIdx !== -1 && swTfIdx <= chartTfIdx;
+    });
+
+    // RULE 2 – HTF DOMINANCE: if an LTF swing is within 0.02% of an HTF swing price,
+    // suppress the LTF swing entirely (HTF line wins at that level).
+    // HTF = lower ALL_TFS index (e.g. '1h' idx=3 beats '5m' idx=5).
+    const PROX_PCT = 0.0002; // 0.02% proximity threshold
+    // Build set of HTF prices per type (type → array of prices)
+    const htfPrices = { high: [], low: [] };
+    for (const sw of relevantSwings) {
+      const idx = ALL_TFS.indexOf(normTf(sw.timeframe));
+      if (idx < chartTfIdx) {              // strictly higher TF than chart
+        htfPrices[sw.type]?.push(sw.price);
+      }
+    }
+    const isNearHTF = (price, type) =>
+      (htfPrices[type] || []).some(p => Math.abs(price - p) / p < PROX_PCT);
+
+    const dedupedSwings = relevantSwings.filter(sw => {
+      const idx = ALL_TFS.indexOf(normTf(sw.timeframe));
+      if (idx === chartTfIdx) return true;
+      if (idx < chartTfIdx) return true;
+      return !isNearHTF(sw.price, sw.type);
+    });
+
+    // Backend already computed 3+3 per TF. Just render active unmitigated + mitigated.
+    dedupedSwings.forEach(sw => {
+      // Skip unmitigated non-active swings (backend omits them, but guard here too)
+      // active → extend to latest | inactive unmitigated → 5-bar stub | mitigated → showMitigated toggle
+      if (sw.mitigated && !(settings.showMitigated ?? false)) return;
+
+      const color     = tfSettings[normTf(sw.timeframe)]?.color || TF_COLORS[normTf(sw.timeframe)] || '#888';
+      const swUnixSec = Math.floor(sw.time_ms / 1000);
+
+      const startIdx = bisectLeft(unixArr, swUnixSec);
+      if (startIdx >= candles.length) return;
+
+      // 3-state line length:
+      // active unmitigated   → extend to latest candle
+      // inactive unmitigated → short 5-bar stub at pivot
+      // mitigated            → terminate at mitigation candle
+      let endIdx;
+      if (sw.active) {
+        endIdx = candles.length - 1;
+      } else if (!sw.mitigated) {
+        // short stub: pivot candle + next 5 bars
+        endIdx = Math.min(startIdx + 5, candles.length - 1);
+      } else {
+        // mitigated: scan for fill candle
+        endIdx = candles.length - 1;
+        let movedAway = false;
+        for (let i = startIdx + 1; i < candles.length; i++) {
+          const c = candles[i];
+          if (sw.type === 'high') {
+            if (!movedAway && c.low  < sw.price)  movedAway = true;
+            if ( movedAway && c.high >= sw.price) { endIdx = i; break; }
+          } else {
+            if (!movedAway && c.high > sw.price)   movedAway = true;
+            if ( movedAway && c.low  <= sw.price)  { endIdx = i; break; }
+          }
+        }
+      }
+
+      const pts = candles.slice(startIdx, endIdx + 1).map(c => ({
+        time:  normalizeTimeForChart(getUnix(c.time), timeframe),
+        value: sw.price,
+      }));
+      if (pts.length < 2) return;
+
+      try {
+        const s = chart.addSeries(LineSeries, {
+          color, lineWidth: 1, lineStyle: 0,
+          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+        });
+        s.setData(pts);
+        swingSeriesRef.current.push(s);
+      } catch (_) {}
+    });
+
+    return () => {
+      swingSeriesRef.current.forEach(s => { try { chartRef.current?.removeSeries(s); } catch {} });
       swingSeriesRef.current = [];
     };
-  }, [chartData, consolidations, timeframe, chartKey]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [swingLevels, timeframe, chartKey, swingSettings?.enabled, swingSettings?.settings, swingSettings?.settings?.showMitigated]);
+
 
   // Seamless Data Updates
   useEffect(() => {
@@ -457,9 +618,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           to: candleData.length + 3 
         });
       } else {
-        const INITIAL_BARS = { '1m': 100, '5m': 150, '15m': 200, '30m': 250 };
-        const initBars = INITIAL_BARS[timeframe];
-        if (initBars && candleData.length > initBars) {
+        const initBars = 100;
+        if (candleData.length > initBars) {
           chart.timeScale().setVisibleLogicalRange({ from: candleData.length - initBars, to: candleData.length + 3 });
         } else {
           chart.timeScale().fitContent();

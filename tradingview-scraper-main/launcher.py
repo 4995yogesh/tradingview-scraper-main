@@ -1,15 +1,14 @@
 """
 Dashboard Launcher — TradingView Scraper
 =========================================
-Starts three services:
+Starts two services:
   • Backend   (FastAPI) → http://localhost:8000
   • Frontend  (React)   → http://localhost:3000
-  • Intel Eng (FastAPI) → http://localhost:8001
 
-Key improvements over original:
-  - Browser only opens AFTER frontend is confirmed ready (HTTP poll, not blind timer)
+Key improvements:
+  - Window appears instantly (deferred init via root.after)
+  - Browser only opens AFTER frontend is confirmed ready (HTTP poll)
   - "Open Canvas" button for manual open at any time
-  - Readiness poll across all three ports shown in status labels
   - Proper yarn/npm detection with clear error messages
   - Port-free check before each start
   - Thread-safe log coloring (INFO / WARN / ERROR prefixes)
@@ -41,8 +40,6 @@ except ImportError:
 ROOT_DIR     = os.path.dirname(os.path.abspath(__file__))
 BACKEND_DIR  = os.path.join(ROOT_DIR, "Trading-Project", "backend")
 FRONTEND_DIR = os.path.join(ROOT_DIR, "Trading-Project", "frontend")   # React/CRACO
-INTEL_DIR    = os.path.join(ROOT_DIR, "Trading-Project", "project")
-
 # Python executable (prefers .venv if present, else falls back to current interpreter)
 PYTHON_EXEC = os.path.join(ROOT_DIR, ".venv", "Scripts", "python.exe")
 if not os.path.exists(PYTHON_EXEC):
@@ -52,7 +49,6 @@ if not os.path.exists(PYTHON_EXEC):
 URL_BACKEND  = "http://localhost:8000/api/health"
 URL_FRONTEND = "http://localhost:3000"
 URL_CANVAS   = "http://localhost:3000/canvas"
-URL_INTEL    = "http://localhost:8001/health"
 
 # Colours (Dracula palette)
 C_BG       = "#1e1e2e"
@@ -121,23 +117,24 @@ class DashboardLauncher:
 
         self.process_backend  = None
         self.process_frontend = None
-        self.process_intel    = None
 
         # Readiness poll stop events
         self._stop_backend_poll  = threading.Event()
         self._stop_frontend_poll = threading.Event()
-        self._stop_intel_poll    = threading.Event()
 
         self._build_ui()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        # Defer path checks + startup logs so window appears immediately
+        self.root.after(10, self._deferred_init)
+
+    # ── Deferred init (runs after mainloop starts) ───────────────────────────
+
+    def _deferred_init(self):
         self._log("INFO  Launcher ready.\n", C_GREEN)
         self._log(f"INFO  PYTHON  → {PYTHON_EXEC}\n", C_CYAN)
         self._log(f"INFO  BACKEND → {BACKEND_DIR}\n", C_CYAN)
         self._log(f"INFO  FRONTEND→ {FRONTEND_DIR}\n", C_CYAN)
-        self._log(f"INFO  INTEL   → {INTEL_DIR}\n", C_CYAN)
-
-        # Verify paths on startup
-        for label, path in [("Backend dir", BACKEND_DIR), ("Frontend dir", FRONTEND_DIR), ("Intel dir", INTEL_DIR)]:
+        for label, path in [("Backend dir", BACKEND_DIR), ("Frontend dir", FRONTEND_DIR)]:
             if not os.path.exists(path):
                 self._log(f"ERROR  {label} NOT FOUND: {path}\n", C_RED)
 
@@ -168,7 +165,6 @@ class DashboardLauncher:
         services = [
             ("Backend  (port 8000)", 1, "backend"),
             ("Frontend (port 3000)", 2, "frontend"),
-            ("Intel Engine (8001)",  3, "intel"),
         ]
 
         self._status_labels = {}
@@ -210,7 +206,6 @@ class DashboardLauncher:
             ("🔭 Canvas",       URL_CANVAS,           C_PURPLE),
             ("📊 Dashboard",    URL_FRONTEND,          C_CYAN),
             ("⚙  Backend API", URL_BACKEND,            C_ORANGE),
-            ("🧠 Intel API",    URL_INTEL,             C_GREEN),
         ]:
             tk.Button(link_frame, text=label,
                        bg=C_PANEL, fg=color,
@@ -250,7 +245,7 @@ class DashboardLauncher:
 
     def _log_ts(self, message: str, color: str = C_FG):
         ts = time.strftime("%H:%M:%S")
-        self._log(f"[{ts}] {message}", color)
+        self._log_safe(f"[{ts}] {message}", color)
 
     def _log_safe(self, message: str, color: str = C_FG):
         """Thread-safe log call via root.after."""
@@ -372,7 +367,6 @@ class DashboardLauncher:
         self._stop_backend_poll.set()
         if self.process_backend:
             _kill_pid(self.process_backend.pid)
-        self._kill_port(8000)
         self.process_backend = None
         self._set_status("backend", running=False)
         self._toggle_buttons["backend"].config(text="Start Backend")
@@ -442,63 +436,9 @@ class DashboardLauncher:
         self._stop_frontend_poll.set()
         if self.process_frontend:
             _kill_pid(self.process_frontend.pid)
-        self._kill_port(3000)
         self.process_frontend = None
         self._set_status("frontend", running=False)
         self._toggle_buttons["frontend"].config(text="Start Frontend")
-
-    # ── Intelligence Engine ───────────────────────────────────────────────────
-
-    def _start_intel(self):
-        self._log_ts("Starting Intelligence Engine (port 8001)…\n", C_PURPLE)
-        self._kill_port(8001)
-
-        main_py = os.path.join(INTEL_DIR, "main.py")
-        if not os.path.exists(main_py):
-            self._log_ts(f"ERROR  main.py not found: {main_py}\n", C_RED)
-            return
-
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
-        try:
-            self.process_intel = subprocess.Popen(
-                [PYTHON_EXEC, "main.py"],
-                cwd=INTEL_DIR,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                stdin=subprocess.DEVNULL,
-                creationflags=creationflags,
-            )
-        except Exception as exc:
-            self._log_ts(f"ERROR  Failed to start Intel engine: {exc}\n", C_RED)
-            return
-
-        threading.Thread(
-            target=self._read_output,
-            args=(self.process_intel, "INTEL"),
-            daemon=True,
-        ).start()
-
-        self._set_status("intel", running=True)
-        self._toggle_buttons["intel"].config(text="Stop Intel Engine")
-        self._log_ts(f"INFO  Intel PID={self.process_intel.pid}\n", C_PURPLE)
-
-        self._stop_intel_poll.clear()
-        threading.Thread(
-            target=self._poll_ready,
-            args=(URL_INTEL, "intel", self._stop_intel_poll),
-            kwargs={"timeout_s": 60},
-            daemon=True,
-        ).start()
-
-    def _stop_intel(self):
-        self._log_ts("Stopping Intelligence Engine…\n", C_ORANGE)
-        self._stop_intel_poll.set()
-        if self.process_intel:
-            _kill_pid(self.process_intel.pid)
-        self._kill_port(8001)
-        self.process_intel = None
-        self._set_status("intel", running=False)
-        self._toggle_buttons["intel"].config(text="Start Intel Engine")
 
     # ── Start All / Stop All ──────────────────────────────────────────────────
 
@@ -531,28 +471,21 @@ class DashboardLauncher:
             else:
                 self._log_ts("WARN  Frontend startup timeout, proceeding anyway...\n", C_ORANGE)
 
-            # 3. Start Intel Engine
-            if self.process_intel is None or self.process_intel.poll() is not None:
-                self.root.after(0, self._start_intel)
-
         threading.Thread(target=_seq, daemon=True).start()
 
     def _stop_all(self):
         self._log_ts("Stopping all services…\n", C_ORANGE)
-        for key in ("backend", "frontend", "intel"):
+        for key in ("backend", "frontend"):
             proc = getattr(self, f"process_{key}")
             if proc is not None and proc.poll() is None:
                 getattr(self, f"_stop_{key}")()
-        # Belt-and-braces port cleanup
-        for port in (8000, 3000, 8001):
-            self._kill_port(port)
 
     # ── Window close ─────────────────────────────────────────────────────────
 
     def _on_close(self):
         self._log_ts("Shutting down…\n", C_RED)
-        self._stop_all()
-        self.root.destroy()
+        self.root.title("Shutting down...")
+        self.root.after(10, lambda: [self._stop_all(), self.root.destroy()])
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -561,5 +494,5 @@ if __name__ == "__main__":
     root = tk.Tk()
     app  = DashboardLauncher(root)
     if "--auto" in sys.argv:
-        app._start_all()
+        root.after(50, app._start_all)  # defer until window is fully visible
     root.mainloop()

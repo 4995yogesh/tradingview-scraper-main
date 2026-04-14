@@ -61,6 +61,12 @@ function getSwingSettings(pane) {
   return { enabled: ind.enabled, settings: ind.settings };
 }
 
+function getConsolidationSettings(pane) {
+  const ind = (pane?.indicators || []).find(i => i.type === 'consolidationBoxes');
+  if (!ind) return null;
+  return { enabled: ind.enabled, settings: ind.settings };
+}
+
 const ResizeHandle = ({ direction = 'horizontal', onDoubleClick }) => (
   <PanelResizeHandle 
     className={`group relative flex items-center justify-center ${
@@ -299,21 +305,25 @@ const ChartPage = () => {
             className="w-[40px] text-[10px] bg-[#1E222D] border border-[#2962FF60] rounded px-1 py-0.5 text-white outline-none"
           />
         )}
-        {/* Active indicator badges */}
-        {activeIndicators.map((ind, i) => (
-          <span
-            key={ind.id || i}
-            className={`text-[4px] font-bold px-1 py-0.5 rounded leading-none uppercase transition-opacity ${
-              ind.enabled ? 'opacity-100' : 'opacity-40'
-            }`}
-            style={{ backgroundColor: '#27a7b020', color: '#27a7b0', border: '1px solid #27a7b040' }}
-            title={`${ind.type === 'swingLevels' ? 'Swing Levels' : ind.type} – ${
-              ind.enabled ? 'visible' : 'hidden'
-            }`}
-          >
-            SL
-          </span>
-        ))}
+        {activeIndicators.map((ind, i) => {
+          const isCb = ind.type === 'consolidationBoxes';
+          const color = isCb ? '#2962FF' : '#27a7b0';
+          const title = isCb ? 'Consolidation Boxes' : ind.type === 'swingLevels' ? 'Swing Levels' : ind.type;
+          const label = isCb ? 'CB' : ind.type === 'swingLevels' ? 'SL' : 'IN';
+          
+          return (
+            <span
+              key={ind.id || i}
+              className={`text-[4px] font-bold px-1 py-0.5 rounded leading-none uppercase transition-opacity ${
+                ind.enabled ? 'opacity-100' : 'opacity-40'
+              }`}
+              style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}
+              title={`${title} – ${ind.enabled ? 'visible' : 'hidden'}`}
+            >
+              {label}
+            </span>
+          );
+        })}
       </div>
     );
   };
@@ -326,6 +336,7 @@ const ChartPage = () => {
     const cRef = isMain ? chartWidgetRef : null;
     const panePrecision = getSymbolPrecision(FIXED_SYMBOL);
     const swingSettings = getSwingSettings(effectivePane);
+    const consolidationSettings = getConsolidationSettings(effectivePane);
     return (
       <div
         key={`pane-${idx}-${effectivePane.timeframe}`}
@@ -345,6 +356,7 @@ const ChartPage = () => {
           refreshKey={refreshKey}
           symbolPrecision={panePrecision}
           swingSettings={swingSettings}
+          consolidationSettings={consolidationSettings}
           liveTickKey={liveTickKey}
         />
         {/* Show mini toolbar for every pane in multi-layout */}
@@ -417,6 +429,7 @@ const ChartPage = () => {
             refreshKey={refreshKey}
             symbolPrecision={symbolPrecision}
             swingSettings={getSwingSettings(panes[0] || {})}
+            consolidationSettings={getConsolidationSettings(panes[0] || {})}
             liveTickKey={liveTickKey}
           />
         </div>

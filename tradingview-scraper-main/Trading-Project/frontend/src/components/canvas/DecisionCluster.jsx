@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ChartWidget from '../chart/ChartWidget';
 import { useCanvasStore } from '../../hooks/useCanvasStore';
 import { useTransformContext } from 'react-zoom-pan-pinch';
+import { useChartMemory } from '../../hooks/useChartMemory';
 
 const BIAS_COLORS = {
   base: '#3B82F6',   // Blue
@@ -105,12 +106,10 @@ export default function DecisionCluster({ cluster }) {
 }
 
 // Sub-component to natively stop wheel propagation
-const STATIC_CHART_SETTINGS = {
-  showGrid: true, 
-  showBorders: true, 
-  showWick: true,
-  background: '#131722',
-  gridColor: 'rgba(255, 255, 255, 0.05)',
+const DEFAULT_CHART_SETTINGS = {
+  background: '#131722', showGrid: true, crosshairMode: 'normal',
+  upColor: '#26A69A', downColor: '#EF5350', timezone: 'exchange',
+  sessionBreaks: false, watermark: false,
 };
 
 function ChartBoxContainer({ node, forkNode, removeFork, cluster, liveTickKey }) {
@@ -119,6 +118,26 @@ function ChartBoxContainer({ node, forkNode, removeFork, cluster, liveTickKey })
   
   const w = isMain ? 650 : 375;
   const h = isMain ? 450 : 260;
+
+  // Read style and indicators from the "main chart" adjustment page (pane 0)
+  const [chartSettings] = useChartMemory('chartSettings', DEFAULT_CHART_SETTINGS);
+  const [chartType] = useChartMemory('chartType', 'hollow');
+  const [panes] = useChartMemory('panes', []);
+  
+  const mainPane = panes[0] || {};
+  const indicators = mainPane.indicators || [];
+  
+  const swingSettings = React.useMemo(() => {
+    const ind = indicators.find(i => i.type === 'swingLevels');
+    if (!ind) return null;
+    return { enabled: ind.enabled, settings: ind.settings };
+  }, [indicators]);
+
+  const consolidationSettings = React.useMemo(() => {
+    const ind = indicators.find(i => i.type === 'consolidationBoxes');
+    if (!ind) return null;
+    return { enabled: ind.enabled, settings: ind.settings };
+  }, [indicators]);
 
   React.useEffect(() => {
     const el = boxRef.current;
@@ -181,8 +200,10 @@ function ChartBoxContainer({ node, forkNode, removeFork, cluster, liveTickKey })
         <ChartWidget 
           symbol="EURUSD" 
           timeframe={cluster.tf} 
-          chartType="candlestick" 
-          chartSettings={STATIC_CHART_SETTINGS}
+          chartType={chartType} 
+          chartSettings={chartSettings}
+          swingSettings={swingSettings}
+          consolidationSettings={consolidationSettings}
           isSubchart={!isMain}
           liveTickKey={liveTickKey}
           initialBars={isMain ? 60 : 30}

@@ -22,6 +22,11 @@ import os
 import time
 import threading
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import multiprocessing as _mp
+
+# ── Worker pool: use all logical CPU cores ────────────────────────────────────
+_CPU_WORKERS: int = max(4, _mp.cpu_count())
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -63,7 +68,7 @@ TIMEFRAME_MAP = {
 }
 
 # Timeframes stored in SQLite via routine gap-fill (intra-day are derived from 5m)
-PERSISTENT_TIMEFRAMES = ["1m", "5m", "1h", "4h", "1d", "1w"]
+PERSISTENT_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d", "1w"]
 
 # Symbols to pre-load and gap-fill on startup
 PERSISTENT_SYMBOLS = [("OANDA", "EURUSD")]
@@ -88,6 +93,22 @@ WATCHLIST_SYMBOLS = [
 # Track which series are currently being gap-filled (to avoid double-fetching)
 _gap_filling: set = set()
 _gap_filling_lock = threading.Lock()
+
+# ── Lightweight TTL cache for expensive aggregation endpoints ─────────────────
+_cache_lock   = threading.Lock()
+_cache_store: dict = {}   # key → (computed_at, result)
+
+def _cache_get(key: str, ttl_s: float = 8.0):
+    """Return cached value if fresh, else None."""
+    with _cache_lock:
+        entry = _cache_store.get(key)
+        if entry and (time.time() - entry[0]) < ttl_s:
+            return entry[1]
+    return None
+
+def _cache_set(key: str, value):
+    with _cache_lock:
+        _cache_store[key] = (time.time(), value)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -270,7 +291,7 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
 
         # Sensible first-time limits per TF (massively bump 5m to drive aggregation)
         FIRST_FETCH = {
-            "1m": 2000, "5m": 20000, "1d": 5000, "1w": 2000,
+            "1m": 2000, "5m": 20000, "15m": 8000, "1d": 5000, "1w": 2000,
         }
 
         if latest_ts is None:
@@ -646,10 +667,7 @@ def get_consolidation(
     candles:  int = Query(500, ge=10, le=100000),
     end_time: Optional[str] = Query(None),
 ):
-    """Return consolidation boxes for given series.
-    Uses same parameters as /api/ohlc.
-    """
-    # fetch candles similar to get_ohlc
+    """Return consolidation boxes for given series."""
     use_timestamp = timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]
     parsed_end = int(end_time) if end_time and use_timestamp else end_time
     stored = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
@@ -662,6 +680,191 @@ def get_consolidation(
         df.set_index(pd.to_datetime(df["time"]).dt.date, inplace=True)
     boxes_df = consolidation_boxes(df)
     return {"status": "success", "boxes": boxes_df.to_dict(orient="records")}
+
+
+@app.get("/consolidations")
+def get_consolidations_all():
+    """
+    Aggregate consolidation zones across ALL persistent timeframes.
+    Parallel: each TF computed concurrently across all CPU cores.
+    TTL-cached for 8 s so repeated frontend polls are instant.
+    Returns: { status:'ok', zones:[{timeframe, timeStart(ms), timeEnd(ms), priceHigh, priceLow}] }
+    """
+    cached = _cache_get("consolidations")
+    if cached is not None:
+        return cached
+
+    def _compute_tf(exchange: str, symbol: str, tf: str) -> list:
+        zones = []
+        try:
+            stored = storage.get_candles(exchange, symbol, tf, count=1000)
+            if not stored or len(stored) < 5:
+                return zones
+
+            use_timestamp = tf in ["1m", "5m", "15m", "30m", "1h", "4h"]
+            df = pd.DataFrame(stored)
+
+            if use_timestamp:
+                df.index = pd.to_datetime(df["time"], unit='s', utc=True)
+            else:
+                df.index = pd.to_datetime(df["time"])
+
+            apply_time_filter = tf in ["1m", "5m", "15m", "30m", "1h"]
+            boxes_df = consolidation_boxes(df, min_bars=5, use_time_filter=apply_time_filter)
+            if boxes_df.empty:
+                return zones
+
+            df_len = len(df)
+            idx    = df.index
+            for _, row in boxes_df.iterrows():
+                try:
+                    si = int(row["start"])
+                    ei = int(row["end"])
+                    if si >= df_len or ei >= df_len:
+                        continue
+                    ts_start = int(pd.Timestamp(idx[si]).timestamp() * 1000)
+                    ts_end   = int(pd.Timestamp(idx[ei]).timestamp() * 1000)
+                    zones.append({
+                        "timeframe": tf,
+                        "timeStart": ts_start,
+                        "timeEnd":   ts_end,
+                        "priceHigh": float(row["top"]),
+                        "priceLow":  float(row["bottom"]),
+                    })
+                except Exception as inner_exc:
+                    logger.debug("Zone parse error %s [%s]: %s", symbol, tf, inner_exc)
+        except Exception as exc:
+            logger.warning("Consolidation failed %s:%s [%s]: %s", exchange, symbol, tf, exc)
+        return zones
+
+    all_zones = []
+    tasks = [
+        (exchange, symbol, tf)
+        for exchange, symbol in PERSISTENT_SYMBOLS
+        for tf in PERSISTENT_TIMEFRAMES
+    ]
+    with ThreadPoolExecutor(max_workers=min(_CPU_WORKERS, len(tasks) or 1)) as pool:
+        futures = {pool.submit(_compute_tf, ex, sym, tf): (ex, sym, tf) for ex, sym, tf in tasks}
+        for fut in as_completed(futures):
+            all_zones.extend(fut.result())
+
+    result = {"status": "ok", "zones": all_zones}
+    _cache_set("consolidations", result)
+    return result
+
+
+@app.get("/swings")
+def get_swings_all():
+    """
+    3-bar pivot swing highs/lows with server-side 3+3 active unmitigated selection.
+    Per TF: detects swings, checks directional mitigation, selects 3 closest above
+    and 3 closest below current price. Returns active + mitigated swings.
+    TTL-cached 8s. Returns: { status:'ok', swings:[{timeframe, type, price, time_ms, active, mitigated}] }
+    """
+    cached = _cache_get("swings")
+    if cached is not None:
+        return cached
+
+    LOOKBACK = 300
+    ACTIVE_COUNT = 3  # per side
+
+    def _compute_swings(exchange: str, symbol: str, tf: str) -> list:
+        result_swings = []
+        try:
+            db_rows = candle_db.get_candles(exchange, symbol, tf, count=2000)
+            if not db_rows or len(db_rows) < 3:
+                return result_swings
+
+            rows_sorted = sorted(db_rows, key=lambda r: int(r["ts"]))
+            ts_arr = [int(r["ts"])     for r in rows_sorted]
+            hi_arr = [float(r["high"]) for r in rows_sorted]
+            lo_arr = [float(r["low"])  for r in rows_sorted]
+            cl_arr = [float(r["close"]) for r in rows_sorted]
+
+            n       = len(ts_arr)
+            start_i = max(1, n - LOOKBACK - 1)
+            end_i   = n - 1
+
+            # Step 1: detect pivots
+            raw_swings = []  # {type, price, idx, time_ms}
+            for i in range(start_i, end_i):
+                if hi_arr[i] > hi_arr[i-1] and hi_arr[i] > hi_arr[i+1]:
+                    raw_swings.append({"type": "high", "price": hi_arr[i], "idx": i, "time_ms": ts_arr[i] * 1000})
+                if lo_arr[i] < lo_arr[i-1] and lo_arr[i] < lo_arr[i+1]:
+                    raw_swings.append({"type": "low",  "price": lo_arr[i], "idx": i, "time_ms": ts_arr[i] * 1000})
+
+            # Step 2: directional mitigation per swing
+            for sw in raw_swings:
+                i0 = sw["idx"]
+                mitigated = False
+                moved_away = False
+                for j in range(i0 + 1, n):
+                    if sw["type"] == "high":
+                        if not moved_away and lo_arr[j] < sw["price"]:
+                            moved_away = True
+                        if moved_away and hi_arr[j] >= sw["price"]:
+                            mitigated = True
+                            break
+                    else:
+                        if not moved_away and hi_arr[j] > sw["price"]:
+                            moved_away = True
+                        if moved_away and lo_arr[j] <= sw["price"]:
+                            mitigated = True
+                            break
+                sw["mitigated"] = mitigated
+
+            # Step 3: current price = last candle close
+            current_price = cl_arr[-1]
+
+            # Step 4: 3+3 selection from unmitigated
+            unmitigated = [s for s in raw_swings if not s["mitigated"]]
+            above = sorted([s for s in unmitigated if s["price"] > current_price],
+                           key=lambda s: abs(s["price"] - current_price))
+            below = sorted([s for s in unmitigated if s["price"] <= current_price],
+                           key=lambda s: abs(s["price"] - current_price))
+
+            active_set = set(id(s) for s in above[:ACTIVE_COUNT]) | set(id(s) for s in below[:ACTIVE_COUNT])
+
+            # Most recent mitigated swings (for optional UI display), capped to avoid clutter
+            mitigated_swings = sorted(
+                [s for s in raw_swings if s["mitigated"]],
+                key=lambda s: s["idx"], reverse=True
+            )[:ACTIVE_COUNT * 2]  # max 6 most recent mitigated
+
+            # Step 5: emit all unmitigated (active or inactive) + recent mitigated
+            for sw in raw_swings:
+                if not sw["mitigated"]:
+                    result_swings.append({
+                        "timeframe": tf, "type": sw["type"],
+                        "price": sw["price"], "time_ms": sw["time_ms"],
+                        "mitigated": False, "active": id(sw) in active_set,
+                    })
+
+            for sw in mitigated_swings:
+                result_swings.append({
+                    "timeframe": tf, "type": sw["type"],
+                    "price": sw["price"], "time_ms": sw["time_ms"],
+                    "mitigated": True, "active": False,
+                })
+
+        except Exception as exc:
+            logger.warning("Swings failed %s:%s [%s]: %s", exchange, symbol, tf, exc)
+        return result_swings
+
+    all_swings = []
+    tasks = [
+        (exchange, symbol, tf)
+        for exchange, symbol in PERSISTENT_SYMBOLS
+        for tf in PERSISTENT_TIMEFRAMES
+    ]
+    with ThreadPoolExecutor(max_workers=min(_CPU_WORKERS, len(tasks) or 1)) as pool:
+        futures = {pool.submit(_compute_swings, ex, sym, tf): (ex, sym, tf) for ex, sym, tf in tasks}
+        for fut in as_completed(futures):
+            all_swings.extend(fut.result())
+
+    result = {"status": "ok", "swings": all_swings}
+    _cache_set("swings", result)
+    return result
 
 
 @app.get("/api/features")

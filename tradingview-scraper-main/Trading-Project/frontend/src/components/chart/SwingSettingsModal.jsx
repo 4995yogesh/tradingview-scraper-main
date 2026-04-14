@@ -157,6 +157,7 @@ const SwingSettingsModal = ({ settings, onChange, onClose }) => {
               ['showLows',        'Show Swing Lows'],
               ['hideFilled',      'Hide Filled Levels'],
               ['filterMitigated', 'Filter Mitigated'],
+              ['showMitigated',   'Show Mitigated Swings'],
             ].map(([key, label]) => (
               <label key={key} className="flex items-center gap-2.5 cursor-pointer select-none">
                 <Toggle checked={!!s[key]} onChange={v => set(key, v)} />
@@ -212,11 +213,11 @@ const SwingSettingsModal = ({ settings, onChange, onClose }) => {
                   <div className="flex justify-center">
                     <input
                       type="number"
-                      min="5"
+                      min="1"
                       max="2000"
-                      step="10"
+                      step="1"
                       value={tfCfg.lookback}
-                      onChange={e => setTf(tf, 'lookback', Math.max(5, parseInt(e.target.value) || 5))}
+                      onChange={e => setTf(tf, 'lookback', Math.max(1, parseInt(e.target.value) || 1))}
                       disabled={!tfCfg.enabled}
                       className="w-[70px] text-center bg-[#131722] border border-[#2A2E39] rounded px-1 py-0.5 text-[12px] text-[#D1D4DC] outline-none focus:border-[#2962FF] disabled:opacity-40"
                     />

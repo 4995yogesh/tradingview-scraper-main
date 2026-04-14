@@ -54,8 +54,9 @@ export const FILLED_COLOR = 'rgba(120,123,134,0.55)';
 export const DEFAULT_SWING_SETTINGS = {
   showHighs:       true,
   showLows:        true,
-  hideFilled:      true,   // hide mitigated levels by default
-  filterMitigated: true,
+  hideFilled:      false,
+  filterMitigated: false,
+  showMitigated:   false,
   tfs: {
     '1w':  { enabled: true, color: TF_COLORS['1w'],  lookback: 30,  extendTillFilled: true },
     '1d':  { enabled: true, color: TF_COLORS['1d'],  lookback: 40,  extendTillFilled: true },
@@ -170,10 +171,10 @@ export function detectSwings(candles, lookbackBars = 300) {
     const next = candles[i + 1];
 
     if (cur.high > prev.high && cur.high > next.high) {
-      highs.push({ time: cur.time, price: cur.high });
+      highs.push({ time: cur.time, price: cur.high, mitigated: false, mitigatedAt: null, active: false });
     }
     if (cur.low < prev.low && cur.low < next.low) {
-      lows.push({ time: cur.time, price: cur.low });
+      lows.push({ time: cur.time, price: cur.low, mitigated: false, mitigatedAt: null, active: false });
     }
   }
 
@@ -190,6 +191,105 @@ export function detectSwings(candles, lookbackBars = 300) {
  */
 export function isFilled(levelPrice, currentHigh, currentLow) {
   return currentHigh >= levelPrice && currentLow <= levelPrice;
+}
+
+/**
+ * updateMitigationState
+ * ──────────────────────
+ * Updates mitigation state incrementally for a single candle.
+ * Modifies swing objects in-place.
+ */
+export function updateMitigationState({ swings, currentHigh, currentLow, currentTime }) {
+  for (let i = 0; i < swings.length; i++) {
+    const swing = swings[i];
+    if (!swing.mitigated) {
+      if (currentHigh >= swing.price && currentLow <= swing.price) {
+        swing.mitigated = true;
+        swing.mitigatedAt = currentTime;
+        swing.active = false;
+      }
+    }
+  }
+}
+
+/**
+ * classifySwings
+ * ──────────────
+ * Splits swings into unmitigated above, unmitigated below, and mitigated.
+ */
+export function classifySwings(swings, currentPrice) {
+  const unmitigatedAbove = [];
+  const unmitigatedBelow = [];
+  const mitigated = [];
+
+  for (let i = 0; i < swings.length; i++) {
+    const s = swings[i];
+    if (s.mitigated) {
+      mitigated.push(s);
+    } else {
+      if (s.price > currentPrice) {
+        unmitigatedAbove.push(s);
+      } else {
+        unmitigatedBelow.push(s);
+      }
+    }
+  }
+  return { unmitigatedAbove, unmitigatedBelow, mitigated };
+}
+
+/**
+ * selectActiveSwings
+ * ──────────────────
+ * Assigns active=true for 3 closest unmitigated above and below.
+ * Assigns active=false for all others.
+ */
+export function selectActiveSwings(swings, currentPrice) {
+  const { unmitigatedAbove, unmitigatedBelow } = classifySwings(swings, currentPrice);
+
+  for (let i = 0; i < swings.length; i++) {
+    swings[i].active = false;
+  }
+
+  // Stable sort by distance
+  unmitigatedAbove.sort((a, b) => Math.abs(a.price - currentPrice) - Math.abs(b.price - currentPrice));
+  unmitigatedBelow.sort((a, b) => Math.abs(a.price - currentPrice) - Math.abs(b.price - currentPrice));
+
+  const activeAbove = unmitigatedAbove.slice(0, 3);
+  const activeBelow = unmitigatedBelow.slice(0, 3);
+
+  for (let i = 0; i < activeAbove.length; i++) activeAbove[i].active = true;
+  for (let i = 0; i < activeBelow.length; i++) activeBelow[i].active = true;
+
+  return { activeAbove, activeBelow };
+}
+
+/**
+ * enforceMaxLines
+ * ───────────────
+ * Restricts array size to maxLinesPerTF, prioritizing active > unmitigated > recent mitigated.
+ */
+export function enforceMaxLines(swings, maxLines = 20) {
+  if (swings.length <= maxLines) return swings;
+
+  const active = swings.filter(s => s.active);
+  const unmitigated = swings.filter(s => !s.mitigated && !s.active).sort((a, b) => b.time - a.time);
+  const mitigated = swings.filter(s => s.mitigated).sort((a, b) => b.time - a.time);
+
+  const retained = [];
+  retained.push(...active);
+
+  let remaining = maxLines - retained.length;
+  if (remaining > 0) {
+    const toAdd = unmitigated.slice(0, remaining);
+    retained.push(...toAdd);
+    remaining -= toAdd.length;
+  }
+  if (remaining > 0) {
+    const toAdd = mitigated.slice(0, remaining);
+    retained.push(...toAdd);
+  }
+
+  return retained.sort((a, b) => Math.abs(a.time - b.time)); // optional restore time order
 }
 
 /**

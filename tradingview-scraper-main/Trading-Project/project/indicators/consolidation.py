@@ -1,92 +1,141 @@
 import pandas as pd
 import numpy as np
-from typing import List, Dict
 
-def consolidation_boxes(df: pd.DataFrame, min_bars: int = 5, fvg_threshold: float = 0.4, use_time_filter: bool = True) -> pd.DataFrame:
+def consolidation_boxes(
+    df: pd.DataFrame,
+    min_bars: int = 5,
+    fvg_threshold: float = 0.4,
+    use_time_filter: bool = True,
+) -> pd.DataFrame:
     """Detect consolidation boxes.
     df must have columns ['open','high','low','close'] and datetime index.
     Returns DataFrame with columns: start, end, top, bottom (indices).
+
+    Optimised: all OHLC data pre-extracted to numpy arrays so the hot loop
+    does O(1) array indexing instead of slow pandas .iloc row access.
     """
+    n = len(df)
+    if n < 3:
+        return pd.DataFrame()
+
+    # ── Pre-extract numpy arrays (avoids slow pandas row access in loop) ──────
+    high_arr  = df["high"].to_numpy(dtype=np.float64)
+    low_arr   = df["low"].to_numpy(dtype=np.float64)
+    open_arr  = df["open"].to_numpy(dtype=np.float64)
+    close_arr = df["close"].to_numpy(dtype=np.float64)
+
+    # Hour array for time filter (0 for daily/weekly indices without .hour)
+    if use_time_filter:
+        idx = df.index
+        hour_arr = np.array(
+            [v.hour if hasattr(v, "hour") else 0 for v in idx],
+            dtype=np.int8,
+        )
+    else:
+        hour_arr = np.zeros(n, dtype=np.int8)
+
     boxes = []
     searchingSwings = True
-    anchorIndex = 0
-    gotSwingHigh = gotSwingLow = False
-    swingHighVal = swingLowVal = np.nan
+    anchorIndex     = 0
+    gotSwingHigh    = gotSwingLow = False
+    swingHighVal    = swingLowVal = np.nan
     firstSwingIndex = None
-    active = False
-    activeBox = None
-    rangeTop = rangeBottom = np.nan
-    fvgBlocked = False
-    boxStarted = False
-    for i in range(len(df)):
-        if i < 2:
+    active          = False
+    activeBox       = None
+    rangeTop        = rangeBottom = np.nan
+    fvgBlocked      = False
+    boxStarted      = False
+
+    for i in range(2, n):
+        h   = high_arr[i];  l   = low_arr[i]
+        o   = open_arr[i];  c   = close_arr[i]
+        h1  = high_arr[i-1]; l1 = low_arr[i-1]
+        h2  = high_arr[i-2]; l2 = low_arr[i-2]
+        o1  = open_arr[i-1]; c1 = close_arr[i-1]
+
+        isBlockedTime = use_time_filter and (0 <= hour_arr[i] < 6)
+
+        isSwingHigh = h1 > h2 and h1 >= h
+        isSwingLow  = l1 < l2 and l1 <= l
+
+        bullishFVG  = l  > h2
+        bearishFVG  = h  < l2
+        bullFvgSize = (l  - h2) if bullishFVG else 0.0
+        bearFvgSize = (l2 - h)  if bearishFVG else 0.0
+        bodySize    = abs(c - o)
+        smallBull   = bullishFVG and bullFvgSize < bodySize * fvg_threshold
+        smallBear   = bearishFVG and bearFvgSize < bodySize * fvg_threshold
+        validFVG    = (bullishFVG and not smallBull) or (bearishFVG and not smallBear)
+
+        if active:
+            if c > rangeTop or c < rangeBottom or isBlockedTime:
+                activeBox["end"]    = i - 1
+                activeBox["top"]    = rangeTop
+                activeBox["bottom"] = rangeBottom
+                boxes.append(activeBox)
+                active          = False
+                activeBox       = None
+                rangeTop        = rangeBottom = np.nan
+                searchingSwings = True
+                boxStarted      = False
+                gotSwingHigh    = gotSwingLow = False
+                swingHighVal    = swingLowVal = np.nan
+                firstSwingIndex = None
+                anchorIndex     = i
+            else:
+                if h > rangeTop:   rangeTop    = h
+                if l < rangeBottom: rangeBottom = l
+                activeBox["end"]    = i
+                activeBox["top"]    = rangeTop
+                activeBox["bottom"] = rangeBottom
+
+        # Reset search state entirely if we are in blocked time
+        if not active and isBlockedTime:
+            anchorIndex     = i
+            gotSwingHigh    = gotSwingLow = False
+            swingHighVal    = swingLowVal = np.nan
+            firstSwingIndex = None
+            rangeTop        = rangeBottom = np.nan
+            fvgBlocked      = False
+            boxStarted      = False
             continue
-        row = df.iloc[i]
-        prev1 = df.iloc[i-1]
-        prev2 = df.iloc[i-2]
-        if use_time_filter:
-            hour = df.index[i].hour
-            isBlockedTime = 0 <= hour < 6
-        else:
-            isBlockedTime = False
-        isSwingHigh = prev1['high'] > prev2['high'] and prev1['high'] >= row['high']
-        isSwingLow = prev1['low'] < prev2['low'] and prev1['low'] <= row['low']
-        bullishFVG = row['low'] > prev2['high']
-        bearishFVG = row['high'] < prev2['low']
-        bullFvgSize = (row['low'] - prev2['high']) if bullishFVG else 0
-        bearFvgSize = (prev2['low'] - row['high']) if bearishFVG else 0
-        bodySize = abs(row['close'] - row['open'])
-        smallBullFVG = bullishFVG and bullFvgSize < bodySize * fvg_threshold
-        smallBearFVG = bearishFVG and bearFvgSize < bodySize * fvg_threshold
-        validFVG = (bullishFVG and not smallBullFVG) or (bearishFVG and not smallBearFVG)
+
         if not boxStarted and validFVG and not isBlockedTime:
             fvgBlocked = True
+
         if searchingSwings and not active and i > anchorIndex and not isBlockedTime:
             swingBarIndex = i - 1
             if swingBarIndex > anchorIndex:
                 if not gotSwingHigh and isSwingHigh:
                     gotSwingHigh = True
-                    swingHighVal = prev1['high']
+                    swingHighVal = h1
                     if firstSwingIndex is None:
                         firstSwingIndex = swingBarIndex
                 if not gotSwingLow and isSwingLow:
                     gotSwingLow = True
-                    swingLowVal = prev1['low']
+                    swingLowVal = l1
                     if firstSwingIndex is None:
                         firstSwingIndex = swingBarIndex
+
             barsInside = None if firstSwingIndex is None else (i - firstSwingIndex + 1)
+
             if fvgBlocked:
-                anchorIndex = i
-                gotSwingHigh = gotSwingLow = False
-                swingHighVal = swingLowVal = np.nan
+                anchorIndex     = i
+                gotSwingHigh    = gotSwingLow = False
+                swingHighVal    = swingLowVal = np.nan
                 firstSwingIndex = None
-                rangeTop = rangeBottom = np.nan
-                fvgBlocked = False
+                rangeTop        = rangeBottom = np.nan
+                fvgBlocked      = False
                 continue
+
             if gotSwingHigh and gotSwingLow and barsInside is not None and barsInside >= min_bars:
-                rangeTop = swingHighVal
-                rangeBottom = swingLowVal
-                active = True
+                rangeTop        = swingHighVal
+                rangeBottom     = swingLowVal
+                active          = True
                 searchingSwings = False
-                boxStarted = True
-                activeBox = {"start": firstSwingIndex, "end": i, "top": rangeTop, "bottom": rangeBottom}
-        if active:
-            breakoutUp = row['close'] > rangeTop
-            breakoutDown = row['close'] < rangeBottom
-            if breakoutUp or breakoutDown:
-                activeBox["end"] = i - 1
-                activeBox["top"] = rangeTop
-                activeBox["bottom"] = rangeBottom
-                boxes.append(activeBox)
-                active = False
-                activeBox = None
-                rangeTop = rangeBottom = np.nan
-                searchingSwings = False
-                boxStarted = False
-            else:
-                rangeTop = max(rangeTop, row['high'])
-                rangeBottom = min(rangeBottom, row['low'])
-                activeBox["end"] = i
-                activeBox["top"] = rangeTop
-                activeBox["bottom"] = rangeBottom
+                boxStarted      = True
+                activeBox       = {"start": firstSwingIndex, "end": i,
+                                   "top": rangeTop, "bottom": rangeBottom}
+
+
     return pd.DataFrame(boxes)

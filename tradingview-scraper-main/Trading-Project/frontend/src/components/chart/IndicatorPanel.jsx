@@ -26,6 +26,15 @@ const INDICATOR_CATALOGUE = [
     tags:        ['swing', 'pivot', 'multi-tf', 'levels', 'structure'],
     defaultSettings: DEFAULT_SWING_SETTINGS,
   },
+  {
+    type:        'consolidationBoxes',
+    name:        'Consolidation Boxes',
+    author:      'Antigravity',
+    description: 'Multi-timeframe consolidation zone detection',
+    color:       '#2962FF',
+    tags:        ['consolidation', 'boxes', 'multi-tf', 'structure'],
+    defaultSettings: {},
+  },
 ];
 
 // ── Layout pane count map ─────────────────────────────────────────────────────
