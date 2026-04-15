@@ -94,6 +94,9 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const chartDataRef = useRef(null);
   chartDataRef.current = chartData;
 
+  const chartTypeRef = useRef(chartType);
+  chartTypeRef.current = chartType;
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -166,24 +169,57 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
   // ── Live Polling: Fetch latest candles synchronized by ChartPage ──
   useEffect(() => {
-    if (loading || error || !chartData || typeof liveTickKey === 'undefined' || liveTickKey === 0) return;
+    // Skip if chart or data isn't ready yet; liveTickKey=0 means no tick fired yet
+    if (loading || error || !chartData || typeof liveTickKey === 'undefined') return;
 
     (async () => {
       try {
         const latest = await fetchLiveCandles(symbol, timeframe, 50);
-        if (latest && latest.candleData.length > 0) {
-          setChartData(prev => {
-            if (!prev) return latest;
-            return {
-              candleData: fastMergeSort(prev.candleData, latest.candleData),
-              volumeData: fastMergeSort(prev.volumeData, latest.volumeData)
-            };
-          });
+        if (!latest || latest.candleData.length === 0) return;
+
+        const newCandles = latest.candleData;
+
+        // Fast path: if only the last candle changed, update in-place (no flicker)
+        if (seriesRef.current && chartDataRef.current?.candleData?.length > 0) {
+          const prevLast = chartDataRef.current.candleData[chartDataRef.current.candleData.length - 1];
+          const isSimpleUpdate = newCandles.length <= 3 &&
+            newCandles.every(c => c.time >= prevLast.time);
+
+          if (isSimpleUpdate) {
+            // Update series in-place — no full setData, no flicker
+            try {
+              newCandles.forEach(c => {
+                const point = (chartTypeRef.current === 'line' || chartTypeRef.current === 'area')
+                  ? { time: c.time, value: c.close }
+                  : c;
+                seriesRef.current.update(point);
+              });
+            } catch (_) {}
+            // Merge into state so scroll-back history stays consistent
+            setChartData(prev => {
+              if (!prev) return latest;
+              return {
+                candleData: fastMergeSort(prev.candleData, newCandles),
+                volumeData: fastMergeSort(prev.volumeData, latest.volumeData),
+              };
+            });
+            return;
+          }
         }
+
+        // Slow path: full merge + setData (catches overnight gaps, new candles, etc.)
+        setChartData(prev => {
+          if (!prev) return latest;
+          return {
+            candleData: fastMergeSort(prev.candleData, newCandles),
+            volumeData: fastMergeSort(prev.volumeData, latest.volumeData),
+          };
+        });
       } catch (err) {
         console.warn('Live fetch failed:', err?.message);
       }
     })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveTickKey]);
 
   // Structural Initialization of HTML Canvas ONLY

@@ -81,13 +81,16 @@ class HistoricalFetcher:
 
         resolve_msg = json.dumps({"adjustment": "splits", "symbol": exchange_symbol})
         
-        # Initialize connection and session
+        # IMPORTANT: create_series initial count must be small (300) to match browser
+        # behavior so TV keeps the series open for unlimited request_more_data pagination.
+        # Passing a large number here (e.g. 5000) caps the total bars TV will serve.
+        SERIES_INITIAL = 300
         self.stream_obj.send_message("quote_add_symbols", [self.stream_obj.quote_session, f"={resolve_msg}"])
         self.stream_obj.send_message("resolve_symbol", [self.stream_obj.chart_session, "sds_sym_1", f"={resolve_msg}"])
         self.stream_obj.send_message("create_series", [
-            self.stream_obj.chart_session, 
-            "sds_1", "s1", "sds_sym_1", 
-            tf_str, chunk_size, ""
+            self.stream_obj.chart_session,
+            "sds_1", "s1", "sds_sym_1",
+            tf_str, SERIES_INITIAL, ""
         ])
 
         # A dict ensures we overwrite duplicates with the exact same timestamp
@@ -95,7 +98,9 @@ class HistoricalFetcher:
         oldest_ts_seen = float('inf')
         
         # Pagination state
-        consecutive_empty_responses = 0
+        consecutive_empty_responses = 0   # TV sends empty series payload
+        consecutive_overlap_batches = 0  # TV sends data but all already known (date-backfill only)
+        consecutive_heartbeats      = 0  # TV is hanging (usually at the absolute end of history)
 
         logger.info(f"Starting historical fetch for {exchange_symbol} | TF: {timeframe} | Limit: {limit} | Start: {start_date}")
 
@@ -113,7 +118,13 @@ class HistoricalFetcher:
                 # Handle heartbeat
                 if re.match(r"~m~\d+~m~~h~\d+$", res):
                     self.stream_obj.ws.send(res)
+                    consecutive_heartbeats += 1
+                    if consecutive_heartbeats >= 5:
+                        logger.info("TV is hanging (5 consecutive heartbeats). Max history likely reached.")
+                        return self._format_and_sort(all_candles_map)
                     continue
+                else:
+                    consecutive_heartbeats = 0
                 
                 # Parse messages
                 split_result = [x for x in re.split(r'~m~\d+~m~', res) if x]
@@ -134,6 +145,7 @@ class HistoricalFetcher:
                             continue
                             
                         consecutive_empty_responses = 0
+                        consecutive_overlap_batches  = 0
                         candles_added_this_batch = 0
                         local_oldest_ts = float('inf')
 
@@ -162,10 +174,24 @@ class HistoricalFetcher:
                         total_candles = len(all_candles_map)
                         logger.info(f"Chunk received: {len(series)} points. Total unqiue candles: {total_candles}")
 
-                        if candles_added_this_batch == 0:
-                            # The chunk contained only candles we already have (we've hit the absolute genesis block)
-                            logger.info("Genesis block reached (No new unique timestamps added).")
+                        if len(series) < 10 and chunk_size > 100:
+                            logger.info("Received a tiny chunk (< 10 points). Absolute genesis limit reached.")
                             return self._format_and_sort(all_candles_map)
+
+                        if candles_added_this_batch == 0:
+                            if target_timestamp <= 0:
+                                # No date target → genesis block reached for limit-based fetch
+                                logger.info("Genesis block reached (No new unique timestamps added).")
+                                return self._format_and_sort(all_candles_map)
+                            # Date-targeted backfill: overlap batch — TV is still paginating
+                            # through already-known bars.  Keep going until we reach the target
+                            # date or TV truly stops sending new data.
+                            consecutive_overlap_batches += 1
+                            if consecutive_overlap_batches >= 5:
+                                logger.info("Max backfill reached (5 consecutive overlap batches, no older data).")
+                                return self._format_and_sort(all_candles_map)
+                        else:
+                            consecutive_overlap_batches = 0
 
                         oldest_ts_seen = local_oldest_ts
 
