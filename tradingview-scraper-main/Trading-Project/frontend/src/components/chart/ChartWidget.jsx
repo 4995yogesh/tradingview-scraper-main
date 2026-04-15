@@ -9,8 +9,8 @@ import {
 
 // Sensible number of bars to fetch per timeframe so candles are visible at the initial zoom
 const TF_CANDLE_COUNT = {
-  '1m':  200,
-  '5m':  300,
+  '1m':  300,
+  '5m':  600,  // 600 × 5m = 50h — covers full overnight + weekend gaps
   '15m': 400,
   '30m': 400,
   '1h':  500,

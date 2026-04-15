@@ -275,8 +275,11 @@ def _load_db_into_ram(exchange: str, symbol: str, timeframe: str):
 
 def _gap_fill(exchange: str, symbol: str, timeframe: str):
     """
-    Detect and fill the gap between the newest DB candle and now.
-    Runs in a background thread — does not block the server startup.
+    Detect and fill gaps in candle data.
+    Always fetches a minimum STARTUP_BARS window to heal any internal gaps
+    (e.g. overnight holes caused by periodic refresh only adding the latest
+    few candles, making latest_ts look current while mid-range data is missing).
+    Runs in a background thread — does not block server startup.
     """
     key = (exchange, symbol, timeframe)
     with _gap_filling_lock:
@@ -289,9 +292,16 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
         now_ts    = int(time.time())
         interval  = TF_INTERVAL_SECS.get(timeframe, 60)
 
-        # Sensible first-time limits per TF (massively bump 5m to drive aggregation)
+        # First-time (empty DB) — deep backfill
         FIRST_FETCH = {
             "1m": 2000, "5m": 20000, "15m": 8000, "1d": 5000, "1w": 2000,
+        }
+
+        # Minimum bars to (re-)fetch on every startup to heal internal gaps.
+        # e.g. 5m × 600 = 50 h — covers any overnight / weekend hole.
+        STARTUP_MIN = {
+            "1m": 500, "5m": 600, "15m": 400, "30m": 300,
+            "1h": 300, "4h": 200, "1d": 200, "1w": 100,
         }
 
         if latest_ts is None:
@@ -299,14 +309,10 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
             logger.info("[gap-fill] First backfill for %s:%s [%s] limit=%d",
                         exchange, symbol, timeframe, fetch_limit)
         else:
-            gap_secs = now_ts - latest_ts
-            if gap_secs <= interval * 1.5:
-                logger.info("[gap-fill] %s:%s [%s] current (gap=%ds)",
-                            exchange, symbol, timeframe, gap_secs)
-                return
-            missing_bars = gap_secs // interval + 20
-            fetch_limit  = max(int(missing_bars), 50)
-            logger.info("[gap-fill] %s:%s [%s] gap=%ds → fetching %d bars",
+            gap_secs     = now_ts - latest_ts
+            missing_bars = max(gap_secs // interval + 20, STARTUP_MIN.get(timeframe, 200))
+            fetch_limit  = int(missing_bars)
+            logger.info("[gap-fill] %s:%s [%s] gap=%ds → fetching %d bars (includes startup min)",
                         exchange, symbol, timeframe, gap_secs, fetch_limit)
 
         cookie_value = os.getenv("TRADINGVIEW_COOKIE", "").strip()
@@ -358,9 +364,10 @@ def _run_all_gap_fills():
 
 def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int = 20):
     """
-    Fetch the very latest `limit` candles from TradingView and merge them
-    into SQLite + RAM cache.  Intended to be called by the periodic refresh
-    thread so the RAM cache is always < 60 s stale.
+    Fetch the very latest candles from TradingView and merge them
+    into SQLite + RAM cache.  The limit is computed dynamically from
+    the actual gap between the newest DB candle and now, so overnight
+    or downtime gaps are automatically healed on the next cycle.
     """
     key = (exchange, symbol, timeframe)
     with _gap_filling_lock:
@@ -368,12 +375,29 @@ def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int
             return   # gap-fill already running; skip
         _gap_filling.add(key)
     try:
+        # ── Compute dynamic limit based on real gap from DB ───────────────
+        interval  = TF_INTERVAL_SECS.get(timeframe, 60)
+        latest_ts = candle_db.get_latest_ts(exchange, symbol, timeframe)
+        if latest_ts is not None:
+            gap_secs     = max(0, int(time.time()) - latest_ts)
+            missing_bars = gap_secs // interval + 5   # +5 buffer
+            dynamic_limit = max(limit, int(missing_bars))
+        else:
+            dynamic_limit = limit
+        # Cap at 500 bars to keep each periodic fetch fast
+        dynamic_limit = min(dynamic_limit, 500)
+
+        if dynamic_limit > limit:
+            logger.info("[periodic] %s:%s [%s] gap detected (%ds) → fetching %d bars",
+                        exchange, symbol, timeframe,
+                        int(time.time()) - (latest_ts or 0), dynamic_limit)
+
         cookie_value = os.getenv("TRADINGVIEW_COOKIE", "").strip()
         jwt_value    = os.getenv("TV_JWT_TOKEN", "unauthorized_user_token")
         fetcher      = HistoricalFetcher(websocket_jwt_token=jwt_value, cookie=cookie_value)
         raw = fetcher.fetch_historical_data(
             exchange=exchange, symbol=symbol, timeframe=timeframe,
-            limit=limit, chunk_size=limit, delay_ms=100,
+            limit=dynamic_limit, chunk_size=dynamic_limit, delay_ms=100,
         )
         if raw:
             _seed_storage(exchange, symbol, timeframe, raw)
@@ -476,6 +500,18 @@ def db_summary():
     """Diagnostic endpoint — shows what's stored in SQLite."""
     rows = candle_db.series_summary()
     return {"status": "ok", "series": rows}
+
+
+@app.get("/api/repair")
+def repair_gaps():
+    """
+    Immediately trigger a full gap-fill for all persistent series.
+    Use this to heal overnight/downtime gaps without restarting the server.
+    Runs async in background — returns immediately.
+    """
+    t = threading.Thread(target=_run_all_gap_fills, name="manual-gap-fill", daemon=True)
+    t.start()
+    return {"status": "ok", "message": "Gap-fill triggered for all series"}
 
 
 @app.get("/api/timeframes")
