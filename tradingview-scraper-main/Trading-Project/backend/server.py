@@ -59,6 +59,32 @@ from indicators.consolidation import consolidation_boxes  # PROJECT path active 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
+
+
+# ── Feedback store (optional — degrades gracefully) ────────────────────────────
+_feedback = None
+try:
+    import sys as _sys, os as _os
+    _sys.path.insert(0, _os.path.join(_os.path.dirname(__file__), "data"))
+    from ml_feedback import feedback_store as _feedback
+    logger.info("MLFeedbackStore loaded — %s", _feedback.summary())
+except Exception as _fb_err:
+    logger.warning("MLFeedbackStore not available (%s)", _fb_err)
+
+# ── Detection Scorer (optional — degrades gracefully if detection_model.pkl absent) ──
+_detection_scorer = None
+try:
+    _DETECTION_TRAINER = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "project", "ml", "detection_trainer")
+    )
+    sys.path.insert(0, _DETECTION_TRAINER)
+    from detection_scorer import get_detection_scorer as _get_detection_scorer
+    _detection_scorer = _get_detection_scorer()
+    logger.info("DetectionScorer loaded — ready=%s version=%s",
+                _detection_scorer.ready, _detection_scorer.version)
+except Exception as _det_err:
+    logger.warning("DetectionScorer not available — model boxes disabled (%s)", _det_err)
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 TIMEFRAME_MAP = {
@@ -109,6 +135,49 @@ def _cache_get(key: str, ttl_s: float = 8.0):
 def _cache_set(key: str, value):
     with _cache_lock:
         _cache_store[key] = (time.time(), value)
+
+
+# ── Per-box ML score cache (avoids re-inferring during consecutive polls) ─────
+# Key  : (symbol, timeframe, time_start_ms, time_end_ms)
+# Value: (recorded_at, {ml_score, ml_label, ml_confidence, ml_top_features, ...})
+# TTL  : 300 s (box geometry never changes within a session)
+_ml_score_cache: dict = {}
+_ML_SCORE_TTL = 300.0  # seconds
+
+# ── ML Scorer (optional — degrades gracefully if model.pkl absent) ────────────
+_scorer = None
+try:
+    from ml.consolidation_scorer.scorer import ConsolidationScorer
+    _scorer = ConsolidationScorer()
+    if _scorer:
+        logger.info("ConsolidationScorer v%s loaded — ready=%s", 
+                    _scorer.VERSION if hasattr(_scorer, 'VERSION') else 'unknown',
+                    _scorer.ready)
+        if _scorer.ready:
+            # Clear ML cache on startup to ensure new thresholds (v6) take effect
+            _ml_score_cache.clear()
+            logger.info("[ML] Score cache cleared for version alignment.")
+            
+            from ml.consolidation_scorer.features import EXPECTED_FEATURE_COUNT
+            logger.info("[ML] Model expects %d features", len(_scorer._feature_cols))
+            logger.info("[ML] Pipeline produces %d features", EXPECTED_FEATURE_COUNT)
+except Exception as _scorer_err:
+    logger.warning("ConsolidationScorer not available — ML fields will show neutral defaults (%s)", _scorer_err)
+
+def _ml_cache_get(symbol: str, tf: str, ts: int, te: int) -> dict | None:
+    """Return cached ML score dict for a box if still fresh, else None."""
+    key = (symbol, tf, ts, te)
+    with _cache_lock:
+        entry = _ml_score_cache.get(key)
+        if entry and (time.time() - entry[0]) < _ML_SCORE_TTL:
+            return entry[1]
+    return None
+
+def _ml_cache_set(symbol: str, tf: str, ts: int, te: int, value: dict) -> None:
+    key = (symbol, tf, ts, te)
+    with _cache_lock:
+        _ml_score_cache[key] = (time.time(), value)
+
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -298,10 +367,10 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
         }
 
         # Minimum bars to (re-)fetch on every startup to heal internal gaps.
-        # e.g. 5m × 600 = 50 h — covers any overnight / weekend hole.
+        # e.g. 1m × 5000 = 83 hrs — covers any overnight / weekend hole.
         STARTUP_MIN = {
-            "1m": 500, "5m": 600, "15m": 400, "30m": 300,
-            "1h": 300, "4h": 200, "1d": 200, "1w": 100,
+            "1m": 5000, "5m": 2000, "15m": 1000, "30m": 1000,
+            "1h": 500, "4h": 500, "1d": 500, "1w": 100,
         }
 
         if latest_ts is None:
@@ -384,8 +453,8 @@ def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int
             dynamic_limit = max(limit, int(missing_bars))
         else:
             dynamic_limit = limit
-        # Cap at 500 bars to keep each periodic fetch fast
-        dynamic_limit = min(dynamic_limit, 500)
+        # Cap at 5000 bars to keep each periodic fetch fast but large enough to heal weekends
+        dynamic_limit = min(dynamic_limit, 5000)
 
         if dynamic_limit > limit:
             logger.info("[periodic] %s:%s [%s] gap detected (%ds) → fetching %d bars",
@@ -750,9 +819,56 @@ def get_consolidations_all():
             if boxes_df.empty:
                 return zones
 
+            # ── ML Scoring (additive layer — never changes box detection) ──────
+            scored_df = boxes_df  # default: unscored
+            scorer_active = _scorer is not None and _scorer.ready
+            if scorer_active:
+                try:
+                    # include_features=True embeds top feature values for debug panel
+                    scored_df = _scorer.score(
+                        df, boxes_df,
+                        timeframe=tf,
+                        threshold=0.0,           # no threshold filter — show ALL boxes
+                        include_features=True,
+                    )
+                except Exception as score_exc:
+                    logger.warning("Scorer failed for %s [%s]: %s", symbol, tf, score_exc)
+                    scored_df = boxes_df  # fallback to unscored
+
             df_len = len(df)
             idx    = df.index
-            for _, row in boxes_df.iterrows():
+            logger.info("[DEBUG] %s [%s]: %d boxes detected, scorer_active=%s",
+                        symbol, tf, len(scored_df), scorer_active)
+            # ── Pre-fetch ALL box labels in ONE query per TF ────────────────
+            # (avoids 1 sqlite3.connect() per box which was causing 1-min delays)
+            box_label_cache = {}
+            if _feedback is not None:
+                try:
+                    # Build all box_ids first (lightweight — no DB yet)
+                    tmp_ids = []
+                    for _, row_tmp in scored_df.iterrows():
+                        try:
+                            si = int(row_tmp["start"]); ei = int(row_tmp["end"])
+                            if si >= df_len or ei >= df_len: continue
+                            ts_s = int(pd.Timestamp(idx[si]).timestamp() * 1000)
+                            ts_e = int(pd.Timestamp(idx[ei]).timestamp() * 1000)
+                            tmp_ids.append(_feedback.make_box_id(symbol, tf, ts_s, ts_e))
+                        except Exception:
+                            pass
+                    if tmp_ids:
+                        import sqlite3 as _sqlite3
+                        placeholders = ",".join("?" * len(tmp_ids))
+                        conn = _sqlite3.connect(str(_feedback._db_path), check_same_thread=False)
+                        rows = conn.execute(
+                            f"SELECT box_id, user_label, pattern_type, breakout_direction, structure_type "
+                            f"FROM boxes WHERE box_id IN ({placeholders})", tmp_ids
+                        ).fetchall()
+                        conn.close()
+                        box_label_cache = {r[0]: r[1:] for r in rows}
+                except Exception:
+                    pass
+
+            for _, row in scored_df.iterrows():
                 try:
                     si = int(row["start"])
                     ei = int(row["end"])
@@ -760,18 +876,135 @@ def get_consolidations_all():
                         continue
                     ts_start = int(pd.Timestamp(idx[si]).timestamp() * 1000)
                     ts_end   = int(pd.Timestamp(idx[ei]).timestamp() * 1000)
-                    zones.append({
-                        "timeframe": tf,
-                        "timeStart": ts_start,
-                        "timeEnd":   ts_end,
-                        "priceHigh": float(row["top"]),
-                        "priceLow":  float(row["bottom"]),
-                    })
+
+                    # ── Per-box ML score cache ─────────────────────────────
+                    cached_ml = _ml_cache_get(symbol, tf, ts_start, ts_end)
+                    if cached_ml:
+                        ml_score        = cached_ml["ml_score"]
+                        ml_label        = cached_ml["ml_label"]
+                        ml_color        = cached_ml["ml_color"]
+                        ml_confidence   = cached_ml["ml_confidence"]
+                        ml_status       = cached_ml["ml_status"]
+                        ml_top_features = cached_ml.get("ml_top_features", [])
+                        ml_features     = cached_ml.get("ml_features", {})
+                        lc              = cached_ml.get("lc", {
+                            "border": "rgba(144,202,249,0.70)",
+                            "fill":   "rgba(144,202,249,0.10)",
+                        })
+                    else:
+                        ml_score      = float(row.get("quality", 0.5))
+                        ml_label      = str(row.get("ml_label", "NEUTRAL"))
+                        ml_color      = str(row.get("quality_color", "#FFB86C"))
+                        ml_confidence = float(row.get("ml_confidence", 0.0))
+                        ml_status     = str(row.get("ml_status",
+                            "inactive" if not scorer_active else "active"))
+
+                        lc = {
+                            "GOOD":    {"border": "rgba(38,166,154,0.85)",  "fill": "rgba(38,166,154,0.12)"},
+                            "BAD":     {"border": "rgba(239,83,80,0.85)",   "fill": "rgba(239,83,80,0.12)"},
+                            "NEUTRAL": {"border": "rgba(144,202,249,0.70)", "fill": "rgba(144,202,249,0.10)"},
+                        }.get(ml_label, {"border": "rgba(144,202,249,0.70)", "fill": "rgba(144,202,249,0.10)"})
+
+                        raw_top = row.get("ml_top_features", None)
+                        ml_top_features = raw_top if (raw_top and isinstance(raw_top, list)) else []
+
+                        ml_features = {}
+                        if "ml_features" in row and isinstance(row["ml_features"], dict):
+                            rf = row["ml_features"]
+                            ml_features = dict(
+                                sorted(rf.items(), key=lambda x: abs(x[1]), reverse=True)[:5]
+                            )
+                        
+                        missing_feats = row.get("ml_missing_features", []) or []
+                        ml_debug = {
+                            "status": ml_status,
+                            "missing_features": missing_feats,
+                            "expected_features": 27,
+                            "actual_features": 27 - len(missing_feats)
+                        }
+
+                        _ml_cache_set(symbol, tf, ts_start, ts_end, {
+                            "ml_score":            ml_score,
+                            "ml_label":            ml_label,
+                            "ml_color":            ml_color,
+                            "ml_confidence":       ml_confidence,
+                            "ml_status":           ml_status,
+                            "lc":                  lc,
+                            "ml_top_features":     ml_top_features,
+                            "ml_features":         ml_features,
+                            "pattern_prediction":  str(row.get("pattern_prediction") or "") or None,
+                            "pattern_confidence":  float(row.get("pattern_confidence") or 0.0),
+                            "ml_debug":            ml_debug,
+                        })
+
+                    # ── Compute structural pattern suggestion ───────────
+                    sug_res = {}
+                    if _feedback is not None and hasattr(_feedback, "suggest_pattern_type"):
+                        sug_res = _feedback.suggest_pattern_type(df, ei, float(row["top"]), float(row["bottom"])) or {}
+
+                    zone = {
+                        "timeframe":           tf,
+                        "timeStart":           ts_start,
+                        "timeEnd":             ts_end,
+                        "priceHigh":           float(row["top"]),
+                        "priceLow":            float(row["bottom"]),
+                        "ml_score":            round(ml_score, 4),
+                        "ml_label":            ml_label,
+                        "ml_color":            ml_color,
+                        "ml_confidence":       round(ml_confidence, 4),
+                        "ml_status":           ml_status,
+                        "ml_border":           lc["border"],
+                        "ml_fill":             lc["fill"],
+                        "ml_features":         ml_features,
+                        "ml_top_features":     ml_top_features,
+                        "pattern_suggestion":  sug_res.get("pattern_suggestion"),
+                        "breakout_direction":  sug_res.get("breakout_direction"),
+                        "structure_type":      sug_res.get("structure_type"),
+                        "swing_count":         sug_res.get("swing_count", 0),
+                        "pattern_prediction":  cached_ml.get("pattern_prediction") if cached_ml else (
+                            str(row.get("pattern_prediction") or "") or None
+                        ),
+                        "pattern_confidence":  cached_ml.get("pattern_confidence", 0.0) if cached_ml else (
+                            float(row.get("pattern_confidence") or 0.0)
+                        ),
+                        "ml_debug":            cached_ml.get("ml_debug", {}) if cached_ml else {},
+                    }
+
+                    # ── Attach box_id + user labels (from batch cache) ─────
+                    if _feedback is not None:
+                        box_id = _feedback.make_box_id(symbol, tf, ts_start, ts_end)
+                        zone["box_id"] = box_id
+                        db_row = box_label_cache.get(box_id)
+                        zone["user_label"]        = db_row[0] if db_row else None
+                        zone["pattern_type"]      = db_row[1] if db_row else None
+                        zone["breakout_direction"] = zone["breakout_direction"] or (db_row[2] if db_row else None)
+                        zone["structure_type"]     = zone["structure_type"]     or (db_row[3] if db_row else None)
+                    else:
+                        zone["box_id"]       = None
+                        zone["user_label"]   = None
+                        zone["pattern_type"] = None
+
+                    zones.append(zone)
+
+                    # ── Feedback loop: record box (fire-and-forget) ─────────
+                    if _feedback is not None and ml_status == "active":
+                        try:
+                            zone_with_symbol = {
+                                **zone, "symbol": symbol,
+                                "swing_high_1": sug_res.get("swing_high_1"),
+                                "swing_low_1":  sug_res.get("swing_low_1"),
+                            }
+                            _feedback.record_box(zone_with_symbol)
+                        except Exception:
+                            pass  # never block the response
+
                 except Exception as inner_exc:
-                    logger.debug("Zone parse error %s [%s]: %s", symbol, tf, inner_exc)
+                    logger.warning("Zone parse error %s [%s] row=%s: %s", symbol, tf,
+                                   getattr(row, 'name', '?'), inner_exc)
         except Exception as exc:
             logger.warning("Consolidation failed %s:%s [%s]: %s", exchange, symbol, tf, exc)
         return zones
+
 
     all_zones = []
     tasks = [
@@ -977,6 +1210,791 @@ async def get_watchlist():
     return {"status": "success", "data": list(results)}
 
 
+@app.get("/api/ml/meta")
+def get_ml_meta():
+    """
+    Returns ML scorer metadata: version, feature list, thresholds, trained_on,
+    contribs_ready flag, and feedback store summary.
+    """
+    ml_info = {"ready": False, "reason": "scorer not imported"}
+    if _scorer is not None:
+        ml_info = _scorer.meta()
+
+    feedback_info = {}
+    if _feedback is not None:
+        try:
+            feedback_info = _feedback.summary()
+        except Exception:
+            feedback_info = {"error": "summary unavailable"}
+
+    return {"status": "ok", "ml": ml_info, "feedback": feedback_info}
+
+
+@app.get("/api/ml/stats")
+async def get_ml_stats():
+    """
+    Returns unified dataset statistics.
+    Reuses structural labeling logic from train.py.
+    Cached for 60 seconds (TASK 7).
+    """
+    global _ml_stats_cache, _ml_stats_last_update
+    
+    now = time.time()
+    if _ml_stats_cache and (now - _ml_stats_last_update < ML_STATS_CACHE_TTL):
+        return _ml_stats_cache
+
+    try:
+        # PROJECT variable at top already points to 'project'
+        import sys as _sys
+        _SCORER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "project", "ml", "consolidation_scorer"))
+        if _SCORER_DIR not in _sys.path:
+            _sys.path.insert(0, _SCORER_DIR)
+        
+        from train import prepare_unified_dataset
+        
+        # Consistent paths for the trainer
+        _BACKEND_DATA = os.path.join(os.path.dirname(__file__), "data")
+        _CANDLE_DB = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "candles.db"))
+        _FB_DB     = os.path.join(_BACKEND_DATA, "ml_feedback.db")
+
+        combined = prepare_unified_dataset(db_path=_CANDLE_DB, fb_db_path=_FB_DB)
+        
+        if combined.empty:
+            stats = {
+                "total_samples": 0,
+                "usable_samples": 0,
+                "positives": 0,
+                "negatives": 0,
+                "ignored": 0
+            }
+        else:
+            stats = {
+                "total_samples": len(combined), 
+                "usable_samples": int(combined["quality"].notna().sum()),
+                "positives": int((combined["quality"] == 1).sum()),
+                "negatives": int((combined["quality"] == 0).sum()),
+                "ignored": int(combined["quality"].isna().sum())
+            }
+        
+        _ml_stats_cache = stats
+        _ml_stats_last_update = now
+        return stats
+    except Exception as e:
+        logger.error("Failed to compute ML stats: %s", e)
+        return {"status": "error", "message": str(e)}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# User feedback endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BaseModel
+
+class _UserFeedbackBody(_BaseModel):
+    box_id:     str
+    user_label: str   # GOOD | BAD | NEUTRAL
+    timeframe:  str | None = None
+
+
+@app.post("/api/ml/feedback/user")
+def post_user_feedback(body: _UserFeedbackBody):
+    """
+    Store a human rating for a consolidation box.
+    Upserts: creates a minimal row if box_id not yet in DB.
+    Returns 200 on success.
+    """
+    import sqlite3 as _sq3
+
+    valid = {"GOOD", "BAD", "NEUTRAL"}
+    label = (body.user_label or "").strip().upper()
+    if label not in valid:
+        return {"status": "error", "reason": f"user_label must be one of {valid}"}
+
+    _db_p = os.path.join(os.path.dirname(__file__), "data", "ml_feedback.db")
+    try:
+        conn = _sq3.connect(_db_p)
+        conn.execute("PRAGMA journal_mode=WAL")
+
+        # Try update first (fast path — box already recorded by ML scorer)
+        cur = conn.execute(
+            "UPDATE boxes SET user_label = ?, timeframe = COALESCE(nullif(timeframe,'unknown'), ?), updated_at = datetime('now') WHERE box_id = ?",
+            (label, body.timeframe or 'unknown', body.box_id),
+        )
+        conn.commit()
+
+        if cur.rowcount == 0:
+            # Box not in DB — insert minimal row so label is persisted immediately
+            conn.execute("""
+                INSERT OR IGNORE INTO boxes
+                    (box_id, symbol, timeframe, time_start, time_end,
+                     price_high, price_low, ml_score, ml_label, ml_confidence,
+                     ml_top_features, recorded_at, user_label, updated_at)
+                VALUES (?, 'EURUSD', ?, 0, 0,
+                        0.0, 0.0, 0.5, 'NEUTRAL', 0.0,
+                        '[]', datetime('now'), ?, datetime('now'))
+            """, (body.box_id, body.timeframe or 'unknown', label))
+            conn.commit()
+            logger.info("User feedback (inserted): box %s -> %s", body.box_id, label)
+        else:
+            logger.info("User feedback (updated): box %s -> %s", body.box_id, label)
+
+        conn.close()
+    except Exception as exc:
+        logger.warning("post_user_feedback failed: %s", exc)
+        return {"status": "error", "reason": str(exc)}
+
+    # Keep in-memory feedback store in sync if available
+    if _feedback is not None:
+        _feedback.update_user_feedback(body.box_id, label)
+
+
+    return {"status": "ok", "box_id": body.box_id, "user_label": label}
+
+import time as _time_mod
+
+# Stage definitions — matched against log messages from train.py
+_ML_STAGES = [
+    {"id": "init",     "label": "Initialising",              "pct": 5,  "keywords": ["Discovering available", "Training on"]},
+    {"id": "load",     "label": "Loading OHLC data",         "pct": 15, "keywords": ["load_ohlc_from_db", "Processing"]},
+    {"id": "detect",   "label": "Detecting boxes",           "pct": 30, "keywords": ["Detecting consolidation", "Detected "]},
+    {"id": "features", "label": "Extracting features",       "pct": 45, "keywords": ["Extracting features", "Feature matrix"]},
+    {"id": "labels",   "label": "Computing labels",          "pct": 58, "keywords": ["Computing auto-labels", "Human labels loaded", "Human label overrides"]},
+    {"id": "train",    "label": "Training XGBoost model",    "pct": 72, "keywords": ["Training XGBoost quality model", "Train:", "Best iteration"]},
+    {"id": "eval",     "label": "Evaluating & calibrating",  "pct": 85, "keywords": ["TEST RESULTS", "Threshold", "Bucket analysis"]},
+    {"id": "pattern",  "label": "Pattern classifier",        "pct": 92, "keywords": ["Training pattern classifier", "Pattern model saved"]},
+    {"id": "save",     "label": "Saving model",              "pct": 97, "keywords": ["Quality model saved", "model saved"]},
+]
+
+_ml_progress: dict = {
+    "state":      "idle",       # idle | training | trained | error
+    "stage":      None,
+    "stage_label": None,
+    "pct":        0,
+    "logs":       [],           # list of {ts, msg} dicts, max 200
+    "started_at": None,
+    "finished_at": None,
+    "elapsed_s":  None,
+    "metrics":    {},           # MAE, pearson_r, threshold etc from result
+    "error":      None,
+}
+_ml_retrain_lock = threading.Event()
+_ml_retrain_lock.set()   # available
+_ml_progress_lock = threading.Lock()
+
+# ── ML Stats Cache (TASK 7) ──────────────────────────────────────────────────
+_ml_stats_cache: dict = None
+_ml_stats_last_update: float = 0
+ML_STATS_CACHE_TTL = 60  # seconds
+
+
+def _ml_log(msg: str, pct: int | None = None):
+    """Append a log line and optionally update stage percentage."""
+    global _ml_progress
+    ts = _time_mod.strftime("%H:%M:%S")
+    with _ml_progress_lock:
+        _ml_progress["logs"].append({"ts": ts, "msg": msg})
+        if len(_ml_progress["logs"]) > 300:
+            _ml_progress["logs"] = _ml_progress["logs"][-300:]
+        if pct is not None and pct > _ml_progress["pct"]:
+            _ml_progress["pct"] = pct
+        # Auto-detect stage from message
+        for stage in _ML_STAGES:
+            if any(kw in msg for kw in stage["keywords"]):
+                if _ml_progress["pct"] <= stage["pct"]:
+                    _ml_progress["pct"]         = stage["pct"]
+                    _ml_progress["stage"]       = stage["id"]
+                    _ml_progress["stage_label"] = stage["label"]
+                break
+
+
+class _MLLogHandler(logging.Handler):
+    """Logging handler that pipes train.py output into _ml_progress['logs']."""
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            _ml_log(msg)
+        except Exception:
+            pass
+
+
+def _bg_ml_retrain():
+    """Fire-and-forget consolidation scorer retrain in background thread."""
+    global _ml_progress
+    if not _ml_retrain_lock.is_set():
+        logger.info("ML retrain already running — skipping duplicate trigger")
+        return
+    _ml_retrain_lock.clear()
+    with _ml_progress_lock:
+        _ml_progress.update({
+            "state": "training", "stage": "init", "stage_label": "Initialising",
+            "pct": 2, "logs": [], "started_at": _time_mod.time(),
+            "finished_at": None, "elapsed_s": None,
+            "metrics": {}, "error": None,
+        })
+
+    def _run():
+        global _ml_progress
+        _ml_log("▶ ML Scorer retrain started", pct=2)
+        # Attach log handler to root + train logger so all train.py output is captured
+        _handler = _MLLogHandler()
+        _handler.setFormatter(logging.Formatter("%(message)s"))
+        _handler.setLevel(logging.DEBUG)
+        _root_logger = logging.getLogger()
+        _train_logger = logging.getLogger("train")
+        _root_logger.addHandler(_handler)
+        _train_logger.addHandler(_handler)
+        try:
+            import sys as _sys
+            _SCORER_DIR = os.path.abspath(
+                os.path.join(os.path.dirname(__file__), "..", "project", "ml", "consolidation_scorer")
+            )
+            _BACKEND_DATA = os.path.join(os.path.dirname(__file__), "data")
+            _CANDLE_DB = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "candles.db"))
+            _FB_DB     = os.path.join(_BACKEND_DATA, "ml_feedback.db")
+            _sys.path.insert(0, _SCORER_DIR)
+            _ml_log("→ Loading train module…", pct=5)
+            import importlib
+            if "train" in _sys.modules:
+                importlib.reload(_sys.modules["train"])
+            from train import run_pipeline
+            _ml_log("→ Starting pipeline…", pct=8)
+            result = run_pipeline(
+                db_path=_CANDLE_DB,
+                fb_db_path=_FB_DB,
+                train_all_series=True,
+                max_candles_per_series=5000,
+            )
+            cnt = 0
+            try:
+                import sqlite3 as _sq3r
+                _c = _sq3r.connect(_FB_DB)
+                _c.execute("UPDATE boxes SET is_consumed = 1 WHERE user_label IS NOT NULL AND (is_consumed = 0 OR is_consumed IS NULL)")
+                _c.commit()
+                cnt = _c.execute("SELECT COUNT(*) FROM boxes WHERE user_label IS NOT NULL AND is_consumed = 1").fetchone()[0]
+                _c.close()
+            except Exception as _e:
+                logger.warning("Failed to mark labels as consumed: %s", _e)
+            # Extract metrics from result dict
+            metrics = {}
+            if result and isinstance(result, dict):
+                metrics = {
+                    "mae":               round(result.get("mae", 0), 4),
+                    "pearson_r":         round(result.get("pearson_r", 0), 4),
+                    "spearman_r":        round(result.get("spearman_r", 0), 4),
+                    "optimal_threshold": round(result.get("optimal_threshold", 0.5), 3),
+                    "train_rows":        result.get("train_rows", 0),
+                    "test_rows":         result.get("test_rows", 0),
+                    "human_label_count": result.get("human_label_count", 0),
+                    "has_pattern_model": result.get("has_pattern_model", False),
+                    "version":           result.get("version", ""),
+                }
+            elapsed = round(_time_mod.time() - _ml_progress["started_at"], 1)
+            _ml_log(f"✓ Training complete in {elapsed}s | human_labels={cnt} | MAE={metrics.get('mae','?')}", pct=100)
+            with _ml_progress_lock:
+                _ml_progress["state"]       = "trained"
+                _ml_progress["stage"]       = "save"
+                _ml_progress["stage_label"] = "Complete"
+                _ml_progress["pct"]         = 100
+                _ml_progress["finished_at"] = _time_mod.time()
+                _ml_progress["elapsed_s"]   = elapsed
+                _ml_progress["label_count"] = cnt
+                _ml_progress["metrics"]     = metrics
+            logger.info("ML scorer retrain complete (labels=%d)", cnt)
+            # Reload scorer weights
+            if _scorer is not None:
+                try:
+                    _scorer.reload()
+                    _ml_log("→ ConsolidationScorer weights reloaded")
+                    logger.info("ConsolidationScorer reloaded after retrain")
+                except Exception as re:
+                    logger.warning("Scorer reload failed: %s", re)
+        except Exception as e:
+            elapsed = round(_time_mod.time() - (_ml_progress.get("started_at") or _time_mod.time()), 1)
+            _ml_log(f"✗ Error: {e}", pct=None)
+            with _ml_progress_lock:
+                _ml_progress["state"]       = "error"
+                _ml_progress["stage"]       = "error"
+                _ml_progress["stage_label"] = "Error"
+                _ml_progress["finished_at"] = _time_mod.time()
+                _ml_progress["elapsed_s"]   = elapsed
+                _ml_progress["error"]       = str(e)
+            logger.error("ML scorer retrain failed: %s", e)
+        finally:
+            _root_logger.removeHandler(_handler)
+            _train_logger.removeHandler(_handler)
+            _ml_retrain_lock.set()
+
+    threading.Thread(target=_run, daemon=True, name="ml-scorer-retrain").start()
+
+
+@app.post("/api/ml/retrain")
+def trigger_ml_retrain():
+    """Manually trigger consolidation scorer retraining using GOOD/BAD/NEUTRAL labels."""
+    if not _ml_retrain_lock.is_set():
+        return {"status": "already_running", "reason": "Retrain already in progress"}
+
+    cnt = 0
+    try:
+        import sqlite3 as _sq3
+        _db_p = os.path.join(os.path.dirname(__file__), "data", "ml_feedback.db")
+        _c = _sq3.connect(_db_p)
+        cnt = _c.execute("SELECT COUNT(*) FROM boxes WHERE user_label IS NOT NULL AND (is_consumed = 0 OR is_consumed IS NULL)").fetchone()[0]
+        _c.close()
+    except Exception:
+        pass
+
+    if cnt < 10:
+        return {"status": "insufficient_data",
+                "labeled_count": cnt,
+                "reason": f"Need at least 10 GOOD/BAD/NEUTRAL labels. Have {cnt}."}
+
+    _bg_ml_retrain()
+    return {"status": "queued", "labeled_count": cnt,
+            "message": "Consolidation scorer retraining in background"}
+
+
+@app.get("/api/ml/train-status")
+def get_ml_train_status():
+    """Return current training state (compact, for toolbar badge)."""
+    with _ml_progress_lock:
+        return {
+            "status":          "ok",
+            "state":           _ml_progress["state"],
+            "retrain_running": not _ml_retrain_lock.is_set(),
+            "pct":             _ml_progress["pct"],
+            "stage_label":     _ml_progress["stage_label"],
+            "elapsed_s":       _ml_progress["elapsed_s"],
+            "label_count":     _ml_progress["label_count"],
+            "error":           _ml_progress["error"],
+        }
+
+
+@app.get("/api/ml/train-progress")
+def get_ml_train_progress():
+    """Return full training progress: stages, logs, metrics."""
+    with _ml_progress_lock:
+        data = dict(_ml_progress)
+    data["retrain_running"] = not _ml_retrain_lock.is_set()
+    data["status"] = "ok"
+    return data
+
+
+
+@app.get("/api/ml/labeled-list")
+def get_labeled_list():
+    """Return all GOOD/BAD/NEUTRAL labeled boxes, newest first."""
+    if _feedback is None:
+        return {"status": "error", "items": [], "total": 0}
+    items = _feedback.get_labeled_list()
+    return {"status": "ok", "items": items, "total": len(items)}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Detection system endpoints (human-in-the-loop improvement)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class _DetectionFeedbackBody(_BaseModel):
+    box_id:           str
+    detection_label:  str   # RIGHT | WRONG | IGNORE
+
+
+@app.post("/api/detection/feedback")
+def post_detection_feedback(body: _DetectionFeedbackBody):
+    """
+    Store RIGHT / WRONG / IGNORE detection label for a box.
+    Box must already exist in DB (auto-created at inference time).
+    """
+    if _feedback is None:
+        return {"status": "error", "reason": "feedback store not initialised"}
+
+    valid = {"RIGHT", "WRONG", "IGNORE"}
+    label = (body.detection_label or "").strip().upper()
+    if label not in valid:
+        return {"status": "error", "reason": f"detection_label must be one of {valid}"}
+
+    ok = _feedback.update_detection_label(body.box_id, label)
+    if not ok:
+        return {"status": "not_found",
+                "reason": f"box_id {body.box_id!r} not in DB — must be scored first"}
+
+    logger.info("Detection feedback: box %s → %s", body.box_id, label)
+
+
+    return {"status": "ok", "box_id": body.box_id, "detection_label": label}
+
+
+class _ManualBoxBody(_BaseModel):
+    symbol:    str
+    timeframe: str
+    timeStart: int   # unix ms
+    timeEnd:   int   # unix ms
+    priceHigh: float
+    priceLow:  float
+
+
+@app.post("/api/detection/manual_box")
+def post_manual_box(body: _ManualBoxBody):
+    """
+    Save a user-drawn consolidation box.
+    Stored with detection_label=RIGHT, source=manual (highest training weight).
+    """
+    if _feedback is None:
+        return {"status": "error", "reason": "feedback store not initialised"}
+
+    zone = body.model_dump()
+    box_id = _feedback.insert_manual_box(zone)
+    if box_id is None:
+        return {"status": "error", "reason": "insert_manual_box failed"}
+
+    # Invalidate consolidation cache so new box is visible immediately
+    _cache_set("consolidations", None)
+    logger.info("Manual box saved: %s [%s %s %.5f–%.5f]",
+                box_id, body.symbol, body.timeframe, body.priceLow, body.priceHigh)
+    return {"status": "ok", "box_id": box_id, "source": "manual"}
+
+
+# ── Background retrain helper ─────────────────────────────────────────────────
+_retrain_lock_flag = threading.Event()
+_retrain_lock_flag.set()  # starts as "available"
+
+
+def _bg_retrain():
+    """Fire-and-forget retrain in background thread."""
+    if not _retrain_lock_flag.is_set():
+        logger.info("Retrain already in progress — skipping duplicate trigger")
+        return
+    _retrain_lock_flag.clear()
+
+    def _run():
+        try:
+            from detection_train import run_detection_training
+            result = run_detection_training(min_samples=10)
+            logger.info("Background retrain complete: %s", result.get("status"))
+            # Reload scorer weights after training
+            if _detection_scorer is not None:
+                _detection_scorer.reload()
+        except Exception as e:
+            logger.error("Background retrain failed: %s", e)
+        finally:
+            _retrain_lock_flag.set()
+
+    threading.Thread(target=_run, daemon=True, name="detection-retrain").start()
+
+
+@app.post("/api/detection/retrain")
+def trigger_retrain():
+    """
+    Manually trigger detection model retraining.
+    Returns immediately; training runs in background.
+    """
+    if not _retrain_lock_flag.is_set():
+        return {"status": "already_running",
+                "reason": "A retrain job is already in progress — please wait"}
+
+    # Count labeled samples
+    labeled_count = 0
+    try:
+        import sqlite3 as _sq3
+        _db_p = os.path.join(os.path.dirname(__file__), "data", "ml_feedback.db")
+        _c = _sq3.connect(_db_p)
+        labeled_count = _c.execute(
+            "SELECT COUNT(*) FROM boxes WHERE detection_label IN ('RIGHT','WRONG')"
+        ).fetchone()[0]
+        _c.close()
+    except Exception:
+        pass
+
+    if labeled_count < 10:
+        return {
+            "status": "insufficient_data",
+            "labeled_count": labeled_count,
+            "reason": f"Need at least 10 labeled boxes (RIGHT/WRONG). Have {labeled_count}.",
+        }
+
+    _bg_retrain()
+    return {
+        "status": "queued",
+        "labeled_count": labeled_count,
+        "message": "Retraining in background — reload model_boxes in ~30s",
+    }
+
+
+@app.get("/api/detection/stats")
+def get_detection_stats():
+    """
+    Return labeled box counts so the frontend can show a training progress counter.
+    """
+    MIN_MANUAL  = 10   # minimum to manually trigger retrain
+    AUTO_TARGET = 20   # threshold for auto-retrain
+    try:
+        import sqlite3 as _sq3
+        _db_p = os.path.join(os.path.dirname(__file__), "data", "ml_feedback.db")
+        _c = _sq3.connect(_db_p)
+        right_count  = _c.execute("SELECT COUNT(*) FROM boxes WHERE detection_label='RIGHT'").fetchone()[0]
+        wrong_count  = _c.execute("SELECT COUNT(*) FROM boxes WHERE detection_label='WRONG'").fetchone()[0]
+        ignore_count = _c.execute("SELECT COUNT(*) FROM boxes WHERE detection_label='IGNORE'").fetchone()[0]
+        _c.close()
+    except Exception:
+        right_count = wrong_count = ignore_count = 0
+
+    labeled = right_count + wrong_count
+    model_ready = _detection_scorer is not None and _detection_scorer.ready
+    retrain_running = not _retrain_lock_flag.is_set()
+
+    return {
+        "status": "ok",
+        "labeled":        labeled,
+        "right":          right_count,
+        "wrong":          wrong_count,
+        "ignore":         ignore_count,
+        "min_to_train":   MIN_MANUAL,
+        "auto_target":    AUTO_TARGET,
+        "need_more":      max(0, MIN_MANUAL - labeled),
+        "to_auto":        max(0, AUTO_TARGET - labeled),
+        "model_ready":    model_ready,
+        "retrain_running": retrain_running,
+    }
+
+
+@app.get("/api/detection/model_boxes")
+def get_model_boxes(
+    symbol:    str = Query("EURUSD"),
+    timeframe: str = Query("1h"),
+    candles:   int = Query(500, ge=50, le=5000),
+    threshold: float = Query(0.5, ge=0.0, le=1.0),
+):
+    """
+    Generate candidate consolidation boxes using the detection model.
+    Applies NMS to de-duplicate overlapping candidates.
+    Returns boxes colour-coded by confidence:
+      - detection_label = 'valid'     → high confidence (green)
+      - detection_label = 'uncertain' → score 0.45–0.55  (yellow, dashed)
+      - detection_label = 'invalid'   → filtered out (not returned)
+    """
+    if _detection_scorer is None or not _detection_scorer.ready:
+        return {
+            "status": "model_not_ready",
+            "reason": "Detection model not trained yet — label boxes and retrain first",
+            "boxes": [],
+        }
+
+    # Get candle data
+    try:
+        stored = storage.get_candles("OANDA", symbol, timeframe, count=candles)
+        if not stored or len(stored) < 50:
+            return {"status": "ok", "boxes": [], "reason": "insufficient candle data"}
+
+        use_ts = timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]
+        df = pd.DataFrame(stored)
+        if use_ts:
+            df.index = pd.to_datetime(df["time"], unit="s", utc=True)
+        else:
+            df.index = pd.to_datetime(df["time"])
+
+    except Exception as e:
+        logger.warning("get_model_boxes: candle fetch failed: %s", e)
+        return {"status": "error", "reason": str(e), "boxes": []}
+
+    # Generate candidates
+    try:
+        from candidate_generator import generate_candidates, nms
+        candidates = generate_candidates(df)
+    except Exception as e:
+        logger.warning("get_model_boxes: candidate generation failed: %s", e)
+        return {"status": "error", "reason": str(e), "boxes": []}
+
+    # Score candidates
+    try:
+        from detection_features import extract_detection_features
+        scored = _detection_scorer.score_candidates(df, candidates,
+                                                    extract_fn=extract_detection_features)
+    except Exception as e:
+        logger.warning("get_model_boxes: scoring failed: %s", e)
+        return {"status": "error", "reason": str(e), "boxes": []}
+
+    # NMS de-duplication
+    try:
+        from candidate_generator import nms
+        scored = nms(scored, score_key="detection_score")
+    except Exception:
+        pass
+
+    # Filter: keep valid + uncertain; drop invalid and unscored
+    use_threshold = threshold if threshold != 0.5 else (_detection_scorer.threshold or 0.5)
+    visible = [
+        c for c in scored
+        if c.get("detection_label") in ("valid", "uncertain")
+        and c.get("detection_score") is not None
+        and c.get("detection_score", 0) >= 0.4  # minimum floor
+    ]
+
+    # Convert to frontend format
+    idx = df.index
+    result_boxes = []
+    for c in visible:
+        try:
+            si, ei = int(c["start"]), int(c["end"])
+            ts_start = int(pd.Timestamp(idx[si]).timestamp() * 1000)
+            ts_end   = int(pd.Timestamp(idx[ei]).timestamp() * 1000)
+            score    = round(float(c["detection_score"]), 4)
+            result_boxes.append({
+                "timeframe":        timeframe,
+                "timeStart":        ts_start,
+                "timeEnd":          ts_end,
+                "priceHigh":        round(float(c["price_high"]), 6),
+                "priceLow":         round(float(c["price_low"]),  6),
+                "detection_score":  score,
+                "detection_label":  c["detection_label"],
+                "source":           "model",
+                "model_version":    _detection_scorer.version,
+                # Frontend color hints
+                "ml_border": "rgba(38,166,154,0.85)"   if score >= 0.65 else "rgba(255,184,0,0.85)",
+                "ml_fill":   "rgba(38,166,154,0.10)"   if score >= 0.65 else "rgba(255,184,0,0.08)",
+                "is_uncertain": c["detection_label"] == "uncertain",
+            })
+        except Exception:
+            continue
+
+    logger.info("model_boxes: %s [%s] → %d candidates → %d visible",
+                symbol, timeframe, len(scored), len(result_boxes))
+    return {
+        "status": "ok",
+        "boxes":  result_boxes,
+        "model_version": _detection_scorer.version,
+        "threshold_used": use_threshold,
+        "total_candidates": len(scored),
+    }
+
+
+@app.get("/api/detection/stats")
+def get_detection_stats():
+    """Return labeled count, model version, threshold, and accuracy metrics."""
+    MIN_MANUAL  = 10
+    AUTO_TARGET = 20
+    labeled_count = 0
+    right_count = wrong_count = ignore_count = manual_count = 0
+    user_labeled = 0   # GOOD / BAD / NEUTRAL ML quality labels
+    try:
+        import sqlite3 as _sq3
+        _db_p = os.path.join(os.path.dirname(__file__), "data", "ml_feedback.db")
+        _c = _sq3.connect(_db_p)
+        rows = _c.execute("""
+            SELECT detection_label, source, COUNT(*) as n
+            FROM boxes
+            WHERE detection_label IS NOT NULL
+            GROUP BY detection_label, source
+        """).fetchall()
+        # Count ML quality labels (GOOD/BAD/NEUTRAL) separately
+        try:
+            user_labeled = _c.execute(
+                "SELECT COUNT(*) FROM boxes WHERE user_label IS NOT NULL"
+            ).fetchone()[0]
+        except Exception:
+            user_labeled = 0
+        _c.close()
+        for label, src, n in rows:
+            labeled_count += n
+            if label == "RIGHT":
+                right_count += n
+                if src == "manual":
+                    manual_count += n
+            elif label == "WRONG":
+                wrong_count += n
+            elif label == "IGNORE":
+                ignore_count += n
+    except Exception:
+        pass
+
+    # Total for toolbar counter = detection labels + ML quality labels
+    total_labeled = labeled_count + user_labeled
+    model_ready = _detection_scorer is not None and _detection_scorer.ready
+
+    model_meta = {}
+    if _detection_scorer is not None:
+        model_meta = _detection_scorer.meta()
+
+    return {
+        "status":          "ok",
+        # ── Fields the toolbar reads ──
+        "labeled":         total_labeled,
+        "user_labeled":    user_labeled,
+        "detection_labeled": labeled_count,
+        "min_to_train":    MIN_MANUAL,
+        "auto_target":     AUTO_TARGET,
+        "model_ready":     model_ready,
+        "need_more":       max(0, MIN_MANUAL - total_labeled),
+        "to_auto":         max(0, AUTO_TARGET - total_labeled),
+        # ── Detection breakdown ──
+        "labeled_count":   labeled_count,
+        "right_count":     right_count,
+        "wrong_count":     wrong_count,
+        "ignore_count":    ignore_count,
+        "manual_count":    manual_count,
+        "retrain_ready":   (right_count + wrong_count) >= 50,
+        "retrain_running": not _retrain_lock_flag.is_set(),
+        "model":           model_meta,
+    }
+
+
+@app.get("/api/detection/compare")
+def get_detection_compare(
+    symbol:    str = Query("EURUSD"),
+    timeframe: str = Query("1h"),
+):
+    """
+    Compare baseline boxes vs model-generated boxes.
+    Returns counts and overlap (agreement) ratio.
+    """
+    cached = _cache_get(f"detection_compare_{symbol}_{timeframe}")
+    if cached is not None:
+        return cached
+
+    # Count baseline boxes from /consolidations cache or live
+    baseline_count = 0
+    cached_zones = _cache_get("consolidations")
+    if cached_zones and "zones" in cached_zones:
+        baseline_count = sum(
+            1 for z in cached_zones["zones"]
+            if z.get("timeframe", "").lower() == timeframe.lower()
+        )
+
+    # Get model boxes (reuse endpoint logic)
+    model_resp = get_model_boxes(symbol=symbol, timeframe=timeframe, candles=500, threshold=0.5)
+    model_boxes = model_resp.get("boxes", []) if model_resp.get("status") == "ok" else []
+    model_count = len(model_boxes)
+
+    # Overlap: model box time window overlaps with any baseline box
+    overlap_count = 0
+    if cached_zones and "zones" in cached_zones and model_boxes:
+        baseline_zones = [z for z in cached_zones["zones"]
+                          if z.get("timeframe", "").lower() == timeframe.lower()]
+        for mb in model_boxes:
+            for bz in baseline_zones:
+                ms, me = mb["timeStart"], mb["timeEnd"]
+                bs, be = bz["timeStart"], bz["timeEnd"]
+                if ms < be and me > bs:  # temporal overlap
+                    ph_overlap = min(mb["priceHigh"], bz["priceHigh"]) > max(mb["priceLow"], bz["priceLow"])
+                    if ph_overlap:
+                        overlap_count += 1
+                        break
+
+    denom = max(baseline_count, model_count, 1)
+    agreement_ratio = round(overlap_count / denom, 4)
+
+    result = {
+        "status": "ok",
+        "symbol": symbol,
+        "timeframe": timeframe,
+        "baseline_count": baseline_count,
+        "model_count": model_count,
+        "overlap_count": overlap_count,
+        "agreement_ratio": agreement_ratio,
+        "model_version": _detection_scorer.version if _detection_scorer else "none",
+    }
+    _cache_set(f"detection_compare_{symbol}_{timeframe}", result)
+    return result
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)

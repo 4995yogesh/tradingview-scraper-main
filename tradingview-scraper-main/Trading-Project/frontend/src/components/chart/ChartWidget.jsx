@@ -81,7 +81,7 @@ const fastMergeSort = (older, newer) => {
   return merged;
 };
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, liveTickKey, isSubchart, initialBars }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, liveTickKey, isSubchart, initialBars, showMLDebug, onMLDebugZones, minMLScore = 0, drawBoxMode = false, showModelBoxes = false }, ref) => {
   const chartContainerRef      = useRef(null);
   const chartRef               = useRef(null);
   const seriesRef              = useRef(null);
@@ -89,6 +89,47 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const swingSeriesRef         = useRef([]); // swing level LineSeries
   const consolidationSeriesRef = useRef([]); // consolidation box series
   const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
+
+  // ML overlay refs
+  const mlOverlayRef          = useRef(null);  // DOM div for score labels
+  const mlTooltipRef          = useRef(null);  // DOM div for hover tooltip
+  const mlZonesRef            = useRef([]);     // active zone data for current TF
+
+  // User feedback state — keyed by box_id (persisted to localStorage)
+  const [userFeedback, setUserFeedback]   = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ml_user_feedback')) || {}; }
+    catch (_) { return {}; }
+  });
+  const userFeedbackRef                   = useRef({});
+  userFeedbackRef.current                 = userFeedback;
+  
+  const [patternFeedback, setPatternFeedback] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('ml_pattern_feedback')) || {};
+    } catch (_) { return {}; }
+  });
+  const patternFeedbackRef                = useRef({});
+  patternFeedbackRef.current              = patternFeedback;
+  
+  const pendingRatings                    = useRef(new Set()); // guard against duplicate POSTs
+  const [ratingPopup, setRatingPopup]     = useState(null); // {box_id, x, y, zone}
+  const ratingPopupTimer                  = useRef(null);
+  
+  // Track last active / hovering box for keyboard shortcuts
+  const activeBoxRef                      = useRef(null);
+  const activeZoneRef                     = useRef(null);
+
+  // ── Detection system state ──────────────────────────────────────────────
+  const [detectionPopup, setDetectionPopup]     = useState(null); // {box_id, x, y, zone, source}
+  const [detectionFeedback, setDetectionFeedback] = useState({});  // keyed by box_id
+  const modelBoxSeriesRef                       = useRef([]);       // lightweight-charts series for model boxes
+  const [modelBoxes, setModelBoxes]             = useState([]);
+  // draw tool
+  const drawStartRef                            = useRef(null);     // {price, time, x, y}
+  const drawPreviewRef                          = useRef(null);     // DOM div for preview rectangle
+  const drawOverlayRef                          = useRef(null);     // transparent capture layer
+  const detectionPopupTimerRef                  = useRef(null);
+  const pendingDetectionRef                     = useRef(new Set());
 
   const [chartData, setChartData] = useState(null);
   const chartDataRef = useRef(null);
@@ -105,6 +146,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     getChart: () => chartRef.current,
     getSeries: () => seriesRef.current,
     getContainer: () => chartContainerRef.current,
+    getChartContainer: () => chartContainerRef.current,
+    getConsolidations: () => mlZonesRef.current,
     setVisibleRange: (range) => {
       if (chartRef.current && chartData) {
         try {
@@ -360,6 +403,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
   // ── Fetch Consolidation Zones + Swing Levels from backend ─────────────────
   const [consolidations, setConsolidations] = useState([]);
+  const [mlHealth, setMlHealth]             = useState(null);
   const [swingLevels, setSwingLevels]       = useState([]);
 
   useEffect(() => {
@@ -373,19 +417,30 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         if (cRes.ok) {
           const d = await cRes.json();
           if (d.status === 'ok') {
-            setConsolidations(prev => JSON.stringify(prev) === JSON.stringify(d.zones) ? prev : (d.zones || []));
+            const incoming = d.zones || [];
+            if (d.ml_health) setMlHealth(d.ml_health);
+            setConsolidations(prev => {
+              if (prev.length === incoming.length &&
+                  (incoming.length === 0 || prev[0]?.box_id === incoming[0]?.box_id)) return prev;
+              return incoming;
+            });
           }
         }
         if (sRes.ok) {
           const d = await sRes.json();
           if (d.status === 'ok') {
-            setSwingLevels(prev => JSON.stringify(prev) === JSON.stringify(d.swings) ? prev : (d.swings || []));
+            const incoming = d.swings || [];
+            setSwingLevels(prev => {
+              if (prev.length === incoming.length &&
+                  (incoming.length === 0 || prev[0]?.id === incoming[0]?.id)) return prev;
+              return incoming;
+            });
           }
         }
       } catch (_) {}
     };
     poll();
-    iv = setInterval(poll, 10000);
+    iv = setInterval(poll, 15000);
     return () => clearInterval(iv);
   }, []);
 
@@ -403,17 +458,32 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     const lastUnix = getUnix(candles[candles.length - 1].time);
     const chartTf  = normTf(timeframe);
 
-    // Same TF filter logic as swing indicator:
-    // Show consolidation zones from same TF or any higher TF, except:
-    //   - Skip 15m zones on 5m chart
-    //   - Skip 5m zones on 1m chart
+    // ── Settings-driven multi-TF filter ─────────────────────────────────────────
+    // ALL_TFS = ['1w','1d','4h','1h','15m','5m','1m']
+    // → lower index = HIGHER timeframe, higher index = LOWER timeframe
+    const cbSettings = consolidationSettings?.settings || {};
+    const showSameTF   = cbSettings.showSameTF   !== false;  // default true
+    const showHigherTF = cbSettings.showHigherTF  !== false;  // default true
+    const tfOverrides  = cbSettings.tfOverrides  || {};
+
     const chartTfIdx = ALL_TFS.indexOf(chartTf);
     const zones = consolidations.filter(z => {
-      const ztf = normTf(z.timeframe);
-      if (chartTf === '5m' && ztf === '15m') return false;
-      if (chartTf === '1m' && ztf === '5m')  return false;
+      const ztf    = normTf(z.timeframe);
       const ztfIdx = ALL_TFS.indexOf(ztf);
-      return ztfIdx !== -1 && ztfIdx <= chartTfIdx;
+      if (ztfIdx === -1) return false;
+
+      // LTF boxes NEVER shown on HTF charts (hard-locked)
+      // LTF = higher index than chart TF
+      if (ztfIdx > chartTfIdx) return false;
+
+      // Per-TF override wins over group setting
+      if (ztf in tfOverrides) return !!tfOverrides[ztf];
+
+      // Group logic
+      // Same TF = same index
+      if (ztfIdx === chartTfIdx) return showSameTF;
+      // HTF = lower index (e.g. 1d idx=1 < 1h idx=3)
+      return showHigherTF;
     });
     if (!zones.length) return;
 
@@ -433,58 +503,82 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       return (unixSec - before <= after - unixSec) ? candles[idx - 1].time : candles[idx].time;
     };
 
-    zones.forEach(zone => {
+    // Store active zones for this TF in ref (for overlay + debug panel)
+    // Apply minMLScore filter (only affects rendering — backend sends all zones)
+    const filteredZones = minMLScore > 0
+      ? zones.filter(z => {
+          const ML_ACTIVE = new Set(['active', 'degraded', 'invalid_model']);
+          if (!ML_ACTIVE.has((z.ml_status || 'inactive'))) return true; // show inactive zones always
+          return (z.ml_score || 0) >= minMLScore;
+        })
+      : zones;
+
+    mlZonesRef.current = filteredZones;
+    if (onMLDebugZones) onMLDebugZones(filteredZones);
+
+    filteredZones.forEach(zone => {
       const startUnix = Math.floor(zone.timeStart / 1000);
       const endUnix   = Math.floor(zone.timeEnd   / 1000);
 
       const t1 = snapToChart(startUnix);
-      // Extend to current bar if zone is still active
       const t2 = endUnix >= lastUnix ? candles[candles.length - 1].time : snapToChart(endUnix);
       if (!t1 || !t2 || t1 === t2) return;
 
-      const s1 = Math.min(getUnix(t1), getUnix(t2));
-      const s2 = Math.max(getUnix(t1), getUnix(t2));
-
-      const lo     = bisectLeft(unixArr, s1);
-      const hi     = bisectLeft(unixArr, s2 + 1);
-      const points = candles.slice(lo, hi).map(c => c.time);
-      if (points.length < 2) return;
+      // ── Use just 2 anchor points per box instead of full candle slice ──
+      // This cuts the data-points-per-series from O(N) to O(1)
+      const pts = [t1, t2];
 
       try {
-        // ── Style: light-blue borders (1px thin), solid light-blue fill ──────
-        const borderColor = 'rgba(144, 202, 249, 0.85)';  // #90CAF9
-        const fillColor   = 'rgba(144, 202, 249, 0.15)';
+        const ML_ACTIVE   = new Set(['active', 'degraded', 'feature_drift', 'invalid_input']);
+        const mlStatus    = zone.ml_status || 'inactive';
+        
+        let customBorder = zone.ml_border;
+        let customFill = zone.ml_fill;
+        if (mlStatus === 'invalid_input') { customBorder = '#9e9e9e'; customFill = 'rgba(158,158,158,0.1)' }
+        else if (mlStatus === 'feature_drift') { customBorder = '#bd93f9'; customFill = 'rgba(189,147,249,0.15)' }
+        else if (mlStatus === 'version_mismatch' || mlStatus === 'degraded') { customBorder = '#FFB86C'; customFill = 'rgba(255,184,108,0.1)' }
 
+        const borderColor = (ML_ACTIVE.has(mlStatus) && customBorder)
+          ? customBorder : 'rgba(144,202,249,0.85)';
+        const fillColor   = (ML_ACTIVE.has(mlStatus) && customFill)
+          ? customFill  : 'rgba(144,202,249,0.06)';
+        const lineStyle   = mlStatus === 'invalid_input' ? 2 : 0; // Dashed for invalid
+
+        // Top border
         const topLine = chart.addSeries(LineSeries, {
-          color: borderColor, lineWidth: 1, lineStyle: 0,
+          color: borderColor, lineWidth: 1, lineStyle,
           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
+        topLine.setData(pts.map(t => ({ time: t, value: zone.priceHigh })));
+
+        // Bottom border
         const botLine = chart.addSeries(LineSeries, {
-          color: borderColor, lineWidth: 1, lineStyle: 0,
+          color: borderColor, lineWidth: 1, lineStyle,
           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
+        botLine.setData(pts.map(t => ({ time: t, value: zone.priceLow })));
 
-        topLine.setData(points.map(t => ({ time: t, value: zone.priceHigh })));
-        botLine.setData(points.map(t => ({ time: t, value: zone.priceLow  })));
-
-        // Solid uniform fill — baseValue at priceLow, data at priceHigh
-        // → entire zone height is "above baseline" → full fill top-to-bottom
+        // Fill between priceHigh and priceLow using BaselineSeries
+        // baseValue = priceLow  →  data value = priceHigh
+        // topFill covers the entire zone from top to bottom, no bottomFill
         const fillArea = chart.addSeries(BaselineSeries, {
-          baseValue:        { type: 'price', price: zone.priceLow },
-          topLineColor:     'transparent',
-          topFillColor1:    fillColor,
-          topFillColor2:    fillColor,
-          bottomLineColor:  'transparent',
-          bottomFillColor1: 'transparent',
-          bottomFillColor2: 'transparent',
-          lineWidth: 0,
-          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+          baseValue:         { type: 'price', price: zone.priceLow },
+          topLineColor:      'transparent',
+          topFillColor1:     fillColor,
+          topFillColor2:     fillColor,
+          bottomLineColor:   'transparent',
+          bottomFillColor1:  'transparent',
+          bottomFillColor2:  'transparent',
+          lineWidth:         0,
+          priceLineVisible:  false,
+          lastValueVisible:  false,
+          crosshairMarkerVisible: false,
         });
-        fillArea.setData(points.map(t => ({ time: t, value: zone.priceHigh })));
+        fillArea.setData(pts.map(t => ({ time: t, value: zone.priceHigh })));
 
         consolidationSeriesRef.current.push(topLine, botLine, fillArea);
       } catch (e) {
-        console.warn('Consolidation box draw error:', e);
+        // ignore per-box errors silently
       }
     });
 
@@ -496,8 +590,505 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   }, [consolidations, timeframe, chartKey, consolidationSettings?.enabled]);
 
 
+  // ── ML Score Label Overlay (DOM chips, positioned in screen space) ──────────
+  // Re-renders only when consolidations or chart zoom changes — NOT per tick
+  useEffect(() => {
+    const chart   = chartRef.current;
+    const overlay = mlOverlayRef.current;
+    if (!overlay) return;
 
-  // ── Swing Levels Drawing ──────────────────────────────────────────────────
+    const renderChips = () => {
+      if (!chart || !consolidationSettings?.enabled) {
+        overlay.innerHTML = '';
+        return;
+      }
+      const ts = chart.timeScale();
+      const zones = mlZonesRef.current;
+      const series = seriesRef.current;
+      if (!zones.length || !series) return;
+
+      const candles = chartDataRef.current?.candleData;
+      if (!candles?.length) return;
+
+      const getUnix = (t) => typeof t === 'string' ? new Date(t).getTime() / 1000 : Number(t);
+
+      let html = '';
+      zones.forEach((zone, i) => {
+        // Only render chip when scorer is fully active
+        // invalid_model / inactive / feature_error → no chip, no score shown
+        const ML_ACTIVE = new Set(['active', 'degraded', 'invalid_model']);
+        const mlStatus = zone.ml_status || 'inactive';
+        if (!ML_ACTIVE.has(mlStatus)) return;
+        if (zone.ml_score == null) return;
+
+        // Map the zone's end-time to an x-pixel, priceHigh to a y-pixel
+        try {
+          const endUnix = Math.floor(zone.timeEnd / 1000);
+          const lastUnix = getUnix(candles[candles.length - 1].time);
+          const chartEndUnix = endUnix >= lastUnix ? lastUnix : endUnix;
+
+          const xCoord = ts.timeToCoordinate(chartEndUnix);
+          const yCoord = series.priceToCoordinate(zone.priceHigh);
+          if (xCoord == null || yCoord == null) return;
+
+          const label  = zone.ml_label || 'NEUTRAL';
+          const score  = (zone.ml_score * 100).toFixed(0);
+          const bgMap  = { GOOD: '#0d3730', BAD: '#3b0d0d', NEUTRAL: '#1a2035' };
+          const txMap  = { GOOD: '#26A69A', BAD: '#EF5350', NEUTRAL: '#90CAF9' };
+          
+          let bg = bgMap[label] || bgMap.NEUTRAL;
+          let tx = txMap[label] || txMap.NEUTRAL;
+          if (mlStatus === 'invalid_input') { bg = '#333333'; tx = '#9e9e9e'; }
+          else if (mlStatus === 'feature_drift') { bg = '#2d1b4d'; tx = '#bd93f9'; }
+          else if (mlStatus === 'version_mismatch' || mlStatus === 'degraded') { bg = '#332b00'; tx = '#FFB86C'; }
+
+          // Agreement icon suffix (✓ / ⚠) or unrated dot (•)
+          const storedFb = userFeedbackRef.current[zone.box_id] || zone.user_label;
+          let agreementSuffix = `<span style="color:#787B86;margin-left:3px;font-size:12px;line-height:0.8">•</span>`;
+          if (storedFb) {
+            agreementSuffix = storedFb === label
+              ? `<span style="color:#26A69A;margin-left:3px">✓</span>`
+              : `<span style="color:#FFB86C;margin-left:3px">⚠</span>`;
+          }
+
+          // Pattern: prefer ML classifier prediction, fall back to user-labeled pattern_type
+          const resolvedPattern = zone.pattern_prediction || zone.pattern_type || null;
+          let patternSuffix = '';
+          if (resolvedPattern === 'CONTINUATION') patternSuffix = ' <span style="margin-left:2px">➡️</span>';
+          else if (resolvedPattern === 'LIQUIDITY_GRAB') patternSuffix = ' <span style="margin-left:2px">🎯</span>';
+
+          html += `<div data-zone="${i}" style="
+            position:absolute;
+            left:${xCoord - 2}px;
+            top:${yCoord - 18}px;
+            transform:translateX(-100%);
+            display:flex;gap:3px;align-items:center;
+            background:${bg};border:1px solid ${tx}40;
+            border-radius:4px;padding:1px 5px;
+            font-size:9px;font-family:Inter,sans-serif;
+            color:${tx};pointer-events:auto;cursor:default;
+            white-space:nowrap;z-index:30;
+            ">${score}% <span style="opacity:0.8">${label}</span>${agreementSuffix}${patternSuffix}</div>`;
+        } catch (_) {}
+      });
+      overlay.innerHTML = html;
+    };
+
+    // Render once immediately
+    renderChips();
+
+    // Throttle pan/zoom re-renders with rAF to avoid layout thrashing
+    const chart2 = chartRef.current;
+    if (!chart2) return;
+    let rafId = null;
+    const throttled = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => { rafId = null; renderChips(); });
+    };
+    const unsub = chart2.timeScale().subscribeVisibleLogicalRangeChange(throttled);
+    return () => {
+      try { chart2.timeScale().unsubscribeVisibleLogicalRangeChange(throttled); } catch (_) {}
+      if (rafId) cancelAnimationFrame(rafId);
+      if (overlay) overlay.innerHTML = '';
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consolidations, chartKey, consolidationSettings?.enabled, showMLDebug, minMLScore]);
+
+
+  // ── ML Hover Tooltip (crosshair-driven) ───────────────────────────────────
+  useEffect(() => {
+    const chart  = chartRef.current;
+    const tooltip = mlTooltipRef.current;
+    if (!chart || !tooltip) return;
+
+    const handler = (param) => {
+      if (!param?.point || !param.time) {
+        tooltip.style.display = 'none';
+        return;
+      }
+
+      const zones  = mlZonesRef.current;
+      const series = seriesRef.current;
+      if (!zones.length || !series) return;
+
+      const priceAtCursor = series.coordinateToPrice(param.point.y);
+      if (!priceAtCursor) { tooltip.style.display = 'none'; return; }
+
+      const cursorUnix = typeof param.time === 'number' ? param.time : 0;
+
+      const hit = zones.find(zone => {
+        // Only hit-test zones where ML is active — invalid/inactive show no tooltip features
+        const ML_ACTIVE = new Set(['active', 'degraded', 'invalid_model']);
+        const mlStatus = zone.ml_status || 'inactive';
+        if (!ML_ACTIVE.has(mlStatus)) return false;
+        const startUnix = Math.floor(zone.timeStart / 1000);
+        const endUnix   = Math.floor(zone.timeEnd   / 1000);
+        return priceAtCursor >= zone.priceLow
+          && priceAtCursor <= zone.priceHigh
+          && cursorUnix    >= startUnix
+          && cursorUnix    <= endUnix;
+      });
+
+      if (!hit) { tooltip.style.display = 'none'; return; }
+
+      const label  = hit.ml_label || 'NEUTRAL';
+      const score  = ((hit.ml_score || 0.5) * 100).toFixed(1);
+      const conf   = ((hit.ml_confidence || 0) * 100).toFixed(0);
+      const txMap  = { GOOD: '#26A69A', BAD: '#EF5350', NEUTRAL: '#90CAF9' };
+      const mlStatus = hit.ml_status || 'inactive';
+      let tx     = txMap[label] || txMap.NEUTRAL;
+      if (mlStatus === 'invalid_input') tx = '#9e9e9e';
+      else if (mlStatus === 'feature_drift') tx = '#bd93f9';
+      else if (mlStatus === 'version_mismatch' || mlStatus === 'degraded') tx = '#FFB86C';
+
+      // ── Top-3 feature contributions (v4 pred_contribs) ──────────────────
+      const topFeats = (hit.ml_top_features || []).slice(0, 3);
+      const maxImpact = topFeats.reduce((m, f) => Math.max(m, Math.abs(f.impact)), 0) || 1;
+
+      const featHtml = topFeats.length > 0
+        ? `<div style="border-top:1px solid #2A2E39;padding-top:6px;margin-top:4px">
+            <div style="font-size:8px;color:#4A4E59;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px">Why</div>
+            ${topFeats.map(f => {
+              const isPos  = f.impact >= 0;
+              const color  = isPos ? '#26A69A' : '#EF5350';
+              const sign   = isPos ? '+' : '';
+              const barPct = Math.round(Math.abs(f.impact) / maxImpact * 80);
+              return `<div style="margin-bottom:4px">
+                <div style="display:flex;justify-content:space-between;font-size:9px;margin-bottom:2px">
+                  <span style="color:#A0A4B0">${f.name}</span>
+                  <span style="color:${color};font-family:monospace">${sign}${f.impact.toFixed(4)}</span>
+                </div>
+                <div style="height:2px;background:#2A2E39;border-radius:1px">
+                  <div style="width:${barPct}%;height:100%;background:${color};border-radius:1px"></div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>`
+        : '';
+
+      // Pattern: prefer ML classifier, fall back to deterministic suggestion
+      const resolvedHitPattern = hit.pattern_prediction || hit.pattern_suggestion || null;
+      const patternConfPct = hit.pattern_confidence ? Math.round(hit.pattern_confidence * 100) : null;
+      const isMLPatternHit = !!hit.pattern_prediction;
+      const patternEmoji = resolvedHitPattern === 'CONTINUATION' ? '➡️' : resolvedHitPattern === 'LIQUIDITY_GRAB' ? '🎯' : '';
+      const patternColor = resolvedHitPattern === 'CONTINUATION' ? '#26A69A' : '#FFB86C';
+
+      const dirEmoji = hit.breakout_direction === 'bullish' ? '↑' : hit.breakout_direction === 'bearish' ? '↓' : '';
+      const structBg  = { 'HH-HL':'#26A69A22','LL-LH':'#EF535022','HH-LH':'#FFB86C22','LL-HL':'#FFB86C22' }[hit.structure_type] || 'transparent';
+      const structClr = { 'HH-HL':'#26A69A','LL-LH':'#EF5350','HH-LH':'#FFB86C','LL-HL':'#FFB86C' }[hit.structure_type] || '#787B86';
+
+      tooltip.innerHTML = `
+        <div style="font-weight:700;color:${tx};margin-bottom:3px;font-size:11px">${mlStatus !== 'active' ? mlStatus.toUpperCase() : label} — ${score}%</div>
+        <div style="color:#787B86;font-size:9px;margin-bottom:2px">Confidence: ${conf}%</div>
+        ${hit.ml_debug?.imputation ? `<div style="color:#FFB86C;font-size:9px;margin-bottom:4px">Imputed: ${hit.ml_debug.imputation.count} feats (${hit.ml_debug.imputation.features.join(', ')})</div>` : ''}
+        ${hit.ml_debug?.missing_features?.length ? `<div style="color:#EF5350;font-size:9px;margin-bottom:4px">Missing: ${hit.ml_debug.missing_features.join(', ')}</div>` : ''}
+        ${hit.structure_type ? `<div style="display:inline-flex;align-items:center;gap:4px;font-size:8px;padding:1px 5px;border-radius:3px;background:${structBg};color:${structClr};margin-bottom:4px;font-weight:600">${dirEmoji} ${hit.structure_type}${hit.swing_count ? ` · ${hit.swing_count} swings` : ''}</div>` : ''}
+        ${resolvedHitPattern ? `<div style="color:${patternColor};font-size:9px;margin-bottom:4px;font-weight:600">${patternEmoji} ${resolvedHitPattern}${isMLPatternHit && patternConfPct ? ` <span style="opacity:0.6;font-size:8px">(ML ${patternConfPct}%)</span>` : !isMLPatternHit ? ` <span style="opacity:0.5;font-size:8px">(structural)</span>` : ''}</div>` : ''}
+        ${featHtml}
+      `;
+
+      // Keep track of hover for keyboard shortcuts
+      activeBoxRef.current = hit.box_id;
+      activeZoneRef.current = hit;
+
+      const container = chart.chartElement ? chart.chartElement() : null;
+      const cw = container?.clientWidth || 9999;
+      const ch = container?.clientHeight || 9999;
+      const tipW = 200, tipH = 120;
+      const x = (param.point.x + 14 + tipW > cw) ? param.point.x - tipW - 6 : param.point.x + 14;
+      const y = (param.point.y + 14 + tipH > ch) ? param.point.y - tipH - 6 : param.point.y + 14;
+      tooltip.style.left    = `${x}px`;
+      tooltip.style.top     = `${y}px`;
+      tooltip.style.display = 'block';
+    };
+
+    chart.subscribeCrosshairMove(handler);
+    return () => {
+      try { chart.unsubscribeCrosshairMove(handler); } catch (_) {}
+      if (tooltip) tooltip.style.display = 'none';
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartKey, consolidationSettings?.enabled]);
+
+
+  // ── User Rating Popup (subscribeClick) ────────────────────────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+    if (!chart || !series) return;
+
+    const handler = (param) => {
+      if (!param?.point) return;
+
+      const zones  = mlZonesRef.current;
+      const priceAtCursor = series.coordinateToPrice(param.point.y);
+      if (!priceAtCursor) return;
+      const cursorUnix = typeof param.time === 'number' ? param.time : 0;
+
+      const hit = zones.find(zone => {
+        const ML_ACTIVE = new Set(['active', 'degraded', 'invalid_model']);
+        const mlStatus = zone.ml_status || 'inactive';
+        if (!ML_ACTIVE.has(mlStatus)) return false;
+        if (!zone.box_id) return false;
+        const startUnix = Math.floor(zone.timeStart / 1000);
+        const endUnix   = Math.floor(zone.timeEnd   / 1000);
+        return priceAtCursor >= zone.priceLow
+          && priceAtCursor <= zone.priceHigh
+          && cursorUnix    >= startUnix
+          && cursorUnix    <= endUnix;
+      });
+
+      if (!hit) {
+        setRatingPopup(null);
+        return;
+      }
+
+      // Position popup near cursor within the container
+      setRatingPopup({
+        box_id: hit.box_id,
+        zone:   hit,
+        x: param.point.x + 16,
+        y: param.point.y - 28,
+      });
+
+      // Popup stays open until user acts — no auto-dismiss
+      clearTimeout(ratingPopupTimer.current);
+    };
+
+    chart.subscribeClick(handler);
+    return () => { try { chart.unsubscribeClick(handler); } catch (_) {} };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartKey, consolidationSettings?.enabled]);
+
+  const handleUserRating = useCallback(async (box_id, user_label, zone) => {
+    if (pendingRatings.current.has(box_id)) return; // prevent duplicate clicks
+
+    // 1) Update local state + localStorage immediately (optimistic)
+    const next = { ...userFeedbackRef.current, [box_id]: user_label };
+    setUserFeedback(next);
+    try { localStorage.setItem('ml_user_feedback', JSON.stringify(next)); } catch (_) {}
+
+    // 2) Dismiss popup
+    setRatingPopup(null);
+    clearTimeout(ratingPopupTimer.current);
+
+    // 3) Send to backend — include timeframe so DB row is TF-aware
+    const tf = zone?.timeframe || ratingPopup?.zone?.timeframe || activeZoneRef.current?.timeframe || null;
+    pendingRatings.current.add(box_id);
+    try {
+      const res = await fetch('http://localhost:8000/api/ml/feedback/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ box_id, user_label, timeframe: tf }),
+      });
+      if (res.ok) {
+        window.dispatchEvent(new CustomEvent('mlDebugRefresh'));
+      }
+    } catch (_) { // backend offline ok
+    } finally {
+      pendingRatings.current.delete(box_id);
+    }
+  }, [ratingPopup]);
+
+  const handlePatternRating = useCallback(async (box_id, ptype) => {
+    if (pendingRatings.current.has(`${box_id}_pattern`)) return;
+
+    // 1) Update local state + localStorage immediately (optimistic)
+    const next = { ...patternFeedbackRef.current, [box_id]: ptype };
+    setPatternFeedback(next);
+    try { localStorage.setItem('ml_pattern_feedback', JSON.stringify(next)); } catch (_) {}
+
+    // 2) Dismiss popup
+    setRatingPopup(null);
+    clearTimeout(ratingPopupTimer.current);
+
+    // 3) Send to backend
+    pendingRatings.current.add(`${box_id}_pattern`);
+    try {
+      const res = await fetch('http://localhost:8000/api/ml/feedback/pattern', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ box_id, pattern_type: ptype }),
+      });
+      if (res.ok) {
+        window.dispatchEvent(new CustomEvent('mlDebugRefresh'));
+      }
+    } catch (_) {
+    } finally {
+      pendingRatings.current.delete(`${box_id}_pattern`);
+    }
+  }, []);
+
+  // ── Keyboard shortcuts for rating (G / B / N) ────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't trigger if user is typing in an input
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      
+      const key = e.key.toLowerCase();
+      // Use either the popup's box_id or the last hovered box_id
+      const targetBoxId = ratingPopup?.box_id || activeBoxRef.current;
+      
+      if (!targetBoxId) return;
+
+      if (key === 'g') handleUserRating(targetBoxId, 'GOOD');
+      if (key === 'b') handleUserRating(targetBoxId, 'BAD');
+      if (key === 'n') handleUserRating(targetBoxId, 'NEUTRAL');
+      if (key === 'c') handlePatternRating(targetBoxId, 'CONTINUATION');
+      if (key === 'l') handlePatternRating(targetBoxId, 'LIQUIDITY_GRAB');
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUserRating, ratingPopup]);
+
+
+  // ── Detection Feedback Handler ──────────────────────────────────────────
+  const handleDetectionFeedback = useCallback(async (box_id, label) => {
+    if (pendingDetectionRef.current.has(box_id)) return;
+    setDetectionFeedback(prev => ({ ...prev, [box_id]: label }));
+    setDetectionPopup(null);
+    clearTimeout(detectionPopupTimerRef.current);
+    pendingDetectionRef.current.add(box_id);
+    try {
+      await fetch('http://localhost:8000/api/detection/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ box_id, detection_label: label }),
+      });
+    } catch (_) {}
+    finally { pendingDetectionRef.current.delete(box_id); }
+  }, []);
+
+  // ── Detection keyboard shortcuts (R / W / I) ───────────────────────────
+  useEffect(() => {
+    const handleKD = (e) => {
+      if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+      const key = e.key.toLowerCase();
+      const bid = detectionPopup?.box_id || activeBoxRef.current;
+      if (!bid) return;
+      if (key === 'r') handleDetectionFeedback(bid, 'RIGHT');
+      if (key === 'w') handleDetectionFeedback(bid, 'WRONG');
+      if (key === 'i') handleDetectionFeedback(bid, 'IGNORE');
+    };
+    window.addEventListener('keydown', handleKD);
+    return () => window.removeEventListener('keydown', handleKD);
+  }, [handleDetectionFeedback, detectionPopup]);
+
+  // ── Model Boxes: fetch + draw on DOM overlay ─────────────────────────────
+  useEffect(() => {
+    if (!showModelBoxes || !chartRef.current) return;
+    let cancelled = false;
+    fetch(`http://localhost:8000/api/detection/model_boxes?symbol=${encodeURIComponent(symbol)}&timeframe=${encodeURIComponent(timeframe)}&candles=500`)
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.status === 'ok' && Array.isArray(data.boxes)) setModelBoxes(data.boxes);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showModelBoxes, chartKey, symbol, timeframe]);
+
+  // ── Draw Box Tool ────────────────────────────────────────────────────
+  useEffect(() => {
+    const overlay = drawOverlayRef.current;
+    if (!overlay) return;
+
+    if (!drawBoxMode) {
+      if (drawPreviewRef.current) { drawPreviewRef.current.remove(); drawPreviewRef.current = null; }
+      drawStartRef.current = null;
+      return;
+    }
+
+    const onMouseDown = (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      const rect  = overlay.getBoundingClientRect();
+      const x     = e.clientX - rect.left;
+      const y     = e.clientY - rect.top;
+      const series = seriesRef.current;
+      const chart  = chartRef.current;
+      if (!series || !chart) return;
+      const price = series.coordinateToPrice(y);
+      drawStartRef.current = { x, y, price };
+      if (drawPreviewRef.current) drawPreviewRef.current.remove();
+      const preview = document.createElement('div');
+      preview.style.cssText = [
+        'position:absolute', 'pointer-events:none', 'z-index:5',
+        'border:2px dashed rgba(41,98,255,0.9)',
+        'background:rgba(41,98,255,0.07)',
+        `left:${x}px`, `top:${y}px`, 'width:0', 'height:0',
+      ].join(';');
+      overlay.appendChild(preview);
+      drawPreviewRef.current = preview;
+    };
+
+    const onMouseMove = (e) => {
+      const start   = drawStartRef.current;
+      const preview = drawPreviewRef.current;
+      if (!start || !preview) return;
+      const rect = overlay.getBoundingClientRect();
+      const x    = e.clientX - rect.left;
+      const y    = e.clientY - rect.top;
+      preview.style.left   = `${Math.min(start.x, x)}px`;
+      preview.style.top    = `${Math.min(start.y, y)}px`;
+      preview.style.width  = `${Math.abs(x - start.x)}px`;
+      preview.style.height = `${Math.abs(y - start.y)}px`;
+    };
+
+    const onMouseUp = async (e) => {
+      const start = drawStartRef.current;
+      if (!start) return;
+      drawStartRef.current = null;
+      if (drawPreviewRef.current) { drawPreviewRef.current.remove(); drawPreviewRef.current = null; }
+      const rect     = overlay.getBoundingClientRect();
+      const x        = e.clientX - rect.left;
+      const y        = e.clientY - rect.top;
+      if (Math.abs(x - start.x) < 10 || Math.abs(y - start.y) < 10) return;
+      const series = seriesRef.current;
+      const chart  = chartRef.current;
+      if (!series || !chart) return;
+      const endPrice = series.coordinateToPrice(y);
+      if (!endPrice || !start.price) return;
+      const priceHigh = Math.max(start.price, endPrice);
+      const priceLow  = Math.min(start.price, endPrice);
+      const ts = chart.timeScale();
+      const t1 = ts.coordinateToTime(start.x);
+      const t2 = ts.coordinateToTime(x);
+      if (!t1 || !t2) return;
+      const timeStart = Math.min(t1, t2) * 1000;
+      const timeEnd   = Math.max(t1, t2) * 1000;
+      try {
+        const res = await fetch('http://localhost:8000/api/detection/manual_box', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ symbol, timeframe, timeStart, timeEnd, priceHigh, priceLow }),
+        });
+        const d = await res.json();
+        if (d.status === 'ok') {
+          // Flash green to confirm save
+          overlay.style.background = 'rgba(38,166,154,0.06)';
+          setTimeout(() => { if (overlay) overlay.style.background = 'transparent'; }, 500);
+        }
+      } catch (_) {}
+    };
+
+    overlay.addEventListener('mousedown', onMouseDown);
+    overlay.addEventListener('mousemove', onMouseMove);
+    overlay.addEventListener('mouseup',   onMouseUp);
+    return () => {
+      overlay.removeEventListener('mousedown', onMouseDown);
+      overlay.removeEventListener('mousemove', onMouseMove);
+      overlay.removeEventListener('mouseup',   onMouseUp);
+      if (drawPreviewRef.current) { drawPreviewRef.current.remove(); drawPreviewRef.current = null; }
+      drawStartRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drawBoxMode, chartKey, symbol, timeframe]);
+
+
+  // ── Swing Levels Drawing ──────────────────────────────────────────────
   useEffect(() => {
     const chart = chartRef.current;
     swingSeriesRef.current.forEach(s => { try { chart?.removeSeries(s); } catch {} });
@@ -508,6 +1099,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     const candles    = chartDataRef.current.candleData;
     const settings   = swingSettings.settings || {};
     const tfSettings = settings.tfs || {};
+
     const getUnix    = (t) => typeof t === 'string' ? new Date(t).getTime() / 1000 : Number(t);
     const normTf     = (tf) => tf.toLowerCase();
 
@@ -560,10 +1152,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       return !isNearHTF(sw.price, sw.type);
     });
 
-    // Backend already computed 3+3 per TF. Just render active unmitigated + mitigated.
+    // ── Batch same-color swings into ONE LineSeries per color ──────────────────
+    // This reduces addSeries() from O(N_swings) → O(N_colors) = ~3-7 series total
+    const colorMap = new Map(); // color → [{time, value}]
+
     dedupedSwings.forEach(sw => {
-      // Skip unmitigated non-active swings (backend omits them, but guard here too)
-      // active → extend to latest | inactive unmitigated → 5-bar stub | mitigated → showMitigated toggle
       if (sw.mitigated && !(settings.showMitigated ?? false)) return;
 
       const color     = tfSettings[normTf(sw.timeframe)]?.color || TF_COLORS[normTf(sw.timeframe)] || '#888';
@@ -572,21 +1165,16 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       const startIdx = bisectLeft(unixArr, swUnixSec);
       if (startIdx >= candles.length) return;
 
-      // 3-state line length:
-      // active unmitigated   → extend to latest candle
-      // inactive unmitigated → short 5-bar stub at pivot
-      // mitigated            → terminate at mitigation candle
       let endIdx;
       if (sw.active) {
         endIdx = candles.length - 1;
       } else if (!sw.mitigated) {
-        // short stub: pivot candle + next 5 bars
         endIdx = Math.min(startIdx + 5, candles.length - 1);
       } else {
-        // mitigated: scan for fill candle
-        endIdx = candles.length - 1;
+        // mitigated: scan for fill candle (capped at 200 bars for performance)
+        endIdx = Math.min(startIdx + 200, candles.length - 1);
         let movedAway = false;
-        for (let i = startIdx + 1; i < candles.length; i++) {
+        for (let i = startIdx + 1; i <= endIdx; i++) {
           const c = candles[i];
           if (sw.type === 'high') {
             if (!movedAway && c.low  < sw.price)  movedAway = true;
@@ -598,21 +1186,44 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         }
       }
 
-      const pts = candles.slice(startIdx, endIdx + 1).map(c => ({
-        time:  normalizeTimeForChart(getUnix(c.time), timeframe),
-        value: sw.price,
-      }));
+      // Just 2 anchor time-points per swing — lightweight-charts will draw straight line
+      const tStart = normalizeTimeForChart(unixArr[startIdx], timeframe);
+      const tEnd   = normalizeTimeForChart(unixArr[endIdx],   timeframe);
+      if (!tStart || !tEnd || tStart === tEnd) return;
+
+      if (!colorMap.has(color)) colorMap.set(color, []);
+      const pts = colorMap.get(color);
+      // Append segment; use NaN gap to separate from previous segment
+      if (pts.length > 0) pts.push({ time: tStart, value: NaN });
+      pts.push({ time: tStart, value: sw.price });
+      pts.push({ time: tEnd,   value: sw.price });
+    });
+
+    // Create one LineSeries per unique color
+    colorMap.forEach((pts, color) => {
       if (pts.length < 2) return;
+
+      // Sort by time (lw-charts requires ascending order)
+      pts.sort((a, b) => {
+        const at = typeof a.time === 'number' ? a.time : new Date(a.time).getTime() / 1000;
+        const bt = typeof b.time === 'number' ? b.time : new Date(b.time).getTime() / 1000;
+        return at - bt;
+      });
+      // Drop duplicate time+value pairs
+      const deduped = pts.filter((p, i) =>
+        i === 0 || !(p.time === pts[i - 1].time && p.value === pts[i - 1].value)
+      );
 
       try {
         const s = chart.addSeries(LineSeries, {
           color, lineWidth: 1, lineStyle: 0,
           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
-        s.setData(pts);
+        s.setData(deduped);
         swingSeriesRef.current.push(s);
       } catch (_) {}
     });
+
 
     return () => {
       swingSeriesRef.current.forEach(s => { try { chartRef.current?.removeSeries(s); } catch {} });
@@ -693,6 +1304,180 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         </div>
       )}
       <div ref={chartContainerRef} className="w-full h-full" />
+      {/* Draw tool overlay — sits above LW-charts canvas, captures mouse events */}
+      <div
+        ref={drawOverlayRef}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 25,
+          cursor:        drawBoxMode ? 'crosshair' : 'default',
+          pointerEvents: drawBoxMode ? 'all' : 'none',
+          background:    'transparent',
+        }}
+      />
+      {/* ML Score label chips — positioned in chart pixel space */}
+      <div ref={mlOverlayRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 20 }} />
+      {/* ML Hover Tooltip */}
+      <div
+        ref={mlTooltipRef}
+        style={{
+          display: 'none',
+          position: 'absolute',
+          background: '#1A1D2E',
+          border: '1px solid #2A2E39',
+          borderRadius: '6px',
+          padding: '8px 10px',
+          fontSize: '10px',
+          color: '#D1D4DC',
+          fontFamily: 'Inter, sans-serif',
+          pointerEvents: 'none',
+          zIndex: 50,
+          minWidth: '140px',
+          maxWidth: '220px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
+          lineHeight: '1.5',
+        }}
+      />
+      {/* User Rating Popup — shown on box click */}
+      {ratingPopup && (() => {
+        // If already labeled → show permanent badge, not a dismissable popup
+        const existingLabel = userFeedback[ratingPopup.box_id] || ratingPopup.zone?.user_label;
+        const existingPattern = patternFeedback[ratingPopup.box_id] || ratingPopup.zone?.pattern_type;
+        return (
+        <div style={{
+          position:   'absolute',
+          left:       `${ratingPopup.x}px`,
+          top:        `${ratingPopup.y}px`,
+          zIndex:     60,
+          display:    'flex',
+          flexDirection: 'column',
+          gap:        '4px',
+          background: 'rgba(20,24,36,0.97)',
+          border:     existingLabel ? '1px solid #26A69A55' : '1px solid #363A45',
+          borderRadius: '12px',
+          padding:    '5px 8px',
+          backdropFilter: 'blur(8px)',
+          boxShadow:  existingLabel ? '0 4px 16px rgba(38,166,154,0.2)' : '0 4px 16px rgba(0,0,0,0.6)',
+          fontFamily: 'Inter, sans-serif',
+          fontSize:   '13px',
+          userSelect: 'none',
+        }}>
+          {/* ── Existing label banner (permanent after first rating) ── */}
+          {existingLabel && (() => {
+            const labelColor = { GOOD: '#26A69A', BAD: '#EF5350', NEUTRAL: '#90CAF9' }[existingLabel] || '#90CAF9';
+            return (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                fontSize: '9px', color: labelColor, fontWeight: 700,
+                background: `${labelColor}15`, border: `1px solid ${labelColor}40`,
+                borderRadius: '6px', padding: '2px 7px',
+              }}>
+                <span>✓ Labeled:</span>
+                <span>{existingLabel}</span>
+                {existingPattern && <span style={{ opacity: 0.7, fontSize: '8px', color: '#FFB86C' }}>· {existingPattern.replace('_', ' ')}</span>}
+              </div>
+            );
+          })()}
+
+          {/* ── Rating row: GOOD / BAD / NEUTRAL + close ── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {[
+              { label: 'GOOD',    emoji: '✓', color: '#26A69A' },
+              { label: 'BAD',     emoji: '✗', color: '#EF5350' },
+              { label: 'NEUTRAL', emoji: '–', color: '#90CAF9' },
+            ].map(({ label, emoji, color }) => {
+              const active = (userFeedback[ratingPopup.box_id] || ratingPopup.zone?.user_label) === label;
+              return (
+                <button
+                  key={label}
+                  onClick={() => handleUserRating(ratingPopup.box_id, label)}
+                  title={`${label} (${label[0].toLowerCase()})`}
+                  style={{
+                    background: active ? `${color}22` : 'transparent',
+                    border:     active ? `1px solid ${color}70` : '1px solid transparent',
+                    borderRadius: '10px', padding: '2px 8px', height: '24px',
+                    cursor: 'pointer', fontSize: '11px', color: active ? color : '#D1D4DC',
+                    display: 'flex', alignItems: 'center', gap: '3px',
+                    transition: 'all 0.12s', outline: 'none',
+                  }}
+                >
+                  <span>{emoji}</span><span>{label}</span>
+                </button>
+              );
+            })}
+
+            {/* Pattern toggle pill */}
+            <button
+              onClick={() => {
+                const next = !JSON.parse(localStorage.getItem('ml_show_pattern_ui') || 'false');
+                localStorage.setItem('ml_show_pattern_ui', JSON.stringify(next));
+                setRatingPopup(p => p ? { ...p } : p);
+              }}
+              title="Toggle pattern-type training (Continuation / Liquidity Grab)"
+              style={{
+                background: JSON.parse(localStorage.getItem('ml_show_pattern_ui') || 'false')
+                  ? 'rgba(144,202,249,0.15)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${JSON.parse(localStorage.getItem('ml_show_pattern_ui') || 'false') ? '#90CAF960' : '#363A45'}`,
+                borderRadius: '10px', padding: '2px 7px', height: '22px',
+                cursor: 'pointer', fontSize: '9px',
+                color: JSON.parse(localStorage.getItem('ml_show_pattern_ui') || 'false') ? '#90CAF9' : '#555A68',
+                display: 'flex', alignItems: 'center', gap: '3px',
+                transition: 'all 0.12s', outline: 'none', marginLeft: '2px',
+              }}
+            >
+              Pattern {JSON.parse(localStorage.getItem('ml_show_pattern_ui') || 'false') ? '▾' : '▸'}
+            </button>
+
+            <button
+              onClick={() => setRatingPopup(null)}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#787B86', fontSize: '9px', marginLeft: '2px',
+                padding: '0 2px', lineHeight: 1,
+              }}
+            >✕</button>
+          </div>
+
+
+          {/* ── Pattern row — hidden unless toggled ── */}
+          {JSON.parse(localStorage.getItem('ml_show_pattern_ui') || 'false') && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '4px',
+              borderTop: '1px solid #252836', paddingTop: '4px',
+            }}>
+              <span style={{ fontSize: '8px', color: '#555A68', marginRight: '2px' }}>Pattern:</span>
+              {[
+                { label: 'CONTINUATION',   emoji: '➡️', color: '#90CAF9' },
+                { label: 'LIQUIDITY_GRAB', emoji: '🎯', color: '#FFB86C' },
+              ].map(({ label, emoji, color }) => {
+                const current = patternFeedback[ratingPopup.box_id] || ratingPopup.zone?.pattern_type;
+                const active  = current === label;
+                return (
+                  <button
+                    key={label}
+                    onClick={() => handlePatternRating(ratingPopup.box_id, label)}
+                    title={label}
+                    style={{
+                      background: active ? `${color}25` : 'transparent',
+                      border:     active ? `1px solid ${color}60` : '1px solid transparent',
+                      borderRadius: '10px', padding: '0 7px', height: '22px',
+                      cursor: 'pointer', fontSize: '10px',
+                      display: 'flex', alignItems: 'center', gap: '3px',
+                      transition: 'all 0.12s', outline: 'none',
+                      color: active ? '#fff' : '#A0A4B0',
+                    }}
+                  >
+                    {emoji} <span style={{ fontSize: '9px' }}>{label.replace('_', ' ')}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        );
+      })()}
+
       {!loading && !error && (
         <button
           onClick={handleResetView}
@@ -703,8 +1488,95 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           <ChevronsRight size={isSubchart ? 10 : 14} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
       )}
+
+      {/* ── Detection Feedback Popup ────────────────────────────────────── */}
+      {detectionPopup && (
+        <div style={{
+          position: 'absolute',
+          left: `${Math.min(detectionPopup.x, 300)}px`,
+          top:  `${Math.max(detectionPopup.y - 10, 4)}px`,
+          zIndex: 70,
+          display: 'flex', flexDirection: 'column', gap: '6px',
+          background: 'rgba(17,20,31,0.97)',
+          border: '1px solid #363A45',
+          borderRadius: '10px',
+          padding: '8px 10px',
+          backdropFilter: 'blur(10px)',
+          boxShadow: '0 6px 24px rgba(0,0,0,0.7)',
+          fontFamily: 'Inter, sans-serif',
+          userSelect: 'none',
+          minWidth: '180px',
+        }}>
+          {/* Score badge */}
+          {detectionPopup.zone && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+              <span style={{ fontSize: '10px', color: '#787B86' }}>Model score</span>
+              <span style={{
+                fontSize: '11px', fontWeight: 700, fontFamily: 'monospace',
+                color: (detectionPopup.zone.detection_score || 0) >= 0.55 ? '#26A69A' :
+                       (detectionPopup.zone.detection_score || 0) >= 0.45 ? '#FFB86C' : '#EF5350',
+              }}>
+                {((detectionPopup.zone.detection_score || 0) * 100).toFixed(1)}%
+              </span>
+              {detectionPopup.zone.is_uncertain && (
+                <span style={{
+                  fontSize: '8px', background: 'rgba(255,184,0,0.18)', color: '#FFB86C',
+                  border: '1px dashed #FFB86C60', borderRadius: '4px', padding: '1px 4px',
+                }}>uncertain</span>
+              )}
+            </div>
+          )}
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {[
+              { label: 'RIGHT',  key: 'R', bg: '#26A69A', emoji: '✓' },
+              { label: 'WRONG',  key: 'W', bg: '#EF5350', emoji: '✗' },
+              { label: 'IGNORE', key: 'I', bg: '#787B86', emoji: '–' },
+            ].map(({ label, key, bg, emoji }) => {
+              const current = detectionFeedback[detectionPopup.box_id];
+              const active  = current === label;
+              return (
+                <button
+                  key={label}
+                  onClick={() => handleDetectionFeedback(detectionPopup.box_id, label)}
+                  title={`${label} (key: ${key})`}
+                  style={{
+                    flex: 1,
+                    background: active ? `${bg}30` : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${active ? bg : '#363A45'}`,
+                    borderRadius: '6px', padding: '3px 0',
+                    cursor: 'pointer', fontSize: '11px', color: active ? '#fff' : '#A0A4B0',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  <span>{emoji}</span>
+                  <span style={{ fontSize: '9px', opacity: 0.7 }}>{key}</span>
+                </button>
+              );
+            })}
+            <button
+              onClick={() => { setDetectionPopup(null); clearTimeout(detectionPopupTimerRef.current); }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#787B86', fontSize: '9px', padding: '0 2px' }}
+            >✕</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Draw mode cursor indicator ────────────────────────────────── */}
+      {drawBoxMode && (
+        <div style={{
+          position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 50, background: 'rgba(41,98,255,0.15)', border: '1px dashed rgba(41,98,255,0.6)',
+          borderRadius: '6px', padding: '2px 8px', fontSize: '9px', color: '#2962FF',
+          pointerEvents: 'none', userSelect: 'none',
+        }}>
+          ✏ Click-drag to draw consolidation box
+        </div>
+      )}
     </div>
   );
+
 });
 
 ChartWidget.displayName = 'ChartWidget';

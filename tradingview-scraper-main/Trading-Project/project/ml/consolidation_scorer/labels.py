@@ -40,116 +40,77 @@ FAKEOUT_MIN_BARS      = 2      # fakeout requires re-entry for at least N bars (
 def compute_label(
     df: pd.DataFrame,
     box: pd.Series,
-    lookforward_cap:   int   = 100,   # raised: gives boxes more room to develop
-    lookforward_min:   int   = 10,
-    penalty_factor:    float = PENALTY_FACTOR,
-    sqrt_transform:    bool  = SQRT_TRANSFORM,
-    mfe_cap_multiples: float = MFE_CAP_MULTIPLES,
-    fakeout_min_bars:  int   = FAKEOUT_MIN_BARS,
+    lookforward_cap:   int   = 100,
+    lookforward_min:   int   = 20,
 ) -> Optional[float]:
     """
-    Compute quality label for one consolidation box using MFE/MAE path quality.
-
-    Returns float in [0, 1], or None if box should be hard-filtered out.
+    Compute y_new for structural upgrade.
+    1.0 = SUCCESS (breakout + follow-through >= 1.5 * box_height or 1.5 * ATR)
+    0.0 = FAILURE (fakeout or reversal < 10 bars)
+    None = Ambiguous / No breakout
     """
     start    = int(box["start"])
     end      = int(box["end"])
     top      = float(box["top"])
     bottom   = float(box["bottom"])
-    duration = end - start
+    box_height = max(top - bottom, 1e-9)
 
-    box_height = top - bottom
-
-    # ── Hard negative filters ─────────────────────────────────────────────────
-    if box_height < MIN_BOX_HEIGHT:
-        return None                          # noise box
-    if duration < 2:
-        return None                          # degenerate box
-
-    # ── Adaptive lookforward ──────────────────────────────────────────────────
-    lookforward = min(lookforward_cap, max(lookforward_min, 2 * duration))
-
+    # Future window
     future_start = end + 1
-    future_end   = future_start + lookforward
-
-    if future_start >= len(df):
-        return None    # no future data → unlabeled (hard filter)
-
-    future = df.iloc[future_start: min(future_end, len(df))]
-    if len(future) < 2:
-        return None
-
-    future_close  = future["close"].to_numpy(dtype=np.float64)
-    future_high   = future["high"].to_numpy(dtype=np.float64)
-    future_low    = future["low"].to_numpy(dtype=np.float64)
-
-    # ── Step 1: Find breakout direction ───────────────────────────────────────
-    direction    = None
-    breakout_bar = None
-    for i, c in enumerate(future_close):
-        if c > top:
-            direction    = "up"
-            breakout_bar = i
-            break
-        elif c < bottom:
-            direction    = "down"
-            breakout_bar = i
-            break
-
-    # Hard filter: no breakout → discard (avoids noisy 0.05 labels)
-    if direction is None:
-        return None
-
-    # ── Step 2: Track MFE and MAE along breakout path ────────────────────────
-    post_high  = future_high[breakout_bar:]
-    post_low   = future_low[breakout_bar:]
-    post_close = future_close[breakout_bar:]
-
-    if direction == "up":
-        # Favorable: how far above top did price reach
-        # Adverse:   how far below top did price drop (pullback)
-        mfe = max(float(np.max(post_high)) - top, 0.0)
-        mae = max(top - float(np.min(post_low)), 0.0)
-    else:  # down
-        mfe = max(bottom - float(np.min(post_low)), 0.0)
-        mae = max(float(np.max(post_high)) - bottom, 0.0)
-
-    # ── Step 3: Path quality with MFE/MAE ────────────────────────────────────
-    # Cap at mfe_cap_multiples× box height.
-    # Using 2× (not 5×) ensures a 2× extension = perfect score = 1.0
-    # giving good spread across the full [0, 1] range.
-    cap = mfe_cap_multiples
-    mfe_norm = min(mfe / box_height, cap) / cap            # → [0, 1]
-    mae_norm = min(mae / box_height, cap) / cap            # → [0, 1]
-
-    raw_quality = mfe_norm - mae_norm * penalty_factor
-    raw_quality = max(raw_quality, 0.0)                    # floor at 0
-
-    # ── Step 4: Fakeout detection ─────────────────────────────────────────────
-    # Require re-entry sustained for fakeout_min_bars consecutive bars
-    # (not just a single wick) to avoid over-penalising normal pullbacks.
-    fakeout_window = max(3, duration // 2)
-    fk_close = post_close[:fakeout_window]
-
-    is_fakeout = False
-    if direction == "up":
-        re_entries = fk_close < top
-        # Count consecutive runs of re-entry
-        max_consec = _max_consecutive(re_entries)
-        is_fakeout = max_consec >= fakeout_min_bars
-    elif direction == "down":
-        re_entries = fk_close > bottom
-        max_consec = _max_consecutive(re_entries)
-        is_fakeout = max_consec >= fakeout_min_bars
-
-    if is_fakeout:
-        raw_quality *= FAKEOUT_MULT
-
-    # ── Step 5: Optional sqrt transform ──────────────────────────────────────
-    if sqrt_transform:
-        raw_quality = float(np.sqrt(raw_quality))
-
-    return float(np.clip(raw_quality, 0.0, 1.0))
+    # Use 50 bars for follow-through check
+    future_end = min(len(df), future_start + 50)
+    if future_start >= len(df): return None
+    
+    future = df.iloc[future_start:future_end]
+    if len(future) < 5: return None
+    
+    fc = future["close"].to_numpy()
+    fh = future["high"].to_numpy()
+    fl = future["low"].to_numpy()
+    
+    # breakout detection
+    direction = 0
+    breakout_idx = -1
+    for i, c in enumerate(fc):
+        if c > top: direction = 1; breakout_idx = i; break
+        if c < bottom: direction = -1; breakout_idx = i; break
+        
+    if direction == 0: return None
+    
+    # follow-through check
+    post_brk = fc[breakout_idx:]
+    post_h = fh[breakout_idx:]
+    post_l = fl[breakout_idx:]
+    
+    # ATR for scaling if box is too tight
+    atr_slice = df.iloc[max(0, end-14):end+1]
+    atr = (atr_slice["high"] - atr_slice["low"]).mean()
+    success_dist = max(box_height * 1.5, atr * 1.5)
+    
+    # Failure check (first 10 bars after breakout)
+    fail_window = 10
+    recent_post = fc[breakout_idx : breakout_idx + fail_window]
+    
+    if direction == 1:
+        # Reversal failure: price closes back below bottom of box or stays below top for too long
+        reversal = np.any(recent_post < bottom)
+        fakeout = np.any(recent_post < top) and (len(recent_post) >= 5 and np.mean(recent_post < top) > 0.6)
+        
+        if reversal or fakeout: return 0.0
+        
+        mfe = np.max(post_h) - top
+        if mfe >= success_dist: return 1.0
+        
+    else: # bearish
+        reversal = np.any(recent_post > top)
+        fakeout = np.any(recent_post > bottom) and (len(recent_post) >= 5 and np.mean(recent_post > bottom) > 0.6)
+        
+        if reversal or fakeout: return 0.0
+        
+        mfe = bottom - np.min(post_l)
+        if mfe >= success_dist: return 1.0
+        
+    return None # Ambiguous (neither success nor quick failure)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -177,15 +138,11 @@ def build_labels(
     df: pd.DataFrame,
     boxes: pd.DataFrame,
     lookforward_cap:   int   = 100,
-    lookforward_min:   int   = 10,
-    penalty_factor:    float = PENALTY_FACTOR,
-    sqrt_transform:    bool  = SQRT_TRANSFORM,
+    lookforward_min:   int   = 20,
     verbose:           bool  = True,
 ) -> pd.Series:
     """
-    Compute quality labels for all boxes.
-
-    Returns pd.Series (indexed by boxes.index).
+    Compute quality labels for all boxes using structural success/failure logic.
     None values → NaN → dropped in training pipeline.
     """
     labels = {}
@@ -194,8 +151,6 @@ def build_labels(
             df, row,
             lookforward_cap = lookforward_cap,
             lookforward_min = lookforward_min,
-            penalty_factor  = penalty_factor,
-            sqrt_transform  = sqrt_transform,
         )
         labels[idx] = score   # None becomes NaN after Series construction
 
@@ -206,13 +161,8 @@ def build_labels(
         if len(valid) > 0:
             import logging
             _log = logging.getLogger(__name__)
-            _log.info(
-                "Label distribution (n=%d): min=%.3f q25=%.3f median=%.3f q75=%.3f max=%.3f std=%.3f",
-                len(valid),
-                float(valid.min()), float(valid.quantile(0.25)),
-                float(valid.median()), float(valid.quantile(0.75)),
-                float(valid.max()), float(valid.std()),
-            )
+            counts = valid.value_counts().to_dict()
+            _log.info("Label counts: %s", str(counts))
 
     return series
 

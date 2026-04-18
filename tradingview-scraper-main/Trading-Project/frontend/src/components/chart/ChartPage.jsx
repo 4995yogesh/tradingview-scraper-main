@@ -6,25 +6,28 @@ import ChartToolbar from './ChartToolbar';
 import SettingsPanel from './SettingsPanel';
 import LayoutSelector from './LayoutSelector';
 import IndicatorPanel from './IndicatorPanel';
+import MLDebugPanel from './MLDebugPanel';
+import LabeledListPanel from './LabeledListPanel';
+import MLTrainingPanel from './MLTrainingPanel';
 
 // ── Keyboard timeframe shortcut map (TradingView-style) ─────────────────────
 // Supports both single-key and multi-char sequences (e.g. "15", "4H", "30")
 const TF_SHORTCUT_MAP = {
-  '1':   '1m',
-  '5':   '5m',
-  '15':  '15m',
-  '30':  '30m',
-  '60':  '1h',
-  'H':   '1h',
-  '1H':  '1h',
-  '4':   '4h',
-  '4H':  '4h',
-  'D':   '1d',
-  '1D':  '1d',
-  'W':   '1w',
-  '1W':  '1w',
-  'M':   '1M',
-  '1M':  '1M',
+  '1': '1m',
+  '5': '5m',
+  '15': '15m',
+  '30': '30m',
+  '60': '1h',
+  'H': '1h',
+  '1H': '1h',
+  '4': '4h',
+  '4H': '4h',
+  'D': '1d',
+  '1D': '1d',
+  'W': '1w',
+  '1W': '1w',
+  'M': '1M',
+  '1M': '1M',
 };
 
 const FIXED_SYMBOL = 'EURUSD';
@@ -68,15 +71,13 @@ function getConsolidationSettings(pane) {
 }
 
 const ResizeHandle = ({ direction = 'horizontal', onDoubleClick }) => (
-  <PanelResizeHandle 
-    className={`group relative flex items-center justify-center ${
-      direction === 'horizontal' ? 'w-[5px] cursor-col-resize' : 'h-[5px] cursor-row-resize'
-    } bg-[#2A2E39] hover:bg-[#2962FF60] active:bg-[#2962FF] transition-colors`}
+  <PanelResizeHandle
+    className={`group relative flex items-center justify-center ${direction === 'horizontal' ? 'w-[5px] cursor-col-resize' : 'h-[5px] cursor-row-resize'
+      } bg-[#2A2E39] hover:bg-[#2962FF60] active:bg-[#2962FF] transition-colors`}
     onDoubleClick={onDoubleClick}
   >
-    <div className={`${
-      direction === 'horizontal' ? 'w-[3px] h-8' : 'h-[3px] w-8'
-    } rounded-full bg-[#363A45] group-hover:bg-[#2962FF] transition-colors`} />
+    <div className={`${direction === 'horizontal' ? 'w-[3px] h-8' : 'h-[3px] w-8'
+      } rounded-full bg-[#363A45] group-hover:bg-[#2962FF] transition-colors`} />
   </PanelResizeHandle>
 );
 
@@ -115,8 +116,65 @@ const ChartPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [countdown, setCountdown] = useState(AUTO_REFRESH_INTERVAL);
   const [liveTickKey, setLiveTickKey] = useState(0);
+  const [showMLDebug, setShowMLDebug] = useState(false);
+  const [mlDebugZones, setMlDebugZones] = useState([]);
+  const [minMLScore, setMinMLScore] = useState(0);  // 0 = show all
+  // Detection system state
+  const [drawBoxMode, setDrawBoxMode] = useState(false);
+  const [showModelBoxes, setShowModelBoxes] = useState(false);
+  const [retrainRunning, setRetrainRunning] = useState(false);
+  // ML label system state
+  const [mlLabelCount, setMlLabelCount]       = useState(0);
+  const [mlTrainStatus, setMlTrainStatus]     = useState('idle'); // idle | training | trained | error
+  const [showLabeledList, setShowLabeledList] = useState(false);
+  const [showTrainingPanel, setShowTrainingPanel] = useState(false);
 
   const symbolPrecision = getSymbolPrecision(symbol);
+
+  // ── ML quality label count + train status poller ────────────────────────
+  useEffect(() => {
+    const pollStatus = async () => {
+      try {
+        const d = await fetch('http://localhost:8000/api/ml/train-status').then(r => r.json());
+        if (d.status === 'ok') {
+          setMlTrainStatus(d.retrain_running ? 'training' : (d.state || 'idle'));
+        }
+      } catch (_) {}
+      try {
+        const d2 = await fetch('http://localhost:8000/api/ml/labeled-list').then(r => r.json());
+        if (d2.status === 'ok') setMlLabelCount(d2.total || 0);
+      } catch (_) {}
+    };
+    pollStatus();
+    const iv = setInterval(pollStatus, 8000);
+    return () => clearInterval(iv);
+  }, []);
+
+  // ── ML retrain handler ────────────────────────────────────────────────────
+  const handleRetrain = async () => {
+    if (retrainRunning || mlTrainStatus === 'training') return;
+    try {
+      setRetrainRunning(true);
+      setMlTrainStatus('training');
+      const res = await fetch('http://localhost:8000/api/ml/retrain', { method: 'POST' }).then(r => r.json());
+      if (res.status === 'queued') {
+        showToast(`Scorer training started (${res.labeled_count} labels)`);
+      } else if (res.status === 'insufficient_data') {
+        showToast(res.reason || 'Not enough labels');
+        setRetrainRunning(false);
+        setMlTrainStatus('idle');
+      } else {
+        showToast(res.reason || res.status);
+        setRetrainRunning(false);
+        setMlTrainStatus('idle');
+      }
+    } catch (e) {
+      showToast('Retrain request failed');
+      setRetrainRunning(false);
+      setMlTrainStatus('idle');
+    }
+  };
+
 
   // ── 15-Second Auto Refresh ───────────────────────────────────────────────
   useEffect(() => {
@@ -132,7 +190,7 @@ const ChartPage = () => {
 
     const tick = setInterval(() => {
       setCountdown(getSecondsLeft());
-      
+
       const currentPeriod = Math.floor(new Date().getSeconds() / 15);
       if (currentPeriod !== lastPeriod) {
         lastPeriod = currentPeriod;
@@ -153,7 +211,7 @@ const ChartPage = () => {
   }, []);
 
   const handlePriceUpdate = useCallback((data) => { setPriceData(data); }, []);
-  
+
   const handleRefresh = useCallback(() => {
     setRefreshKey(prev => prev + 1);
     showToast('Refreshing chart data...');
@@ -243,7 +301,7 @@ const ChartPage = () => {
 
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updatePane, setTimeframe]);
 
   const PaneMiniToolbar = ({ pane, idx }) => {
@@ -310,13 +368,12 @@ const ChartPage = () => {
           const color = isCb ? '#2962FF' : '#27a7b0';
           const title = isCb ? 'Consolidation Boxes' : ind.type === 'swingLevels' ? 'Swing Levels' : ind.type;
           const label = isCb ? 'CB' : ind.type === 'swingLevels' ? 'SL' : 'IN';
-          
+
           return (
             <span
               key={ind.id || i}
-              className={`text-[4px] font-bold px-1 py-0.5 rounded leading-none uppercase transition-opacity ${
-                ind.enabled ? 'opacity-100' : 'opacity-40'
-              }`}
+              className={`text-[4px] font-bold px-1 py-0.5 rounded leading-none uppercase transition-opacity ${ind.enabled ? 'opacity-100' : 'opacity-40'
+                }`}
               style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}
               title={`${title} – ${ind.enabled ? 'visible' : 'hidden'}`}
             >
@@ -340,9 +397,8 @@ const ChartPage = () => {
     return (
       <div
         key={`pane-${idx}-${effectivePane.timeframe}`}
-        className={`h-full w-full relative border border-[#2A2E39] ${
-          activePaneIdx === idx && activeLayout !== '1' ? 'ring-1 ring-[#2962FF60]' : ''
-        }`}
+        className={`h-full w-full relative border border-[#2A2E39] ${activePaneIdx === idx && activeLayout !== '1' ? 'ring-1 ring-[#2962FF60]' : ''
+          }`}
         onClick={() => setActivePaneIdx(idx)}
       >
         <ChartWidget
@@ -358,6 +414,11 @@ const ChartPage = () => {
           swingSettings={swingSettings}
           consolidationSettings={consolidationSettings}
           liveTickKey={liveTickKey}
+          showMLDebug={showMLDebug}
+          onMLDebugZones={isMain ? setMlDebugZones : undefined}
+          minMLScore={minMLScore}
+          drawBoxMode={drawBoxMode}
+          showModelBoxes={showModelBoxes}
         />
         {/* Show mini toolbar for every pane in multi-layout */}
         {activeLayout !== '1' && (
@@ -431,7 +492,67 @@ const ChartPage = () => {
             swingSettings={getSwingSettings(panes[0] || {})}
             consolidationSettings={getConsolidationSettings(panes[0] || {})}
             liveTickKey={liveTickKey}
+            showMLDebug={showMLDebug}
+            onMLDebugZones={setMlDebugZones}
+            minMLScore={minMLScore}
           />
+          {/* Floating Min ML Score slider */}
+          <div style={{
+            position: 'absolute',
+            bottom: '38px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            background: 'rgba(30,34,45,0.92)',
+            border: '1px solid #363A45',
+            borderRadius: '20px',
+            padding: '4px 12px',
+            zIndex: 25,
+            backdropFilter: 'blur(8px)',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+          }}>
+            <span style={{ fontSize: '9px', color: '#787B86', whiteSpace: 'nowrap' }}>ML ≥</span>
+            <input
+              type="range"
+              min="0" max="1" step="0.05"
+              value={minMLScore}
+              onChange={e => setMinMLScore(parseFloat(e.target.value))}
+              style={{
+                width: '80px',
+                accentColor: minMLScore === 0 ? '#363A45' : minMLScore >= 0.6 ? '#26A69A' : minMLScore >= 0.35 ? '#FFB86C' : '#EF5350',
+                cursor: 'pointer',
+              }}
+              title={`Hide boxes below ML score ${Math.round(minMLScore * 100)}%`}
+            />
+            <span style={{
+              fontSize: '10px',
+              fontWeight: 700,
+              fontFamily: 'monospace',
+              minWidth: '28px',
+              color: minMLScore === 0 ? '#787B86' : minMLScore >= 0.6 ? '#26A69A' : minMLScore >= 0.35 ? '#FFB86C' : '#EF5350',
+            }}>
+              {minMLScore === 0 ? 'All' : `${Math.round(minMLScore * 100)}%`}
+            </span>
+            {minMLScore > 0 && (
+              <button
+                onClick={() => setMinMLScore(0)}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#787B86', fontSize: '10px', padding: '0 2px', lineHeight: 1,
+                }}
+                title="Reset filter"
+              >✕</button>
+            )}
+          </div>
+          {showMLDebug && (
+            <MLDebugPanel
+              zones={mlDebugZones}
+              timeframe={timeframe}
+              onClose={() => setShowMLDebug(false)}
+            />
+          )}
         </div>
       );
     }
@@ -466,8 +587,22 @@ const ChartPage = () => {
         onToggleLayout={() => setShowLayout(prev => !prev)}
         showIndicators={showIndicators}
         onToggleIndicators={() => setShowIndicators(prev => !prev)}
+        showMLDebug={showMLDebug}
+        onToggleMLDebug={() => setShowMLDebug(prev => !prev)}
         countdown={countdown}
         panes={panes}
+        drawBoxMode={drawBoxMode}
+        onToggleDrawBox={() => setDrawBoxMode(prev => !prev)}
+        showModelBoxes={showModelBoxes}
+        onToggleModelBoxes={() => setShowModelBoxes(prev => !prev)}
+        onRetrain={handleRetrain}
+        retrainRunning={retrainRunning || mlTrainStatus === 'training'}
+        mlLabelCount={mlLabelCount}
+        mlTrainStatus={mlTrainStatus}
+        onToggleLabeledList={() => setShowLabeledList(prev => !prev)}
+        showLabeledList={showLabeledList}
+        onToggleTrainingPanel={() => setShowTrainingPanel(prev => !prev)}
+        showTrainingPanel={showTrainingPanel}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -510,7 +645,44 @@ const ChartPage = () => {
           {toastMsg}
         </div>
       )}
+
+      {/* Labeled List Sidebar */}
+      {showLabeledList && (
+        <LabeledListPanel
+          trainStatus={mlTrainStatus}
+          onClose={() => setShowLabeledList(false)}
+          onRetrain={(result) => {
+            if (result?.status === 'queued') {
+              setMlTrainStatus('training');
+              setRetrainRunning(true);
+              showToast(`Scorer training started (${result.labeled_count} labels)`);
+            } else {
+              showToast(result?.reason || result?.status || 'Error');
+            }
+          }}
+        />
+      )}
+
+      {/* ML Training Monitor */}
+      {showTrainingPanel && (
+        <MLTrainingPanel
+          labelCount={mlLabelCount}
+          onClose={() => setShowTrainingPanel(false)}
+          onTrain={(result) => {
+            if (result?.status === 'queued') {
+              setMlTrainStatus('training');
+              setRetrainRunning(true);
+              showToast(`Scorer training started (${result.labeled_count} labels)`);
+            } else if (result?.status === 'already_running') {
+              showToast('Training already in progress');
+            } else {
+              showToast(result?.reason || result?.status || 'Error');
+            }
+          }}
+        />
+      )}
     </div>
+
   );
 };
 

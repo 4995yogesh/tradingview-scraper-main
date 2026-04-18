@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  ChevronDown, Menu, Settings, Maximize2, Layout, RotateCw, Keyboard, Activity
+  ChevronDown, Menu, Settings, Maximize2, Layout, RotateCw, Keyboard,
+  Activity, BrainCircuit, PenLine, Bot, RefreshCcw
 } from 'lucide-react';
 import { symbolInfo, timeframes } from '../../data/chartData';
 import LayoutSelector from './LayoutSelector';
@@ -21,13 +22,31 @@ const ChartToolbar = ({
   onSettings, onRefresh,
   activeLayout, onLayoutChange, showLayout, onToggleLayout,
   showIndicators, onToggleIndicators, panes,
+  showMLDebug, onToggleMLDebug,
   countdown,
+  // ML label system
+  mlLabelCount, mlTrainStatus, onToggleLabeledList, showLabeledList,
+  onToggleTrainingPanel, showTrainingPanel,
+  // Detection system controls
+  drawBoxMode, onToggleDrawBox,
+  showModelBoxes, onToggleModelBoxes,
+  onRetrain, retrainRunning,
 }) => {
   const [showTimeframes, setShowTimeframes] = useState(false);
   const [showTfInput, setShowTfInput] = useState(false);
   const [tfInputVal, setTfInputVal] = useState('');
   const tfInputRef = useRef(null);
   const tfRef = useRef(null);
+
+  // ML label count (GOOD/BAD/NEUTRAL) for batch progress
+  const BATCH = 20;
+  const mlCount    = mlLabelCount || 0;
+  const batchProg  = mlCount % BATCH;
+  const batchNum   = Math.floor(mlCount / BATCH) + 1;
+  const batchPct   = Math.round((batchProg / BATCH) * 100);
+  const batchColor = batchPct === 100 ? '#26A69A' : batchPct > 50 ? '#2962FF' : '#787B86';
+
+  // Detection label counter removed — now using ML quality labels only
 
   // Count total active indicators across all panes (for badge)
   const totalActiveIndicators = (panes || []).reduce(
@@ -184,6 +203,133 @@ const ChartToolbar = ({
                 {totalActiveIndicators}
               </span>
             )}
+          </button>
+        </div>
+
+        {/* ML Debug toggle */}
+        <button
+          onClick={onToggleMLDebug}
+          className={`w-[30px] h-[30px] flex items-center justify-center rounded-[4px] transition-colors ${
+            showMLDebug ? 'text-[#BD93F9] bg-[#BD93F915]' : 'text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960]'
+          }`}
+          title="ML Debug Panel"
+        >
+          <BrainCircuit size={14} />
+        </button>
+
+        {/* ── Detection system controls ─────────────────────────────── */}
+        <div className="w-px h-[22px] bg-[#2A2E39] mx-[2px]" />
+
+        {/* Draw Box tool */}
+        <button
+          onClick={onToggleDrawBox}
+          className={`w-[30px] h-[30px] flex items-center justify-center rounded-[4px] transition-colors ${
+            drawBoxMode
+              ? 'text-[#2962FF] bg-[#2962FF20] ring-1 ring-[#2962FF60]'
+              : 'text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960]'
+          }`}
+          title="Draw Consolidation Box (click-drag on chart)"
+        >
+          <PenLine size={14} />
+        </button>
+
+        {/* Model Boxes toggle */}
+        <button
+          onClick={onToggleModelBoxes}
+          className={`w-[30px] h-[30px] flex items-center justify-center rounded-[4px] transition-colors ${
+            showModelBoxes
+              ? 'text-[#26A69A] bg-[#26A69A18]'
+              : 'text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960]'
+          }`}
+          title={showModelBoxes ? 'Hide Model Boxes' : 'Show Model Boxes (AI-detected)'}
+        >
+          <Bot size={14} />
+        </button>
+
+        {/* Retrain button + label counter */}
+        <div className="flex items-center gap-[3px]">
+          {/* Counter pill */}
+        {/* ML label batch counter */}
+        <div
+          onClick={onToggleLabeledList}
+          title={`${mlCount} labels · Batch ${batchNum} (${batchProg}/${BATCH}) · click to open list`}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: showLabeledList ? '#2962FF15' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${showLabeledList ? '#2962FF60' : batchColor + '40'}`,
+            borderRadius: 6, padding: '2px 7px', cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          <span style={{ fontSize: 8, fontFamily: 'monospace', color: '#BD93F9', lineHeight: 1 }}>📋</span>
+          <span style={{ fontSize: 9, fontFamily: 'monospace', color: batchColor, lineHeight: 1 }}>
+            {batchProg}<span style={{ opacity: 0.5 }}>/{BATCH}</span>
+          </span>
+          <div style={{ width: 20, height: 3, background: '#2A2E39', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{
+              width: `${batchPct}%`, height: '100%',
+              background: batchColor, borderRadius: 2,
+              transition: 'width 0.4s ease',
+            }} />
+          </div>
+        </div>
+
+        {/* ML Training Monitor button */}
+        <button
+          onClick={onToggleTrainingPanel}
+          title="Open ML Training Monitor"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 3,
+            background: showTrainingPanel ? '#BD93F920' : 'rgba(255,255,255,0.04)',
+            border: `1px solid ${showTrainingPanel ? '#BD93F960' : '#2A2E39'}`,
+            borderRadius: 6, padding: '2px 7px', cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          <span style={{ fontSize: 9 }}>📟</span>
+          <span style={{ fontSize: 8, color: showTrainingPanel ? '#BD93F9' : '#787B86', fontWeight: 600 }}>Monitor</span>
+        </button>
+
+        {/* Training status badge */}
+        {mlTrainStatus === 'training' && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: '#FFB86C10', border: '1px solid #FFB86C40',
+            borderRadius: 5, padding: '2px 7px',
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#FFB86C', animation: 'pulse 1s infinite' }} />
+            <span style={{ fontSize: 8, fontWeight: 700, color: '#FFB86C', letterSpacing: '0.5px' }}>TRAINING…</span>
+          </div>
+        )}
+        {mlTrainStatus === 'trained' && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: '#26A69A10', border: '1px solid #26A69A40',
+            borderRadius: 5, padding: '2px 7px',
+          }}>
+            <span style={{ fontSize: 8, fontWeight: 700, color: '#26A69A' }}>TRAINED ✓</span>
+          </div>
+        )}
+
+          {/* Retrain button */}
+          <button
+            onClick={onRetrain}
+            disabled={retrainRunning || mlCount < 10}
+            className={`w-[30px] h-[30px] flex items-center justify-center rounded-[4px] transition-colors ${
+              retrainRunning
+                ? 'text-[#FFB86C] bg-[#FFB86C15] cursor-wait'
+                : mlCount < 10
+                ? 'text-[#363A45] cursor-not-allowed'
+                : 'text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960]'
+            }`}
+            title={
+              retrainRunning ? 'Training in progress…'
+              : mlCount < 10
+              ? `Need ${10 - mlCount} more labels to train`
+              : 'Train Consolidation Scorer'
+            }
+          >
+            <RefreshCcw size={14} className={retrainRunning ? 'animate-spin' : ''} />
           </button>
         </div>
 

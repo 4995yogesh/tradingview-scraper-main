@@ -13,6 +13,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Search, Eye, EyeOff, Settings, Trash2, Plus, Activity } from 'lucide-react';
 import SwingSettingsModal from './SwingSettingsModal';
+import ConsolidationSettingsModal, { DEFAULT_CONSOLIDATION_SETTINGS } from './ConsolidationSettingsModal';
 import { DEFAULT_SWING_SETTINGS, TF_COLORS } from '../../lib/swingLevels';
 
 // ── Available indicator catalogue ─────────────────────────────────────────────
@@ -33,7 +34,7 @@ const INDICATOR_CATALOGUE = [
     description: 'Multi-timeframe consolidation zone detection',
     color:       '#2962FF',
     tags:        ['consolidation', 'boxes', 'multi-tf', 'structure'],
-    defaultSettings: {},
+    defaultSettings: { ...DEFAULT_CONSOLIDATION_SETTINGS },
   },
 ];
 
@@ -224,6 +225,17 @@ const IndicatorPanel = ({
     const { paneIdx, indicatorIdx } = editingIndicator;
     const targetIndicator = (panes[paneIdx]?.indicators || [])[indicatorIdx];
     if (!targetIndicator) { setEditingIndicator(null); return null; }
+
+    // Route to the correct modal by indicator type
+    if (targetIndicator.type === 'consolidationBoxes') {
+      return (
+        <ConsolidationSettingsModal
+          settings={targetIndicator.settings}
+          onChange={handleSettingsChange}
+          onClose={() => setEditingIndicator(null)}
+        />
+      );
+    }
 
     return (
       <SwingSettingsModal

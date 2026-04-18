@@ -138,4 +138,36 @@ def consolidation_boxes(
                                    "top": rangeTop, "bottom": rangeBottom}
 
 
-    return pd.DataFrame(boxes)
+    # ── Non-Max Suppression (NMS) — Deduplicate overlapping boxes ────────────────
+    if not boxes:
+        return pd.DataFrame()
+
+    def calculate_iou(b1, b2):
+        # 1D Overlap in time
+        t_overlap = max(0, min(b1["end"], b2["end"]) - max(b1["start"], b2["start"]))
+        if t_overlap <= 0: return 0.0
+        
+        # 1D Overlap in price
+        p_overlap = max(0, min(b1["top"], b2["top"]) - max(b1["bottom"], b2["bottom"]))
+        if p_overlap <= 0: return 0.0
+        
+        overlap_area = t_overlap * p_overlap
+        area1 = (b1["end"] - b1["start"]) * (b1["top"] - b1["bottom"])
+        area2 = (b2["end"] - b2["start"]) * (b2["top"] - b2["bottom"])
+        
+        return overlap_area / (area1 + area2 - overlap_area + 1e-9)
+
+    # Sort by duration descending (simplistic priority)
+    sorted_boxes = sorted(boxes, key=lambda x: (x["end"] - x["start"]), reverse=True)
+    kept = []
+    
+    for b in sorted_boxes:
+        is_duplicate = False
+        for k in kept:
+            if calculate_iou(b, k) > 0.5:
+                is_duplicate = True
+                break
+        if not is_duplicate:
+            kept.append(b)
+
+    return pd.DataFrame(kept)
