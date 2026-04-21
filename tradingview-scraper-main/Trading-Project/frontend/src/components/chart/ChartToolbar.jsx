@@ -4,6 +4,8 @@ import {
 } from 'lucide-react';
 import { symbolInfo, timeframes } from '../../data/chartData';
 import LayoutSelector from './LayoutSelector';
+import MLStatusHUD from './MLStatusHUD';
+
 
 // TradingView-style shortcut map (same as ChartPage)
 const TF_SHORTCUT_MAP = {
@@ -21,7 +23,7 @@ const ChartToolbar = ({
   onSettings, onRefresh,
   activeLayout, onLayoutChange, showLayout, onToggleLayout,
   showIndicators, onToggleIndicators, panes,
-  countdown,
+  countdown, onToggleML,
 }) => {
   const [showTimeframes, setShowTimeframes] = useState(false);
   const [showTfInput, setShowTfInput] = useState(false);
@@ -168,6 +170,9 @@ const ChartToolbar = ({
             </span>
           </div>
         )}
+
+        {/* ML Status HUD */}
+        <MLStatusHUD onToggle={onToggleML} />
 
         {/* Indicators button */}
         <div className="relative">

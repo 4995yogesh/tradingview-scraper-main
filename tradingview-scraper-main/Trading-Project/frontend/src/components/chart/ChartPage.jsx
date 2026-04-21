@@ -116,6 +116,7 @@ const ChartPage = () => {
   const [countdown, setCountdown] = useState(AUTO_REFRESH_INTERVAL);
   const [liveTickKey, setLiveTickKey] = useState(0);
 
+
   const symbolPrecision = getSymbolPrecision(symbol);
 
   // ── 15-Second Auto Refresh ───────────────────────────────────────────────
@@ -468,7 +469,9 @@ const ChartPage = () => {
         onToggleIndicators={() => setShowIndicators(prev => !prev)}
         countdown={countdown}
         panes={panes}
+        onToggleML={() => setShowML(prev => !prev)}
       />
+
 
       <div className="flex flex-1 overflow-hidden">
         {getLayoutCharts()}
@@ -504,6 +507,7 @@ const ChartPage = () => {
           onClose={() => setShowIndicators(false)}
         />
       )}
+
 
       {toastMsg && (
         <div className="fixed bottom-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-[#363A45] text-white text-[12px] rounded-lg shadow-xl border border-[#4A4E59] animate-fade-in">

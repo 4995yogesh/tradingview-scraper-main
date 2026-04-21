@@ -6,6 +6,8 @@ import {
   aggregateCandles, detectSwings, getHigherTfs, ALL_TFS,
   normalizeTimeForChart, TF_COLORS, FILLED_COLOR,
 } from '../../lib/swingLevels';
+import LabelDialog from './LabelDialog';
+
 
 // Sensible number of bars to fetch per timeframe so candles are visible at the initial zoom
 const TF_CANDLE_COUNT = {
@@ -97,6 +99,14 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
+
+  // ML label dialog state
+  const [activeLabelZone, setActiveLabelZone] = useState(null);
+  const [hoveredBoxId, setHoveredBoxId] = useState(null);
+  // Store zone data keyed by box_id for overlay rendering
+  const zoneMapRef = useRef({});
+  const activeBoxesRef = useRef([]);
+
 
   useImperativeHandle(ref, () => ({
     getChart: () => chartRef.current,
@@ -354,6 +364,20 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   }, []);
 
   // ── Consolidation Boxes Drawing ───────────────────────────────────────────
+  const visibleZones = React.useMemo(() => {
+    if (!consolidationSettings?.enabled) return [];
+    const chartTf = timeframe.toLowerCase();
+    const chartTfIdx = ALL_TFS.indexOf(chartTf);
+    return consolidations.filter(z => {
+      const ztf = (z.timeframe || '').toLowerCase();
+      if (!ztf) return false;
+      if (chartTf === '5m' && ztf === '15m') return false;
+      if (chartTf === '1m' && ztf === '5m')  return false;
+      const ztfIdx = ALL_TFS.indexOf(ztf);
+      return ztfIdx !== -1 && ztfIdx <= chartTfIdx;
+    });
+  }, [consolidations, timeframe, consolidationSettings?.enabled]);
+
   useEffect(() => {
     const chart = chartRef.current;
     consolidationSeriesRef.current.forEach(s => { try { chart?.removeSeries(s); } catch {} });
@@ -372,13 +396,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     //   - Skip 15m zones on 5m chart
     //   - Skip 5m zones on 1m chart
     const chartTfIdx = ALL_TFS.indexOf(chartTf);
-    const zones = consolidations.filter(z => {
-      const ztf = normTf(z.timeframe);
-      if (chartTf === '5m' && ztf === '15m') return false;
-      if (chartTf === '1m' && ztf === '5m')  return false;
-      const ztfIdx = ALL_TFS.indexOf(ztf);
-      return ztfIdx !== -1 && ztfIdx <= chartTfIdx;
-    });
+    const zones = visibleZones;
     if (!zones.length) return;
 
     // Pre-build sorted unix-second array once — reused for all O(log N) lookups
@@ -401,6 +419,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       const startUnix = Math.floor(zone.timeStart / 1000);
       const endUnix   = Math.floor(zone.timeEnd   / 1000);
 
+
       const t1 = snapToChart(startUnix);
       // Extend to current bar if zone is still active
       const t2 = endUnix >= lastUnix ? candles[candles.length - 1].time : snapToChart(endUnix);
@@ -414,10 +433,32 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       const points = candles.slice(lo, hi).map(c => c.time);
       if (points.length < 2) return;
 
+      // Store zone for overlay rendering
+      if (zone.box_id) zoneMapRef.current[zone.box_id] = zone;
+
       try {
-        // ── Style: light-blue borders (1px thin), solid light-blue fill ──────
-        const borderColor = 'rgba(144, 202, 249, 0.85)';  // #90CAF9
-        const fillColor   = 'rgba(144, 202, 249, 0.15)';
+        // Determine color based on label / score
+        const hasLabel  = zone.label != null;
+        const score     = zone.score || {};
+        const isFb      = score.is_fallback !== false;
+        const pGood     = !isFb ? (score.probabilities?.good || 0) : null;
+
+        let borderColor, fillColor;
+        if (hasLabel) {
+          if (zone.label === 'good')    { borderColor = 'rgba(38,166,154,0.85)'; fillColor = 'rgba(38,166,154,0.12)'; }
+          else if (zone.label === 'bad') { borderColor = 'rgba(239,83,80,0.85)';  fillColor = 'rgba(239,83,80,0.12)'; }
+          else                           { borderColor = 'rgba(255,167,38,0.85)'; fillColor = 'rgba(255,167,38,0.12)'; }
+        } else if (!isFb && pGood != null) {
+          // Color-code by P(good): green if high, red if low
+          const r = Math.round(239 - pGood * (239 - 38));
+          const g = Math.round(83  + pGood * (166 - 83));
+          const b = Math.round(80  + pGood * (154 - 80));
+          borderColor = `rgba(${r},${g},${b},0.85)`;
+          fillColor   = `rgba(${r},${g},${b},0.10)`;
+        } else {
+          borderColor = 'rgba(144, 202, 249, 0.85)';
+          fillColor   = 'rgba(144, 202, 249, 0.15)';
+        }
 
         const topLine = chart.addSeries(LineSeries, {
           color: borderColor, lineWidth: 1, lineStyle: 0,
@@ -431,8 +472,6 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         topLine.setData(points.map(t => ({ time: t, value: zone.priceHigh })));
         botLine.setData(points.map(t => ({ time: t, value: zone.priceLow  })));
 
-        // Solid uniform fill — baseValue at priceLow, data at priceHigh
-        // → entire zone height is "above baseline" → full fill top-to-bottom
         const fillArea = chart.addSeries(BaselineSeries, {
           baseValue:        { type: 'price', price: zone.priceLow },
           topLineColor:     'transparent',
@@ -447,6 +486,15 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         fillArea.setData(points.map(t => ({ time: t, value: zone.priceHigh })));
 
         consolidationSeriesRef.current.push(topLine, botLine, fillArea);
+        
+        if (zone.box_id) {
+          activeBoxesRef.current.push({
+            box_id: zone.box_id,
+            drawT1: points[0],
+            drawT2: points[points.length - 1],
+            priceHigh: zone.priceHigh
+          });
+        }
       } catch (e) {
         console.warn('Consolidation box draw error:', e);
       }
@@ -455,9 +503,56 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     return () => {
       consolidationSeriesRef.current.forEach(s => { try { chartRef.current?.removeSeries(s); } catch {} });
       consolidationSeriesRef.current = [];
+      activeBoxesRef.current = [];
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [consolidations, timeframe, chartKey, consolidationSettings?.enabled]);
+
+  // ── Sync HTML Overlays to Chart Coordinates ────────────────────────────────
+  useEffect(() => {
+    let handle;
+    const syncOverlays = () => {
+      const chart = chartRef.current;
+      const series = seriesRef.current;
+      if (!chart || !series) {
+        handle = requestAnimationFrame(syncOverlays);
+        return;
+      }
+      
+      const timeScale = chart.timeScale();
+      
+      activeBoxesRef.current.forEach(box => {
+        const el = document.getElementById(`mlbox-${box.box_id}`);
+        if (!el) return;
+        
+        try {
+          const x1 = timeScale.timeToCoordinate(box.drawT1);
+          const x2 = timeScale.timeToCoordinate(box.drawT2);
+          if (x1 === null || x2 === null) {
+            el.style.display = 'none';
+            return;
+          }
+          
+          const midX = (x1 + x2) / 2;
+          const topY = series.priceToCoordinate(box.priceHigh);
+          
+          if (topY !== null) {
+            el.style.display = 'block';
+            // Anchor neatly above the box center
+            el.style.transform = `translate(calc(${midX}px - 50%), calc(${topY}px - 100% - 6px))`;
+          } else {
+            el.style.display = 'none';
+          }
+        } catch (_) {
+          el.style.display = 'none';
+        }
+      });
+      handle = requestAnimationFrame(syncOverlays);
+    };
+    handle = requestAnimationFrame(syncOverlays);
+    return () => cancelAnimationFrame(handle);
+  }, []);
+
 
 
 
@@ -657,6 +752,24 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         </div>
       )}
       <div ref={chartContainerRef} className="w-full h-full" />
+      
+      {/* Absolute Box Label Overlays */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
+        {visibleZones.map(zone => {
+          if (!zone.box_id) return null;
+          return (
+            <div 
+              key={zone.box_id} 
+              id={`mlbox-${zone.box_id}`}
+              className="absolute top-0 left-0"
+              style={{ display: 'none', pointerEvents: 'auto', transformOrigin: 'bottom center' }}
+            >
+              <LabelDialog zone={zone} />
+            </div>
+          );
+        })}
+      </div>
+
       {!loading && !error && (
         <button
           onClick={handleResetView}

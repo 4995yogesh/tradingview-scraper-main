@@ -56,8 +56,31 @@ from pipeline.data.storage import storage
 from pipeline.data.db import candle_db          # ← SQLite layer
 from indicators.consolidation import consolidation_boxes  # PROJECT path active now
 
+# ── ML imports ────────────────────────────────────────────────────────────────
+import hashlib
+try:
+    from ml.db import init_db as _ml_init_db
+    from ml import scorer as _ml_scorer
+    from ml import db as _ml_db
+    _ML_AVAILABLE = True
+except ImportError as _ml_err:
+    _ML_AVAILABLE = False
+    _ml_init_db = None
+    _ml_scorer = None
+    _ml_db = None
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
+
+def _compute_box_id(symbol: str, zone: dict) -> str:
+    """sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars."""
+    key = (
+        f"{symbol}:{zone['timeframe']}:"
+        f"{zone['timeStart']}:{zone['timeEnd']}:"
+        f"{zone['priceHigh']:.5f}:{zone['priceLow']:.5f}"
+    )
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -469,6 +492,15 @@ async def lifespan(app: FastAPI):
     refresh_thread.start()
     logger.info("=== Periodic refresh thread started ===")
 
+    # 5. Init ML DB and load promoted model
+    if _ML_AVAILABLE:
+        try:
+            _ml_init_db()
+            _ml_scorer.load_model()
+            logger.info("=== ML system initialized ===")
+        except Exception as _ml_exc:
+            logger.error("ML init failed (non-fatal): %s", _ml_exc)
+
     yield  # Server is live
 
     _stop_refresh.set()
@@ -486,6 +518,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Mount ML router ────────────────────────────────────────────────────────────
+if _ML_AVAILABLE:
+    try:
+        from ml_router import router as _ml_router
+        app.include_router(_ml_router)
+        logger.info("ML router mounted at /api/ml/*")
+    except Exception as _mr_exc:
+        logger.error("Failed to mount ML router: %s", _mr_exc)
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -783,6 +824,31 @@ def get_consolidations_all():
         futures = {pool.submit(_compute_tf, ex, sym, tf): (ex, sym, tf) for ex, sym, tf in tasks}
         for fut in as_completed(futures):
             all_zones.extend(fut.result())
+
+    # ── Enrich zones with ML box_id, label, score ────────────────────────────
+    if _ML_AVAILABLE:
+        try:
+            # Attach box_id and symbol to every zone
+            for ex, sym in PERSISTENT_SYMBOLS:
+                for z in all_zones:
+                    if "box_id" not in z:
+                        z["symbol"] = sym
+                        z["box_id"] = _compute_box_id(sym, z)
+
+            box_ids = [z["box_id"] for z in all_zones]
+
+            # Batch score (single predict_proba call)
+            scores_map = _ml_scorer.batch_score(box_ids)
+
+            # Latest labels for each box
+            labels_map = _ml_db.get_labels_for_boxes(box_ids)
+
+            for z in all_zones:
+                bid = z["box_id"]
+                z["score"] = scores_map.get(bid, _ml_scorer.FALLBACK)
+                z["label"] = labels_map.get(bid)
+        except Exception as _enrich_exc:
+            logger.warning("ML enrichment failed (non-fatal): %s", _enrich_exc)
 
     result = {"status": "ok", "zones": all_zones}
     _cache_set("consolidations", result)
