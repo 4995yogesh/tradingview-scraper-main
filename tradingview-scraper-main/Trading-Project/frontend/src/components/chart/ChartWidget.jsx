@@ -642,13 +642,18 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           else if (mlStatus === 'feature_drift') { bg = '#2d1b4d'; tx = '#bd93f9'; }
           else if (mlStatus === 'version_mismatch' || mlStatus === 'degraded') { bg = '#332b00'; tx = '#FFB86C'; }
 
-          // Agreement icon suffix (✓ / ⚠) or unrated dot (•)
+          // Agreement icon suffix (✓ / ⚠) or active-learning "needs label" badge.
           const storedFb = userFeedbackRef.current[zone.box_id] || zone.user_label;
-          let agreementSuffix = `<span style="color:#787B86;margin-left:3px;font-size:12px;line-height:0.8">•</span>`;
+          let agreementSuffix = '';
           if (storedFb) {
             agreementSuffix = storedFb === label
               ? `<span style="color:#26A69A;margin-left:3px">✓</span>`
               : `<span style="color:#FFB86C;margin-left:3px">⚠</span>`;
+          } else {
+            const conf = Number.isFinite(zone.ml_confidence) ? zone.ml_confidence : 1;
+            agreementSuffix = conf <= 0.6
+              ? `<span style="color:#FFB86C;margin-left:4px;font-size:8px;border:1px solid #FFB86C55;border-radius:8px;padding:0 4px">needs label</span>`
+              : `<span style="color:#787B86;margin-left:3px;font-size:12px;line-height:0.8">•</span>`;
           }
 
           // Pattern: prefer ML classifier prediction, fall back to user-labeled pattern_type
@@ -825,7 +830,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       if (!priceAtCursor) return;
       const cursorUnix = typeof param.time === 'number' ? param.time : 0;
 
-      const hit = zones.find(zone => {
+      const hits = zones.filter(zone => {
         const ML_ACTIVE = new Set(['active', 'degraded', 'invalid_model']);
         const mlStatus = zone.ml_status || 'inactive';
         if (!ML_ACTIVE.has(mlStatus)) return false;
@@ -838,10 +843,23 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           && cursorUnix    <= endUnix;
       });
 
-      if (!hit) {
+      if (!hits.length) {
         setRatingPopup(null);
         return;
       }
+      // Active learning priority:
+      //   1) unlabeled zones first
+      //   2) lower confidence first (more uncertain)
+      //   3) newest zone first when tied
+      const hit = [...hits].sort((a, b) => {
+        const aLabeled = !!(userFeedbackRef.current[a.box_id] || a.user_label);
+        const bLabeled = !!(userFeedbackRef.current[b.box_id] || b.user_label);
+        if (aLabeled !== bLabeled) return aLabeled ? 1 : -1;
+        const aConf = Number.isFinite(a.ml_confidence) ? a.ml_confidence : 1;
+        const bConf = Number.isFinite(b.ml_confidence) ? b.ml_confidence : 1;
+        if (aConf !== bConf) return aConf - bConf;
+        return (b.timeEnd || 0) - (a.timeEnd || 0);
+      })[0];
 
       // Position popup near cursor within the container
       setRatingPopup({

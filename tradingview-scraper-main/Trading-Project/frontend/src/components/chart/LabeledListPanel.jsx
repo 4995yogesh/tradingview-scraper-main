@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
-const BATCH_SIZE = 20;
+const BATCH_SIZE = 100;
 
 const LABEL_COLORS = {
   GOOD:    { bg: '#26A69A22', border: '#26A69A60', text: '#26A69A', dot: '#26A69A' },

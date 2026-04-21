@@ -1347,8 +1347,30 @@ def post_user_feedback(body: _UserFeedbackBody):
     if _feedback is not None:
         _feedback.update_user_feedback(body.box_id, label)
 
+    # Auto-retrain after each 100 newly labeled (unconsumed) samples globally.
+    fresh_unconsumed = 0
+    try:
+        conn = _sq3.connect(_db_p)
+        fresh_unconsumed = conn.execute(
+            "SELECT COUNT(*) FROM boxes WHERE user_label IS NOT NULL AND (is_consumed = 0 OR is_consumed IS NULL)"
+        ).fetchone()[0]
+        conn.close()
+    except Exception:
+        fresh_unconsumed = 0
 
-    return {"status": "ok", "box_id": body.box_id, "user_label": label}
+    auto_retrain_triggered = False
+    if fresh_unconsumed >= _ML_RETRAIN_LABEL_BATCH and _ml_retrain_lock.is_set():
+        _bg_ml_retrain()
+        auto_retrain_triggered = True
+
+    return {
+        "status": "ok",
+        "box_id": body.box_id,
+        "user_label": label,
+        "fresh_unconsumed_labels": fresh_unconsumed,
+        "auto_retrain_batch": _ML_RETRAIN_LABEL_BATCH,
+        "auto_retrain_triggered": auto_retrain_triggered,
+    }
 
 import time as _time_mod
 
@@ -1380,6 +1402,7 @@ _ml_progress: dict = {
 _ml_retrain_lock = threading.Event()
 _ml_retrain_lock.set()   # available
 _ml_progress_lock = threading.Lock()
+_ML_RETRAIN_LABEL_BATCH = 100
 
 # ── ML Stats Cache (TASK 7) ──────────────────────────────────────────────────
 _ml_stats_cache: dict = None
@@ -1543,10 +1566,10 @@ def trigger_ml_retrain():
     except Exception:
         pass
 
-    if cnt < 10:
+    if cnt < _ML_RETRAIN_LABEL_BATCH:
         return {"status": "insufficient_data",
                 "labeled_count": cnt,
-                "reason": f"Need at least 10 GOOD/BAD/NEUTRAL labels. Have {cnt}."}
+                "reason": f"Need at least {_ML_RETRAIN_LABEL_BATCH} GOOD/BAD/NEUTRAL labels. Have {cnt}."}
 
     _bg_ml_retrain()
     return {"status": "queued", "labeled_count": cnt,
@@ -1587,6 +1610,37 @@ def get_labeled_list():
         return {"status": "error", "items": [], "total": 0}
     items = _feedback.get_labeled_list()
     return {"status": "ok", "items": items, "total": len(items)}
+
+
+@app.get("/api/ml/active-learning-queue")
+def get_active_learning_queue(limit: int = Query(10, ge=1, le=50)):
+    """
+    Return the most uncertain unlabeled boxes for human annotation.
+    Uncertainty proxy: lowest ml_confidence first.
+    """
+    import sqlite3 as _sq3
+
+    _db_p = os.path.join(os.path.dirname(__file__), "data", "ml_feedback.db")
+    try:
+        conn = _sq3.connect(_db_p)
+        conn.row_factory = _sq3.Row
+        rows = conn.execute(
+            """
+            SELECT box_id, symbol, timeframe, time_start, time_end,
+                   price_high, price_low, ml_label, ml_confidence, ml_score
+            FROM boxes
+            WHERE user_label IS NULL
+            ORDER BY COALESCE(ml_confidence, 1.0) ASC, time_end DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+        conn.close()
+    except Exception as exc:
+        return {"status": "error", "reason": str(exc), "items": [], "total": 0}
+
+    items = [dict(r) for r in rows]
+    return {"status": "ok", "items": items, "total": len(items), "limit": limit}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1997,4 +2051,4 @@ def get_detection_compare(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=False)
