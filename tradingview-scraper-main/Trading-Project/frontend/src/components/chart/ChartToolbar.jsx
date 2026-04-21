@@ -39,7 +39,7 @@ const ChartToolbar = ({
   const tfRef = useRef(null);
 
   // ML label count (GOOD/BAD/NEUTRAL) for batch progress
-  const BATCH = 20;
+  const BATCH = 100;
   const mlCount    = mlLabelCount || 0;
   const batchProg  = mlCount % BATCH;
   const batchNum   = Math.floor(mlCount / BATCH) + 1;
@@ -314,18 +314,18 @@ const ChartToolbar = ({
           {/* Retrain button */}
           <button
             onClick={onRetrain}
-            disabled={retrainRunning || mlCount < 10}
+            disabled={retrainRunning || mlCount < BATCH}
             className={`w-[30px] h-[30px] flex items-center justify-center rounded-[4px] transition-colors ${
               retrainRunning
                 ? 'text-[#FFB86C] bg-[#FFB86C15] cursor-wait'
-                : mlCount < 10
+                : mlCount < BATCH
                 ? 'text-[#363A45] cursor-not-allowed'
                 : 'text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960]'
             }`}
             title={
               retrainRunning ? 'Training in progress…'
-              : mlCount < 10
-              ? `Need ${10 - mlCount} more labels to train`
+              : mlCount < BATCH
+              ? `Need ${BATCH - mlCount} more labels to train`
               : 'Train Consolidation Scorer'
             }
           >
