@@ -1,0 +1,17 @@
+Trading-Project\backend\test_jwt.py
+Trading-Project\frontend\craco.config.js
+Trading-Project\frontend\postcss.config.js
+Trading-Project\frontend\src\components\canvas\StatusBar.jsx
+Trading-Project\frontend\src\components\ui\aspect-ratio.jsx
+Trading-Project\frontend\src\components\ui\avatar.jsx
+Trading-Project\frontend\src\components\ui\hover-card.jsx
+Trading-Project\frontend\src\components\ui\input-otp.jsx
+Trading-Project\frontend\src\components\ui\navigation-menu.jsx
+Trading-Project\frontend\src\components\ui\radio-group.jsx
+Trading-Project\frontend\src\components\ui\scroll-area.jsx
+Trading-Project\frontend\src\components\ui\slider.jsx
+Trading-Project\frontend\src\components\ui\toggle-group.jsx
+Trading-Project\frontend\tailwind.config.js
+Trading-Project\project\frontend\vite.config.js
+Trading-Project\wipe_4h.py
+replace_symbols.py
