@@ -366,17 +366,27 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   // ── Consolidation Boxes Drawing ───────────────────────────────────────────
   const visibleZones = React.useMemo(() => {
     if (!consolidationSettings?.enabled) return [];
-    const chartTf = timeframe.toLowerCase();
+    const chartTf    = timeframe.toLowerCase();
     const chartTfIdx = ALL_TFS.indexOf(chartTf);
+    const showHTF    = consolidationSettings?.settings?.showHTF !== false; // default on
+
     return consolidations.filter(z => {
       const ztf = (z.timeframe || '').toLowerCase();
       if (!ztf) return false;
+
+      // Chart-TF ordering rules
       if (chartTf === '5m' && ztf === '15m') return false;
       if (chartTf === '1m' && ztf === '5m')  return false;
       const ztfIdx = ALL_TFS.indexOf(ztf);
-      return ztfIdx !== -1 && ztfIdx <= chartTfIdx;
+      if (ztfIdx === -1 || ztfIdx > chartTfIdx) return false;
+
+      // HTF toggle: ztfIdx < chartTfIdx means zone is from a higher TF
+      if (!showHTF && ztfIdx < chartTfIdx) return false;
+
+      return true;
     });
-  }, [consolidations, timeframe, consolidationSettings?.enabled]);
+  }, [consolidations, timeframe, consolidationSettings?.enabled, consolidationSettings?.settings?.showHTF]);
+
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -506,7 +516,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       activeBoxesRef.current = [];
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consolidations, timeframe, chartKey, consolidationSettings?.enabled]);
+  }, [consolidations, timeframe, chartKey, consolidationSettings?.enabled, consolidationSettings?.settings?.showHTF]);
 
   // ── Sync HTML Overlays to Chart Coordinates ────────────────────────────────
   useEffect(() => {

@@ -13,6 +13,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Search, Eye, EyeOff, Settings, Trash2, Plus, Activity } from 'lucide-react';
 import SwingSettingsModal from './SwingSettingsModal';
+import ConsolidationSettingsModal from './ConsolidationSettingsModal';
 import { DEFAULT_SWING_SETTINGS, TF_COLORS } from '../../lib/swingLevels';
 
 // ── Available indicator catalogue ─────────────────────────────────────────────
@@ -157,7 +158,7 @@ const IndicatorPanel = ({
 }) => {
   const [selectedPane, setSelectedPane] = useState(activePaneIdx);
   const [search, setSearch] = useState('');
-  const [editingIndicator, setEditingIndicator] = useState(null); // { paneIdx, indicatorIdx }
+  const [editingIndicator, setEditingIndicator] = useState(null); // { paneIdx, indicatorIdx, type }
   const searchRef = useRef(null);
 
   useEffect(() => { searchRef.current?.focus(); }, []);
@@ -204,7 +205,8 @@ const IndicatorPanel = ({
   };
 
   const handleOpenSettings = (indicatorIdx) => {
-    setEditingIndicator({ paneIdx: safePane, indicatorIdx });
+    const ind = paneIndicators[indicatorIdx];
+    setEditingIndicator({ paneIdx: safePane, indicatorIdx, type: ind?.type });
   };
 
   const handleSettingsChange = (newSettings) => {
@@ -221,9 +223,19 @@ const IndicatorPanel = ({
 
   // ── Settings modal for editing indicator ──────────────────────────────────
   if (editingIndicator) {
-    const { paneIdx, indicatorIdx } = editingIndicator;
+    const { paneIdx, indicatorIdx, type } = editingIndicator;
     const targetIndicator = (panes[paneIdx]?.indicators || [])[indicatorIdx];
     if (!targetIndicator) { setEditingIndicator(null); return null; }
+
+    if (type === 'consolidationBoxes') {
+      return (
+        <ConsolidationSettingsModal
+          settings={targetIndicator.settings}
+          onChange={handleSettingsChange}
+          onClose={() => setEditingIndicator(null)}
+        />
+      );
+    }
 
     return (
       <SwingSettingsModal
