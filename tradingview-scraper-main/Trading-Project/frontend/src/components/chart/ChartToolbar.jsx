@@ -9,8 +9,7 @@ import MLStatusHUD from './MLStatusHUD';
 
 // TradingView-style shortcut map (same as ChartPage)
 const TF_SHORTCUT_MAP = {
-  '1': '1m', '5': '5m', '15': '15m', '30': '30m',
-  '60': '1h', 'H': '1h', '1H': '1h',
+  '1': '1m', '5': '5m', '15': '15m','60': '1h', 'H': '1h', '1H': '1h',
   '4': '4h', '4H': '4h',
   'D': '1d', '1D': '1d',
   'W': '1w', '1W': '1w',

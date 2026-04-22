@@ -295,7 +295,7 @@ class DashboardLauncher:
                     self._log_safe(f"INFO  Opening browser → {open_browser_url}\n", C_CYAN)
                     webbrowser.open(open_browser_url)
                 return
-            time.sleep(2)
+            time.sleep(0.75)
 
         if not stop_event.is_set():
             self._log_safe(
@@ -443,33 +443,37 @@ class DashboardLauncher:
     # ── Start All / Stop All ──────────────────────────────────────────────────
 
     def _start_all(self):
-        """Start Backend → Frontend → Intel strictly sequentially based on port readiness."""
-        def _seq():
-            # 1. Start Backend
+        """Start Backend + Frontend in parallel — frontend compile overlaps with backend init."""
+        def _start_backend_and_wait():
             if self.process_backend is None or self.process_backend.poll() is not None:
                 self.root.after(0, self._start_backend)
-                
-            # Block until backend responds or timeout (approx 30s)
             self._log_ts("Waiting for backend to become ready...\n", C_YELLOW)
-            for _ in range(30):
+            for _ in range(60):   # max 30s (60 × 0.5s)
                 if _http_ok(URL_BACKEND):
-                    break
-                time.sleep(1)
-            else:
-                self._log_ts("WARN  Backend startup timeout, proceeding anyway...\n", C_ORANGE)
+                    self._log_ts("INFO  Backend ready.\n", C_GREEN)
+                    return
+                time.sleep(0.5)
+            self._log_ts("WARN  Backend startup timeout, continuing...\n", C_ORANGE)
 
-            # 2. Start Frontend
+        def _start_frontend_and_wait():
             if self.process_frontend is None or self.process_frontend.poll() is not None:
                 self.root.after(0, self._start_frontend)
-                
-            # Block until frontend responds or timeout (CRA can take longer, e.g. 60-90s)
             self._log_ts("Waiting for frontend to become ready...\n", C_YELLOW)
-            for _ in range(90):
+            for _ in range(180):  # max 90s (180 × 0.5s)
                 if _http_ok(URL_FRONTEND):
-                    break
-                time.sleep(1)
-            else:
-                self._log_ts("WARN  Frontend startup timeout, proceeding anyway...\n", C_ORANGE)
+                    self._log_ts("INFO  Frontend ready.\n", C_GREEN)
+                    return
+                time.sleep(0.5)
+            self._log_ts("WARN  Frontend startup timeout, continuing...\n", C_ORANGE)
+
+        def _seq():
+            # Launch both in parallel — frontend compile has no backend dependency
+            t_be = threading.Thread(target=_start_backend_and_wait, daemon=True)
+            t_fe = threading.Thread(target=_start_frontend_and_wait, daemon=True)
+            t_be.start()
+            t_fe.start()
+            t_be.join()
+            t_fe.join()
 
         threading.Thread(target=_seq, daemon=True).start()
 

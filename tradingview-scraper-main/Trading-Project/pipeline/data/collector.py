@@ -51,7 +51,7 @@ class DataCollector:
                         for entry in ohlc_data:
                             ts = entry["timestamp"]
                             
-                            if timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]:
+                            if timeframe in ["1m", "5m", "15m", "1h", "4h"]:
                                 time_val = int(ts)
                             else:
                                 dt = datetime.fromtimestamp(ts, tz=timezone.utc)

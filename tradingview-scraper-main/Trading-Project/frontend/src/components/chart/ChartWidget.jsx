@@ -14,8 +14,7 @@ const TF_CANDLE_COUNT = {
   '1m':  300,
   '5m':  600,  // 600 × 5m = 50h — covers full overnight + weekend gaps
   '15m': 400,
-  '30m': 400,
-  '1h':  500,
+'1h':  500,
   '4h':  600,
   '1d':  750,
   '1w':  500,
@@ -27,61 +26,187 @@ const TF_BAR_SPACING = {
   '1m':  6,
   '5m':  6,
   '15m': 6,
-  '30m': 7,
-  '1h':  8,
+'1h':  8,
   '4h':  8,
   '1d':  8,
   '1w':  10,
   '1M':  14,
 };
+// ================================
+// MARKET CLOSED FILTER (SAFE)
+// ================================
+function isWeekendBlackout(time) {
+  const d = new Date(time * 1000);
+  const day = d.getUTCDay();
+  const hr = d.getUTCHours();
 
-const sortAndDedupe = (data) => {
-  if (!data || data.length === 0) return [];
-  const sorted = [...data].sort((a, b) => {
-    const ta = typeof a.time === 'string' ? a.time : Number(a.time);
-    const tb = typeof b.time === 'string' ? b.time : Number(b.time);
-    if (ta < tb) return -1;
-    if (ta > tb) return 1;
-    return 0;
-  });
-  const result = [sorted[0]];
-  for (let i = 1; i < sorted.length; i++) {
-    if (sorted[i].time !== sorted[i - 1].time) result.push(sorted[i]);
-  }
-  return result;
-};
+  // Saturday is always closed implicitly
+  if (day === 6) return true;
 
-// Fast O(1) merge for live tick appending (skips sorting entirely if strictly newer)
-const fastMergeSort = (older, newer) => {
-  if (!older?.length) return newer;
-  if (!newer?.length) return older;
+  // Friday shutdown boundaries (approx 21:00 or 22:00 UTC depending on DST)
+  // Safely bounding >= 21 UTC handles both winter/summer NY closures
+  if (day === 5 && hr >= 21) return true;
 
-  const lastOld = older[older.length - 1].time;
-  const firstNew = newer[0].time;
+  // Sunday open boundaries (approx 21:00 or 22:00 UTC)
+  // Safely bouncing < 21 UTC captures stray ticks emitted during dead zones
+  if (day === 0 && hr < 21) return true;
 
-  // Optimized append-only
-  if (firstNew > lastOld) return older.concat(newer);
-  
-  // Optimized single-item overwrite
-  if (newer.length === 1 && newer[0].time === lastOld) {
-    const copy = [...older];
-    copy[copy.length - 1] = newer[0];
-    return copy;
-  }
+  return false;
+}
 
-  // Fallback map + sort for messy overlap (scroll loading)
+// ================================
+// DAILY STRING CONVERSION
+// ================================
+function toDayString(time) {
+  const d = new Date(time * 1000);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+}
+
+// ================================
+// WEEKLY ALIGNMENT (MANDATORY)
+// ================================
+function toWeekString(time) {
+  const d = new Date(time * 1000);
+
+  const day = d.getUTCDay();
+  const diff = (day === 0 ? -6 : 1 - day); // Monday
+
+  const monday = new Date(d);
+  monday.setUTCDate(d.getUTCDate() + diff);
+  monday.setUTCHours(0, 0, 0, 0);
+
+  return `${monday.getUTCFullYear()}-${String(monday.getUTCMonth()+1).padStart(2,'0')}-${String(monday.getUTCDate()).padStart(2,'0')}`;
+}
+
+// ================================
+// STAGE 1: RAW DEDUPE (UNIX LEVEL)
+// ================================
+function dedupeRaw(data) {
   const map = new Map();
-  for (let i = 0; i < older.length; i++) map.set(older[i].time, older[i]);
-  for (let i = 0; i < newer.length; i++) map.set(newer[i].time, newer[i]);
-  
-  const merged = Array.from(map.values());
-  merged.sort((a, b) => {
-    const ta = typeof a.time === 'string' ? a.time : Number(a.time);
-    const tb = typeof b.time === 'string' ? b.time : Number(b.time);
-    return ta < tb ? -1 : ta > tb ? 1 : 0;
-  });
-  return merged;
-};
+
+  for (const c of data) {
+    const key = c.time;
+
+    if (!map.has(key)) {
+      map.set(key, { ...c });
+    } else {
+      const existing = map.get(key);
+
+      map.set(key, {
+        ...existing,
+        high: Math.max(existing.high, c.high),
+        low: Math.min(existing.low, c.low),
+        close: c.close
+      });
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+// ================================
+// STAGE 2: FINAL DEDUPE
+// ================================
+function dedupeAfterTimeTransform(data) {
+  const map = new Map();
+
+  for (const c of data) {
+    const key = c.time;
+
+    if (!map.has(key)) {
+      map.set(key, { ...c });
+    } else {
+      const existing = map.get(key);
+
+      map.set(key, {
+        ...existing,
+        high: Math.max(existing.high, c.high),
+        low: Math.min(existing.low, c.low),
+        close: c.close
+      });
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+// ================================
+// STRICT ORDER VALIDATION
+// ================================
+function assertStrictOrder(data) {
+  for (let i = 1; i < data.length; i++) {
+    if (data[i].time <= data[i - 1].time) {
+      console.error("ORDER ERROR", data[i], data[i - 1]);
+      throw new Error("Time ordering violation");
+    }
+  }
+}
+
+// ================================
+// SAFE PIPELINE
+// ================================
+function prepareChartData(rawCandles, timeframe) {
+  if (!Array.isArray(rawCandles)) return [];
+
+  // normalize properly to handle String dates from backend
+  let data = rawCandles
+    .map(c => {
+      let t = c.time;
+      if (typeof t === 'string' && t.includes('-')) {
+        t = new Date(t).getTime() / 1000;
+      } else {
+        t = Number(t);
+      }
+      return { ...c, time: t };
+    })
+    .filter(c => Number.isFinite(c.time));
+
+  // STAGE 1 DEDUPE (raw)
+  data = dedupeRaw(data);
+
+  // Filter missing blackout spans (weekends + rogue server noise)
+  data = data.filter(c => !isWeekendBlackout(c.time));
+
+  // transform
+  if (timeframe === '1d') {
+    data = data.map(c => ({
+      ...c,
+      realTime: c.time,
+      time: toDayString(c.time)
+    }));
+  }
+
+  if (timeframe === '1w') {
+    data = data.map(c => ({
+      ...c,
+      realTime: c.time,
+      time: toWeekString(c.time)
+    }));
+  }
+
+  // STAGE 2 DEDUPE (post-transform)
+  data = dedupeAfterTimeTransform(data);
+
+  // sort
+  data.sort((a, b) => (a.time > b.time ? 1 : -1));
+
+  // validate
+  assertStrictOrder(data);
+
+  return data;
+}
+
+// ================================
+// OVERLAY MAPPING HELPER
+// ================================
+function mapOverlayTime(realTime, tf) {
+  if (tf === '1d') return toDayString(realTime);
+  if (tf === '1w') return toWeekString(realTime);
+  return realTime;
+}
+
+
+
 
 const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, liveTickKey, isSubchart, initialBars }, ref) => {
   const chartContainerRef      = useRef(null);
@@ -184,9 +309,13 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         if (latest && latest.candleData.length > 0) {
           setChartData(prev => {
             if (!prev) return latest;
+            
+            const combinedCandles = prev.candleData.concat(latest.candleData);
+            const combinedVolume  = prev.volumeData.concat(latest.volumeData);
+
             return {
-              candleData: fastMergeSort(prev.candleData, latest.candleData),
-              volumeData: fastMergeSort(prev.volumeData, latest.volumeData)
+              candleData: prepareChartData(combinedCandles, timeframe),
+              volumeData: prepareChartData(combinedVolume, timeframe)
             };
           });
         }
@@ -229,7 +358,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       crosshair: { mode: crosshairMode, vertLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' }, horzLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' } },
       timeScale: {
         borderColor: chartSettings?.priceScaleColor || '#2A2E39', 
-        timeVisible: ['1m', '5m', '15m', '30m', '1h', '4h'].includes(timeframe),
+        timeVisible: ['1m', '5m', '15m', '1h', '4h'].includes(timeframe),
         secondsVisible: false, rightOffset: 10, barSpacing: TF_BAR_SPACING[timeframe] || 8, minBarSpacing: 1,
         tickMarkFormatter: (time, tickMarkType, locale) => {
           if (typeof time === 'string') return time;
@@ -318,10 +447,15 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           const oldestTime = currentData.candleData[0].time;
           const newData = await fetchLiveCandles(symbol, timeframe, TF_CANDLE_COUNT[timeframe] || 500, oldestTime);
           if (newData.candleData.length > 0) {
-            setChartData(prev => ({ 
-              candleData: fastMergeSort(newData.candleData, prev.candleData), 
-              volumeData: fastMergeSort(newData.volumeData, prev.volumeData) 
-            }));
+            setChartData(prev => {
+              const combinedCandles = prev.candleData.concat(newData.candleData);
+              const combinedVolume  = prev.volumeData.concat(newData.volumeData);
+
+              return {
+                candleData: prepareChartData(combinedCandles, timeframe),
+                volumeData: prepareChartData(combinedVolume, timeframe)
+              };
+            });
           }
         } finally {
           setTimeout(() => { isLoadingMoreRef.current = false; }, 500);
@@ -536,8 +670,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         if (!el) return;
         
         try {
-          const x1 = timeScale.timeToCoordinate(box.drawT1);
-          const x2 = timeScale.timeToCoordinate(box.drawT2);
+          const mappedT1 = mapOverlayTime(box.drawT1, timeframe);
+          const mappedT2 = mapOverlayTime(box.drawT2, timeframe);
+          const x1 = timeScale.timeToCoordinate(mappedT1);
+          const x2 = timeScale.timeToCoordinate(mappedT2);
           if (x1 === null || x2 === null) {
             el.style.display = 'none';
             return;
@@ -668,7 +804,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       }
 
       const pts = candles.slice(startIdx, endIdx + 1).map(c => ({
-        time:  normalizeTimeForChart(getUnix(c.time), timeframe),
+        time:  mapOverlayTime(normalizeTimeForChart(getUnix(c.time), timeframe), timeframe),
         value: sw.price,
       }));
       if (pts.length < 2) return;
@@ -701,7 +837,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     // Determine if series is empty prior to adding data
     const isFirstLoad = seriesRef.current.data().length === 0;
 
-    const candleData = sortAndDedupe(chartData.candleData);
+    const candleData = prepareChartData(chartData.candleData, timeframe);
+
+    if (!Array.isArray(candleData) || candleData.length < 2) return;
+
     if (chartType === 'line' || chartType === 'area') {
       seriesRef.current.setData(candleData.map(d => ({ time: d.time, value: d.close })));
     } else {

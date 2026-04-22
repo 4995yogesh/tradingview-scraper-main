@@ -16,8 +16,7 @@ export const TF_SECONDS = {
   '1m':  60,
   '5m':  300,
   '15m': 900,
-  '30m': 1800,
-  '1h':  3600,
+'1h':  3600,
   '4h':  14400,
   '1d':  86400,
   '1w':  604800,
@@ -25,8 +24,7 @@ export const TF_SECONDS = {
 
 /** TradingView-style display labels */
 export const TF_LABELS = {
-  '1m': '1M', '5m': '5M', '15m': '15M', '30m': '30M',
-  '1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W',
+  '1m': '1M', '5m': '5M', '15m': '15M','1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W',
 };
 
 /** All supported timeframes in descending order (highest first) */
@@ -72,7 +70,7 @@ export const DEFAULT_SWING_SETTINGS = {
 
 /** Minutes per each target timeframe bucket */
 const TF_MINUTES = {
-  '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440, '1w': 10080,
+  '15m': 15,'1h': 60, '4h': 240, '1d': 1440, '1w': 10080,
 };
 
 /**
@@ -84,7 +82,7 @@ const TF_MINUTES = {
  *   - Daily/weekly charts (1d, 1w) use 'YYYY-MM-DD' strings.
  */
 export function normalizeTimeForChart(unixSec, chartTf) {
-  const intraday = ['1m', '5m', '15m', '30m', '1h', '4h'].includes(chartTf);
+  const intraday = ['1m', '5m', '15m', '1h', '4h'].includes(chartTf);
   if (intraday) return unixSec;
   return new Date(unixSec * 1000).toISOString().substring(0, 10);
 }

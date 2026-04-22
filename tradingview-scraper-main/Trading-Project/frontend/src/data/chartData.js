@@ -11,7 +11,6 @@ const TF_CONFIG = {
   '1m':  { bars: 500, intervalMin: 1, useTimestamp: true },
   '5m':  { bars: 500, intervalMin: 5, useTimestamp: true },
   '15m': { bars: 400, intervalMin: 15, useTimestamp: true },
-  '30m': { bars: 350, intervalMin: 30, useTimestamp: true },
   '1h':  { bars: 300, intervalMin: 60, useTimestamp: true },
   '4h':  { bars: 250, intervalMin: 240, useTimestamp: true },
   '1d':  { bars: 300, intervalMin: 1440, useTimestamp: false },

@@ -85,7 +85,7 @@ def _compute_box_id(symbol: str, zone: dict) -> str:
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 TIMEFRAME_MAP = {
-    "1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m",
+    "1m": "1m", "5m": "5m", "15m": "15m",
     "1h": "1h", "4h": "4h", "1d": "1d", "1w": "1w", "1M": "1M",
     "1D": "1d", "1W": "1w",
 }
@@ -98,13 +98,13 @@ PERSISTENT_SYMBOLS = [("OANDA", "EURUSD")]
 
 # Seconds per bar for each timeframe (used for gap calculation)
 TF_INTERVAL_SECS = {
-    "1m": 60, "5m": 300, "15m": 900, "30m": 1800,
+    "1m": 60, "5m": 300, "15m": 900,
     "1h": 3600, "4h": 14400, "1d": 86400, "1w": 604800,
 }
 
 # Per-timeframe fetch limits for routine refreshes (not first-time backfills)
 TF_FETCH_LIMIT = {
-    "1m": 300, "5m": 400, "15m": 500, "30m": 500,
+    "1m": 300, "5m": 400, "15m": 500,
     "1h": 600, "4h": 700, "1d": 800, "1w": 600, "1M": 300,
 }
 
@@ -116,6 +116,19 @@ WATCHLIST_SYMBOLS = [
 # Track which series are currently being gap-filled (to avoid double-fetching)
 _gap_filling: set = set()
 _gap_filling_lock = threading.Lock()
+
+# ── Bucket alignment helper (CRITICAL for HTF dedup) ─────────────────────────
+
+def _snap_to_bucket(ts: int, timeframe: str) -> int:
+    """
+    Snap a unix-second timestamp to the lower bucket boundary for its timeframe.
+    Example: 4H candle at ts=14402 → snapped to 14400.
+    This is the server-side getBucketTime() equivalent.
+    """
+    bucket_secs = TF_INTERVAL_SECS.get(timeframe)
+    if not bucket_secs:
+        return ts
+    return (ts // bucket_secs) * bucket_secs
 
 # ── Lightweight TTL cache for expensive aggregation endpoints ─────────────────
 _cache_lock   = threading.Lock()
@@ -138,85 +151,130 @@ def _cache_set(key: str, value):
 
 def _format_candles_for_ui(raw_candles, timeframe: str):
     """
-    Convert raw candle dicts (either 'time' already set, or 'timestamp' from
-    HistoricalFetcher / DB) into the exact shape lightweight-charts expects.
-    Returns (candle_data, volume_data) sorted ascending, no duplicates.
+    Convert raw candle dicts into the exact shape lightweight-charts expects.
+    CRITICAL: intraday timestamps are snapped to bucket boundaries to prevent
+    duplicate or misaligned HTF candles (e.g. 4H arriving at 14402 instead of 14400).
+    Returns (candle_data, volume_data) sorted ascending, strictly deduplicated.
     """
-    use_timestamp = timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]
-    seen_times = set()
-    candle_data = []
-    volume_data = []
+    use_timestamp = timeframe in ["1m", "5m", "15m", "1h", "4h"]
+    # Map<time_val, candle> — last-write-wins, enforces single candle per bucket
+    candle_map: dict = {}
+    volume_map: dict = {}
 
     for c in raw_candles:
-        # Accept 'ts' (from DB rows), 'timestamp' (from HistoricalFetcher), or 'time' (RAM storage)
+        # Accept 'ts' (DB rows), 'timestamp' (HistoricalFetcher), or 'time' (RAM storage)
         if "ts" in c:
             ts = int(c["ts"])
-            time_val = ts if use_timestamp else datetime.fromtimestamp(ts, tz=IST).strftime("%Y-%m-%d")
         elif "timestamp" in c:
             ts = int(c["timestamp"])
-            time_val = ts if use_timestamp else datetime.fromtimestamp(ts, tz=IST).strftime("%Y-%m-%d")
         else:
-            time_val = c["time"]
+            # 'time' key: could be unix-sec int or 'YYYY-MM-DD' string
+            raw_time = c["time"]
+            if isinstance(raw_time, str):
+                if use_timestamp:
+                    # Parse date string to unix seconds
+                    try:
+                        ts = int(datetime.strptime(raw_time, "%Y-%m-%d").replace(tzinfo=IST).timestamp())
+                    except Exception:
+                        continue
+                else:
+                    # daily/weekly: use string as-is
+                    candle_map[raw_time] = {
+                        "time":  raw_time,
+                        "open":  round(float(c["open"]),  5),
+                        "high":  round(float(c["high"]),  5),
+                        "low":   round(float(c["low"]),   5),
+                        "close": round(float(c["close"]), 5),
+                    }
+                    volume_map[raw_time] = {
+                        "time":  raw_time,
+                        "value": float(c.get("volume", 0)),
+                        "color": "rgba(38,166,154,0.5)" if float(c["close"]) >= float(c["open"]) else "rgba(239,83,80,0.5)",
+                    }
+                    continue
+            else:
+                ts = int(raw_time)
 
-        if time_val in seen_times:
-            continue
-        seen_times.add(time_val)
+        # Detect milliseconds: > year 2100 in seconds
+        if ts > 4_102_444_800:
+            ts = ts // 1000
 
-        candle_data.append({
+        if use_timestamp:
+            # CRITICAL: snap to bucket boundary — eliminates near-duplicate HTF candles
+            time_val = _snap_to_bucket(ts, timeframe)
+        else:
+            # OANDA forex 1d candles open at 21:00/22:00 UTC (17:00 EST).
+            # +4h shifts into the next calendar day in UTC, giving correct trading-date labels:
+            #   Sun 21:00 UTC + 4h → Mon 01:00 UTC → "Monday" (Monday's candle) ✓
+            #   Fri 21:00 UTC + 4h → Sat 01:00 UTC → weekday=5 → filtered ✓
+            dt_local = datetime.fromtimestamp(ts, tz=timezone.utc) + timedelta(hours=4)
+            if dt_local.weekday() >= 5:   # 5=Sat, 6=Sun — market closed
+                continue
+            time_val = dt_local.strftime("%Y-%m-%d")
+
+        candle_map[time_val] = {
             "time":  time_val,
             "open":  round(float(c["open"]),  5),
             "high":  round(float(c["high"]),  5),
             "low":   round(float(c["low"]),   5),
             "close": round(float(c["close"]), 5),
-        })
-        volume_data.append({
+        }
+        volume_map[time_val] = {
             "time":  time_val,
             "value": float(c.get("volume", 0)),
             "color": "rgba(38,166,154,0.5)" if float(c["close"]) >= float(c["open"]) else "rgba(239,83,80,0.5)",
-        })
+        }
 
-    candle_data.sort(key=lambda x: x["time"])
-    volume_data.sort(key=lambda x: x["time"])
+    candle_data = sorted(candle_map.values(), key=lambda x: x["time"])
+    volume_data = sorted(volume_map.values(), key=lambda x: x["time"])
     return candle_data, volume_data
 
 
 def resample_candles(source_candles: list, target_tf: str) -> list:
     """
-    Dynamically aggregate high-density 5m candles into larger timeframes.
-    Supports intra-day and macro timeframes.
-    Expects source_candles to be chronological.
+    Aggregate lower-TF candles into higher-TF OHLCV buckets.
+    Uses strict getBucketTime alignment. One candle per bucket, always.
     """
-    tf_minutes = {"15m": 15, "30m": 30, "1h": 60, "4h": 240, "1d": 1440, "1w": 10080}.get(target_tf)
+    tf_minutes = {"15m": 15, "1h": 60, "4h": 240, "1d": 1440, "1w": 10080}.get(target_tf)
     if not tf_minutes or not source_candles:
         return source_candles
 
     bucket_size_secs = tf_minutes * 60
-    buckets = {}
+    buckets: dict = {}   # bucket_ts -> candle dict (Map = one entry per bucket)
 
     for c in source_candles:
         ts = int(c.get("ts", c.get("timestamp", c.get("time", 0))))
         if not ts:
             continue
-            
+
+        # Detect milliseconds (year > 2100 in seconds = > 4102444800)
+        if ts > 4_102_444_800:
+            ts = ts // 1000
+
+        # getBucketTime: snap to bucket boundary
         bucket_ts = (ts // bucket_size_secs) * bucket_size_secs
-        
+
         if bucket_ts not in buckets:
+            # First candle in bucket → set open
             buckets[bucket_ts] = {
-                "ts": bucket_ts,
-                "open": float(c["open"]),
-                "high": float(c["high"]),
-                "low": float(c["low"]),
-                "close": float(c["close"]),
-                "volume": float(c.get("volume", 0.0))
+                "ts":     bucket_ts,
+                "open":   float(c["open"]),
+                "high":   float(c["high"]),
+                "low":    float(c["low"]),
+                "close":  float(c["close"]),
+                "volume": float(c.get("volume", 0.0)),
             }
         else:
+            # Subsequent candles → update high/low/close only
             b = buckets[bucket_ts]
-            b["high"] = max(b["high"], float(c["high"]))
-            b["low"] = min(b["low"], float(c["low"]))
-            b["close"] = float(c["close"])
+            b["high"]   = max(b["high"],  float(c["high"]))
+            b["low"]    = min(b["low"],   float(c["low"]))
+            b["close"]  = float(c["close"])   # last close wins
             b["volume"] += float(c.get("volume", 0.0))
 
-    return [buckets[k] for k in sorted(buckets.keys())]
+    # Sort strictly ascending — guaranteed no duplicates (Map enforces 1 entry/bucket)
+    result = [buckets[k] for k in sorted(buckets.keys())]
+    return result
 
 
 def _seed_storage(exchange: str, symbol: str, timeframe: str,
@@ -226,12 +284,34 @@ def _seed_storage(exchange: str, symbol: str, timeframe: str,
     2. Load them into the in-memory DataStorage deque.
     3. Stamp the last_refresh time so the freshness check works.
     """
-    # ── 1. Write to SQLite ────────────────────────────────────────────────────
-    candle_db.upsert_candles(exchange, symbol, timeframe, raw_candles)
+    current_time = int(time.time())
+    tf_secs = TF_INTERVAL_SECS.get(timeframe, 60)
+    
+    closed_candles = []
+    for c in raw_candles:
+        ts = int(float(c.get("timestamp", c.get("ts", c.get("time", 0)))))
+        if ts > 4_102_444_800:
+            ts //= 1000
+        bucket_ts = _snap_to_bucket(ts, timeframe)
+        if current_time >= bucket_ts + tf_secs:
+            # For daily/weekly: reject weekend candles before they enter SQLite.
+            # OANDA 17:00 EST open equates to 21:00/22:00 UTC. 
+            # We must shift +4h to evaluate the actual trading day (Sun 21:00 + 4h = Monday).
+            if timeframe in ("1d", "1w"):
+                dow = (datetime.fromtimestamp(ts, tz=timezone.utc) + timedelta(hours=4)).weekday()
+                if dow >= 5:   # 5=Sat, 6=Sun
+                    continue
+            closed_candles.append(c)
+
+    if not closed_candles:
+        return
+
+    # ── 1. Strict Closed-Candles Write to SQLite ──────────────────────────────
+    candle_db.upsert_candles(exchange, symbol, timeframe, closed_candles)
     candle_db.log_refresh(exchange, symbol, timeframe, int(time.time()))
 
     # ── 2. Format and push to RAM ─────────────────────────────────────────────
-    use_timestamp = timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]
+    use_timestamp = timeframe in ["1m", "5m", "15m", "1h", "4h"]
     formatted = []
     for c in raw_candles:
         ts = int(float(c.get("timestamp", c.get("ts", c.get("time", 0)))))
@@ -272,7 +352,7 @@ def _load_db_into_ram(exchange: str, symbol: str, timeframe: str):
         logger.info("DB empty for %s:%s [%s] — will be filled by gap-fill thread", exchange, symbol, timeframe)
         return
 
-    use_timestamp = timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]
+    use_timestamp = timeframe in ["1m", "5m", "15m", "1h", "4h"]
     storage._ensure_paths(exchange, symbol, timeframe)
 
     for row in db_rows:
@@ -317,13 +397,13 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
 
         # First-time (empty DB) — deep backfill
         FIRST_FETCH = {
-            "1m": 2000, "5m": 20000, "15m": 8000, "1d": 5000, "1w": 2000,
+            "1m": 1000, "5m": 5000, "15m": 8000, "1d": 5000, "1w": 2000,
         }
 
         # Minimum bars to (re-)fetch on every startup to heal internal gaps.
-        # e.g. 5m × 600 = 50 h — covers any overnight / weekend hole.
+        # e.g. 5m × 300 = 25 h — covers any overnight / weekend hole.
         STARTUP_MIN = {
-            "1m": 500, "5m": 600, "15m": 400, "30m": 300,
+            "1m": 500, "5m": 300, "15m": 400,
             "1h": 300, "4h": 200, "1d": 200, "1w": 100,
         }
 
@@ -347,6 +427,7 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
             symbol     = symbol,
             timeframe  = timeframe,
             limit      = fetch_limit,
+            start_date = latest_ts if latest_ts else None,
             chunk_size = min(fetch_limit, 5000),
             delay_ms   = 250,
         )
@@ -369,18 +450,30 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
 
 def _run_all_gap_fills():
     """
-    Sequential gap-fill, shortest timeframe first so 1m/5m data appears
-    quickly for the user. Deep history loads in the background afterward.
+    Parallel gap-fill across all symbol/timeframe pairs.
+    Shortest timeframes first within each batch to minimise wall-clock time.
+    Uses a thread-pool so all TFs run concurrently instead of sequentially.
     """
     ordered = sorted(
         PERSISTENT_TIMEFRAMES,
         key=lambda tf: TF_INTERVAL_SECS.get(tf, 0),
-        reverse=False,  # 1m first, 1w last
+        reverse=False,  # 1m first, 1w last (for logging clarity)
     )
-    for exchange, symbol in PERSISTENT_SYMBOLS:
-        for tf in ordered:
-            _gap_fill(exchange, symbol, tf)
-            time.sleep(2)   # brief pause between WebSocket sessions
+    tasks = [
+        (exchange, symbol, tf)
+        for exchange, symbol in PERSISTENT_SYMBOLS
+        for tf in ordered
+    ]
+    max_workers = min(_CPU_WORKERS, len(tasks) or 1)
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(_gap_fill, ex, sym, tf): (ex, sym, tf)
+                   for ex, sym, tf in tasks}
+        for fut in as_completed(futures):
+            ex, sym, tf = futures[fut]
+            try:
+                fut.result()
+            except Exception as exc:
+                logger.error("[gap-fill] %s:%s [%s] pool error: %s", ex, sym, tf, exc)
 
 
 # ── Periodic live refresh (runs every 60 s) ───────────────────────────────────
@@ -467,11 +560,22 @@ async def lifespan(app: FastAPI):
     # 1. Start event-driven streaming pipeline
     pipeline.start()
 
-    # 2. Load persisted candles into RAM (fast — pure SQL reads)
+    # 2. Load persisted candles into RAM in parallel (pure SQL reads — WAL safe)
     logger.info("=== Loading persisted candle data from SQLite ===")
-    for exchange, symbol in PERSISTENT_SYMBOLS:
-        for tf in PERSISTENT_TIMEFRAMES:
-            _load_db_into_ram(exchange, symbol, tf)
+    load_tasks = [
+        (exchange, symbol, tf)
+        for exchange, symbol in PERSISTENT_SYMBOLS
+        for tf in PERSISTENT_TIMEFRAMES
+    ]
+    with ThreadPoolExecutor(max_workers=min(_CPU_WORKERS, len(load_tasks) or 1)) as pool:
+        futs = {pool.submit(_load_db_into_ram, ex, sym, tf): (ex, sym, tf)
+                for ex, sym, tf in load_tasks}
+        for fut in as_completed(futs):
+            ex, sym, tf = futs[fut]
+            try:
+                fut.result()
+            except Exception as exc:
+                logger.error("DB load failed %s:%s [%s]: %s", ex, sym, tf, exc)
 
     # 3. Start background gap-fill (non-blocking — server ready immediately)
     gap_thread = threading.Thread(
@@ -599,6 +703,21 @@ def _sync_tick(payload: dict, exchange: str, symbol: str, timeframe: str, is_rec
     return payload
 
 
+def parse_end_time(end_time):
+    if end_time is None:
+        return None
+    try:
+        return int(end_time)
+    except Exception:
+        pass
+    try:
+        from datetime import datetime, timezone
+        dt = datetime.strptime(end_time, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        return int(dt.timestamp())
+    except Exception:
+        return None
+
+
 @app.get("/api/ohlc")
 def get_ohlc(
     exchange: str = Query("OANDA"),
@@ -607,134 +726,52 @@ def get_ohlc(
     candles:  int = Query(500, ge=10, le=100000),
     end_time: Optional[str] = Query(None),
 ):
-    """
-    Return OHLCV candles for the given symbol/timeframe.
-
-    Fast path  : serve from RAM cache if data is fresh (< 12 s since last TV fetch).
-    Slow path  : fetch from TradingView → persist to SQLite → update RAM → serve.
-    Fallback   : if TV fetch fails but DB has data, serve stale DB data rather than 500.
-    """
     if timeframe not in TIMEFRAME_MAP:
         raise HTTPException(400, f"Unsupported timeframe '{timeframe}'. Choose from: {list(TIMEFRAME_MAP)}")
 
     if ":" in symbol:
         exchange, symbol = symbol.split(":", 1)
 
-    use_timestamp = timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]
-    parsed_end    = int(end_time) if end_time and use_timestamp else end_time
-
-    logger.info("OHLC → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
+    parsed_end = parse_end_time(end_time)
+    logger.info("OHLC (DB-First) → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
     
     is_recent = end_time is None
 
-    # ── Step 0: Aggregation Interception ──────────────────────────────────────
-    if timeframe in ["15m", "30m", "1h"]:
-        tf_minutes = {"15m": 15, "30m": 30, "1h": 60}[timeframe]
-        multiplier = max(1, tf_minutes // 5)
-        needed_5m = candles * multiplier + int(multiplier * 0.5)  # 50% buffer for temporal gaps
+    # 1. Fetch CLOSED candles strictly from SQLite Database
+    closed_candles = candle_db.get_candles(exchange, symbol, timeframe, count=candles, end_ts=parsed_end)
+    
+    # 2. Bridge Live HTF Segment using 1m DB & RAM partials
+    if is_recent and timeframe != "1m" and closed_candles:
+        latest_closed_ts = int(float(closed_candles[-1].get("ts", closed_candles[-1].get("time", 0))))
+        tf_secs = TF_INTERVAL_SECS.get(timeframe, 60)
+        unclosed_boundary = latest_closed_ts + tf_secs
         
-        # 1d and 1w pass `end_time` as a 'YYYY-MM-DD' string, which breaks the 5m unix lookup.
-        end_ts_5m = parsed_end
-        if isinstance(end_ts_5m, str):
-            try:
-                dt = datetime.strptime(end_ts_5m, "%Y-%m-%d").replace(tzinfo=IST)
-                end_ts_5m = int(dt.timestamp())
-            except Exception:
-                pass
+        # Pull any closed 1m segments bridging the gap out of DB securely
+        live_1m = candle_db.get_candles(exchange, symbol, "1m", count=4000, start_ts=unclosed_boundary)
         
-        db_raw_5m = candle_db.get_candles(exchange, symbol, "5m", count=needed_5m, end_ts=end_ts_5m)
-        resampled = resample_candles(db_raw_5m, timeframe)
-        
-        # If we successfully built ANY valid number of candles, serve them instantly!
-        # Do not force a high minimum limit. This prevents hanging the TV WebSocket connection
-        # if the 5m background thread is still actively downloading the 20,000 payload.
-        if resampled and len(resampled) > 0: 
-            final_resampled = resampled[-candles:] if len(resampled) > candles else resampled
-            logger.info("Aggregation hit: mathematically built %d %s candles from %d 5m DB candles", 
-                        len(final_resampled), timeframe, len(db_raw_5m))
-            cd, vd = _format_candles_for_ui(final_resampled, timeframe)
-            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
-        else:
-            logger.info("Aggregation fallback: Insufficient 5m candles (found %d) to build %s, fetching directly", 
-                        len(db_raw_5m), timeframe)
+        # Extract purely unclosed live 1m tick from RAM cache
+        latest_1m_ram = storage.get_candles(exchange, symbol, "1m", count=5)
+        ram_ticks = []
+        for c in latest_1m_ram:
+            ts = int(float(c.get("timestamp", c.get("ts", c.get("time", 0)))))
+            if ts >= unclosed_boundary:
+                ram_ticks.append(c)
+                
+        # Consolidate arrays
+        unclosed_ticks = live_1m + ram_ticks
+        if unclosed_ticks:
+            bridge = resample_candles(unclosed_ticks, timeframe)
+            if bridge:
+                closed_candles.append(bridge[0])
 
-    # ── Step 1: RAM cache check ───────────────────────────────────────────────
-    stored = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
+    elif timeframe == "1m" and is_recent and closed_candles:
+        # 1m just appends its active floating tick cleanly
+        ram_ticks = storage.get_candles(exchange, symbol, "1m", count=1)
+        if ram_ticks:
+            closed_candles.append(ram_ticks[-1])
 
-    if is_recent and stored:
-        last_fetch = storage.last_refresh.get(exchange, {}).get(symbol, {}).get(timeframe, 0.0)
-        age        = time.time() - last_fetch
-        if age < 12.0:   # serve from RAM as long as data is < 12 s old
-            logger.info("Cache hit: serving %d candles (age=%.0fs)", len(stored), age)
-            cd, vd = _format_candles_for_ui(stored, timeframe)
-            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
-        logger.info("Cache stale (%.0fs) — re-fetching from TradingView", age)
-
-    # ── Step 2: DB check — serve from DB while fetching fresh data ───────────
-    # If we have DB data but RAM is cold (e.g., just restarted), load it now
-    if not stored and is_recent:
-        db_candles = candle_db.get_candles(exchange, symbol, timeframe, count=candles)
-        if db_candles:
-            logger.info("Serving %d candles from SQLite (RAM was cold)", len(db_candles))
-            cd, vd = _format_candles_for_ui(db_candles, timeframe)
-            # Also push into RAM for next call
-            _load_db_into_ram(exchange, symbol, timeframe)
-            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
-
-    # ── Step 3: Fetch from TradingView ───────────────────────────────────────
-    # If a gap-fill is already running for this series, don't race with it
-    series_key = (exchange, symbol, timeframe)
-    if series_key in _gap_filling:
-        logger.info("Gap-fill in progress for %s:%s [%s] — serving DB snapshot", exchange, symbol, timeframe)
-        db_snap = candle_db.get_candles(exchange, symbol, timeframe, count=candles)
-        if db_snap:
-            cd, vd = _format_candles_for_ui(db_snap, timeframe)
-            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
-        return {"status": "loading", "candleData": [], "volumeData": [],
-                "message": "Initial data fetch in progress — please wait"}
-
-    # Always use the per-TF fetch limit; deep history comes from scroll-back
-    fetch_limit = TF_FETCH_LIMIT.get(timeframe, 500)
-    logger.info("Fetching from TradingView: %s:%s [%s] limit=%d", exchange, symbol, timeframe, fetch_limit)
-
-    try:
-        cookie_value = os.getenv("TRADINGVIEW_COOKIE", "").strip()
-        jwt_value    = os.getenv("TV_JWT_TOKEN", "unauthorized_user_token")
-        fetcher      = HistoricalFetcher(websocket_jwt_token=jwt_value, cookie=cookie_value)
-        raw_candles  = fetcher.fetch_historical_data(
-            exchange   = exchange,
-            symbol     = symbol,
-            timeframe  = timeframe,
-            limit      = fetch_limit,
-            start_date = parsed_end,
-            chunk_size = 5000 if fetch_limit > 5000 else fetch_limit,
-            delay_ms   = 250,
-        )
-    except Exception as exc:
-        logger.error("TV fetch failed: %s", exc)
-        # Graceful fallback: serve whatever we have in DB rather than a 500
-        fallback = candle_db.get_candles(exchange, symbol, timeframe, count=candles,
-                                         end_ts=int(end_time) if end_time else None)
-        if fallback:
-            cd, vd = _format_candles_for_ui(fallback, timeframe)
-            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd, "warning": "Live fetch failed — serving cached data"}, exchange, symbol, timeframe, is_recent)
-        raise HTTPException(500, f"Failed to fetch OHLC data: {exc}")
-
-    if not raw_candles:
-        fallback = candle_db.get_candles(exchange, symbol, timeframe, count=candles)
-        if fallback:
-            cd, vd = _format_candles_for_ui(fallback, timeframe)
-            return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
-        return {"status": "success", "candleData": [], "volumeData": []}
-
-    # Persist to SQLite + update RAM cache
-    _seed_storage(exchange, symbol, timeframe, raw_candles, prepend=(end_time is not None))
-    logger.info("Stored %d fresh candles for %s:%s [%s]", len(raw_candles), exchange, symbol, timeframe)
-
-    final = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
-    cd, vd = _format_candles_for_ui(final, timeframe)
-    return _sync_tick({"status": "success", "candleData": cd, "volumeData": vd}, exchange, symbol, timeframe, is_recent)
-
+    cd, vd = _format_candles_for_ui(closed_candles, timeframe)
+    return {"status": "success", "candleData": cd, "volumeData": vd}
 
 @app.get("/api/consolidation")
 def get_consolidation(
@@ -745,7 +782,7 @@ def get_consolidation(
     end_time: Optional[str] = Query(None),
 ):
     """Return consolidation boxes for given series."""
-    use_timestamp = timeframe in ["1m", "5m", "15m", "30m", "1h", "4h"]
+    use_timestamp = timeframe in ["1m", "5m", "15m", "1h", "4h"]
     parsed_end = int(end_time) if end_time and use_timestamp else end_time
     stored = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
     if not stored:
@@ -778,7 +815,7 @@ def get_consolidations_all():
             if not stored or len(stored) < 5:
                 return zones
 
-            use_timestamp = tf in ["1m", "5m", "15m", "30m", "1h", "4h"]
+            use_timestamp = tf in ["1m", "5m", "15m", "1h", "4h"]
             df = pd.DataFrame(stored)
 
             if use_timestamp:
@@ -786,7 +823,7 @@ def get_consolidations_all():
             else:
                 df.index = pd.to_datetime(df["time"])
 
-            apply_time_filter = tf in ["1m", "5m", "15m", "30m", "1h"]
+            apply_time_filter = tf in ["1m", "5m", "15m", "1h"]
             boxes_df = consolidation_boxes(df, min_bars=5, use_time_filter=apply_time_filter)
             if boxes_df.empty:
                 return zones

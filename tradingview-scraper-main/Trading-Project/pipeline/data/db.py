@@ -148,11 +148,13 @@ class CandleDB:
 
     def get_candles(self, exchange: str, symbol: str, timeframe: str,
                     count: Optional[int] = None,
-                    end_ts: Optional[int] = None) -> List[dict]:
+                    end_ts: Optional[int] = None,
+                    start_ts: Optional[int] = None) -> List[dict]:
         """
         Return candles sorted ASCENDING by timestamp.
         If count is given, returns the most recent N bars (tail of the series).
-        If end_ts is given, excludes bars at or after end_ts.
+        If end_ts is given, excludes bars at or after end_ts (ceiling).
+        If start_ts is given, excludes bars before start_ts (floor).
         """
         conn = self._conn()
         params: list = [exchange, symbol, timeframe]
@@ -161,6 +163,10 @@ class CandleDB:
         if end_ts is not None:
             where += " AND ts < ?"
             params.append(int(end_ts))
+
+        if start_ts is not None:
+            where += " AND ts >= ?"
+            params.append(int(start_ts))
 
         limit_clause = f"LIMIT {int(count)}" if count else ""
         # DESC + LIMIT grabs the tail efficiently; we then reverse for ascending order

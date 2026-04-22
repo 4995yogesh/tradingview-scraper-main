@@ -13,8 +13,7 @@ const TF_SHORTCUT_MAP = {
   '1':   '1m',
   '5':   '5m',
   '15':  '15m',
-  '30':  '30m',
-  '60':  '1h',
+'60':  '1h',
   'H':   '1h',
   '1H':  '1h',
   '4':   '4h',
@@ -252,7 +251,7 @@ const ChartPage = () => {
     const [tfInput, setTfInput] = useState('');
     const [showInput, setShowInput] = useState(false);
     const inputRef = useRef(null);
-    const tfLabels = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W', '1M': '1M' };
+    const tfLabels = { '1m': '1m', '5m': '5m', '15m': '15m','1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W', '1M': '1M' };
 
     const commitTfInput = () => {
       const raw = tfInput.trim().toUpperCase();
