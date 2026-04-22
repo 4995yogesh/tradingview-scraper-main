@@ -395,9 +395,10 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
         now_ts    = int(time.time())
         interval  = TF_INTERVAL_SECS.get(timeframe, 60)
 
-        # First-time (empty DB) — deep backfill
+        # First-time (empty DB) or DB too shallow — deep backfill
         FIRST_FETCH = {
-            "1m": 1000, "5m": 5000, "15m": 8000, "1d": 5000, "1w": 2000,
+            "1m": 10000, "5m": 15000, "15m": 15000, 
+            "1h": 10000, "4h": 10000, "1d": 5000, "1w": 2000,
         }
 
         # Minimum bars to (re-)fetch on every startup to heal internal gaps.
@@ -407,9 +408,10 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
             "1h": 300, "4h": 200, "1d": 200, "1w": 100,
         }
 
-        if latest_ts is None:
-            fetch_limit = FIRST_FETCH.get(timeframe, 1000)
-            logger.info("[gap-fill] First backfill for %s:%s [%s] limit=%d",
+        db_count = candle_db.count(exchange, symbol, timeframe)
+        if latest_ts is None or db_count < FIRST_FETCH.get(timeframe, 5000):
+            fetch_limit = FIRST_FETCH.get(timeframe, 5000)
+            logger.info("[gap-fill] Deep backfill for %s:%s [%s] limit=%d",
                         exchange, symbol, timeframe, fetch_limit)
         else:
             gap_secs     = now_ts - latest_ts
