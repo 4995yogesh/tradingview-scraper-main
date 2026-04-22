@@ -114,6 +114,7 @@ const ChartPage = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [countdown, setCountdown] = useState(AUTO_REFRESH_INTERVAL);
   const [liveTickKey, setLiveTickKey] = useState(0);
+  const [showML, setShowML] = useState(false);
 
 
   const symbolPrecision = getSymbolPrecision(symbol);

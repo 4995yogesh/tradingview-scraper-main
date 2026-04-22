@@ -5,6 +5,7 @@ import {
 import { symbolInfo, timeframes } from '../../data/chartData';
 import LayoutSelector from './LayoutSelector';
 import MLStatusHUD from './MLStatusHUD';
+import MLTrainingMonitor from './MLTrainingMonitor';
 
 
 // TradingView-style shortcut map (same as ChartPage)
@@ -170,8 +171,11 @@ const ChartToolbar = ({
           </div>
         )}
 
-        {/* ML Status HUD */}
-        <MLStatusHUD onToggle={onToggleML} />
+        {/* ML Status HUD & Monitor */}
+        <div className="flex items-center gap-1">
+          <MLStatusHUD onToggle={onToggleML} />
+          <MLTrainingMonitor />
+        </div>
 
         {/* Indicators button */}
         <div className="relative">

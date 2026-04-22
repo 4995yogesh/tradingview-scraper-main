@@ -29,6 +29,35 @@ _train_lock = threading.Lock()
 # Models save directory (relative to this file)
 _MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "models")
 
+# ── Training Real-Time State ──────────────────────────────────────────────────
+
+TRAINING_STATE = {
+    "is_training": False,
+    "iteration": 0,
+    "max_iterations": 1000,
+    "val_logloss": 0.0,
+    "logs": []
+}
+
+def _log_msg(msg: str):
+    logger.info(msg)
+    TRAINING_STATE["logs"].append(msg)
+    # Keep last 100 logs
+    if len(TRAINING_STATE["logs"]) > 100:
+        TRAINING_STATE["logs"].pop(0)
+
+def lgb_progress_callback(env):
+    """LightGBM custom callback to feed real-time iteration metrics."""
+    TRAINING_STATE["iteration"] = env.iteration
+    # Attempt to extract metric (multi_logloss)
+    if env.evaluation_result_list:
+        try:
+            val_loss = env.evaluation_result_list[0][2]
+            TRAINING_STATE["val_logloss"] = float(val_loss)
+        except Exception:
+            pass
+
+
 
 # ── GPU detection ─────────────────────────────────────────────────────────────
 
@@ -81,9 +110,14 @@ def maybe_trigger_retrain() -> None:
     def train_job():
         with _train_lock:
             try:
+                TRAINING_STATE["logs"] = []
+                _log_msg("[trainer] Starting async training job...")
                 _run_training()
             except Exception as exc:
+                _log_msg(f"[trainer] Error: {exc}")
                 logger.error("[trainer] Training failed: %s", exc, exc_info=True)
+            finally:
+                TRAINING_STATE["is_training"] = False
 
     t = threading.Thread(target=train_job, daemon=True, name="ml-trainer")
     t.start()
@@ -92,9 +126,10 @@ def maybe_trigger_retrain() -> None:
 
 # ── Main training pipeline ────────────────────────────────────────────────────
 
-def _run_training() -> None:
+def _run_training(force: bool = False) -> None:
     """
     Full training pipeline. Runs inside _train_lock.
+    If force=True, bypass the 100 label minimum check.
     """
     import lightgbm as lgb
     from sklearn.calibration import CalibratedClassifierCV
@@ -102,12 +137,16 @@ def _run_training() -> None:
     from sklearn.model_selection import train_test_split
     import joblib
 
-    logger.info("[trainer] === Starting training run ===")
+    TRAINING_STATE["is_training"] = True
+    TRAINING_STATE["iteration"] = 0
+    TRAINING_STATE["val_logloss"] = 0.0
+
+    _log_msg("[trainer] === Starting training run ===")
 
     # ── 1. Load unconsumed labels ─────────────────────────────────────────────
     raw_labels = ml_db.get_unconsumed_labels()
-    if len(raw_labels) < RETRAIN_EVERY_N:
-        logger.info("[trainer] Unconsumed count %d < %d — abort", len(raw_labels), RETRAIN_EVERY_N)
+    if not force and len(raw_labels) < RETRAIN_EVERY_N:
+        _log_msg(f"[trainer] Unconsumed count {len(raw_labels)} < {RETRAIN_EVERY_N} — abort")
         return
 
     # ── 2. Join with feature store, skip mismatches ───────────────────────────
@@ -128,8 +167,11 @@ def _run_training() -> None:
     logger.info("[trainer] Valid rows: %d / %d (skipped %d)",
                 len(valid_rows), len(raw_labels), skipped)
 
-    if len(valid_rows) < RETRAIN_EVERY_N:
-        logger.warning("[trainer] Not enough valid rows (%d) — abort", len(valid_rows))
+    if not force and len(valid_rows) < RETRAIN_EVERY_N:
+        _log_msg(f"[trainer] Not enough valid rows ({len(valid_rows)}) — abort")
+        return
+    elif force and len(valid_rows) < 10:
+        _log_msg(f"[trainer] Even with force, < 10 rows is too small to train — abort")
         return
 
     # ── 3. Deduplicate: keep LATEST label per box ─────────────────────────────
@@ -140,7 +182,7 @@ def _run_training() -> None:
             latest[bid] = (r, vec)
 
     rows_deduped = list(latest.values())
-    logger.info("[trainer] Unique boxes after dedup: %d", len(rows_deduped))
+    _log_msg(f"[trainer] Unique boxes after dedup: {len(rows_deduped)}")
 
     # ── 4. Build X, y, sample weights ────────────────────────────────────────
     X = np.array([vec for _, vec in rows_deduped], dtype=np.float32)
@@ -187,18 +229,20 @@ def _run_training() -> None:
     from lightgbm import LGBMClassifier
     lgbm_clf = LGBMClassifier(**lgb_params)
 
+    TRAINING_STATE["max_iterations"] = lgb_params["n_estimators"]
+
     lgbm_clf.fit(
         X_train, y_train,
         sample_weight=w_train,
         eval_set=[(X_val, y_val)],
         callbacks=[
             lgb.early_stopping(stopping_rounds=50, verbose=False),
-            lgb.log_evaluation(period=-1),
+            lgb_progress_callback
         ],
     )
 
     # ── 7. Calibrate ─────────────────────────────────────────────────────────
-    logger.info("[trainer] Calibrating model...")
+    _log_msg("[trainer] Calibrating model...")
     calibrated = CalibratedClassifierCV(lgbm_clf, cv=5, method="sigmoid")
     calibrated.fit(X_train, y_train, sample_weight=w_train)
 
@@ -219,23 +263,16 @@ def _run_training() -> None:
     f1_good        = report.get("good", {}).get("f1-score", 0.0)
     support_good   = int(report.get("good", {}).get("support", 0))
 
-    logger.info("[trainer] === Evaluation Results ===")
-    logger.info("[trainer] Confusion Matrix:\n%s", cm)
-    logger.info("[trainer] Classification Report:\n%s",
-                classification_report(y_val, y_pred,
-                                     target_names=["good", "bad", "neutral"],
-                                     zero_division=0))
-    logger.info("[trainer] Precision_good=%.3f | Recall_good=%.3f | Support_good=%d",
-                precision_good, recall_good, support_good)
+    _log_msg("[trainer] === Evaluation Results ===")
+    _log_msg(f"[trainer] Precision=%.3f | Recall=%.3f | Support={support_good}" % (precision_good, recall_good))
 
     # ── 9. Promotion gate ────────────────────────────────────────────────────
     passed = precision_good >= 0.60 and support_good >= 30
 
     if not passed:
-        logger.warning(
-            "[trainer] Gate FAILED: Precision_good=%.3f (need 0.60), "
-            "support_good=%d (need 30) — model NOT promoted",
-            precision_good, support_good,
+        _log_msg(
+            f"[trainer] Gate FAILED: Precision={precision_good:.3f} (need 0.60), "
+            f"support={support_good} (need 30) — NOT promoted"
         )
         return  # Labels stay unconsumed
 
@@ -265,6 +302,6 @@ def _run_training() -> None:
     # Mark labels consumed
     label_ids = [r["id"] for r, _ in rows_deduped]
     ml_db.mark_consumed(label_ids)
-    logger.info("[trainer] Marked %d labels as consumed", len(label_ids))
+    _log_msg(f"[trainer] Marked {len(label_ids)} labels as consumed")
 
-    logger.info("[trainer] === Training complete: %s promoted ===", version)
+    _log_msg(f"[trainer] === Training complete: {version} promoted ===")

@@ -262,6 +262,13 @@ def get_status():
     }
 
 
+@router.get("/training_progress")
+def get_training_progress():
+    """Return real-time LightGBM training state and logs."""
+    from ml.trainer import TRAINING_STATE
+    return TRAINING_STATE
+
+
 @router.get("/predict")
 def predict(box_id: str):
     """Return inference contract for a given box_id."""
@@ -279,9 +286,14 @@ def manual_retrain():
     def force_train():
         with trainer._train_lock:
             try:
-                trainer._run_training()
+                from ml.trainer import TRAINING_STATE
+                TRAINING_STATE["logs"] = []
+                trainer._run_training(force=True)
             except Exception as exc:
                 logger.error("[ml/retrain] Force retrain failed: %s", exc, exc_info=True)
+            finally:
+                from ml.trainer import TRAINING_STATE
+                TRAINING_STATE["is_training"] = False
 
     t = threading.Thread(target=force_train, daemon=True, name="ml-force-trainer")
     t.start()
