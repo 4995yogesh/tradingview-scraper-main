@@ -37,6 +37,8 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 IST = timezone(timedelta(hours=5, minutes=30))
 
+
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -478,14 +480,122 @@ def _run_all_gap_fills():
                 logger.error("[gap-fill] %s:%s [%s] pool error: %s", ex, sym, tf, exc)
 
 
-# ── Periodic live refresh (runs every 60 s) ───────────────────────────────────
+# ── Delta-Engine: 1m-only external fetch + HTF in-process synthesis ──────────
+
+# Which timeframes are synthesized from 1m candles (intraday)
+_INTRADAY_TFS  = ["5m", "15m", "1h", "4h"]
+# Which timeframes are synthesized from 5m candles
+_INTERDAY_TFS  = ["1d", "1w"]
+# OANDA day boundary: 22:00 UTC (17:00 EST)
+_DAY_OPEN_UTC_HOUR = 22
+
+
+def _get_day_start_ts() -> int:
+    """Return the unix-second of the most recent OANDA trading day open (22:00 UTC)."""
+    now_utc = datetime.now(timezone.utc)
+    candidate = now_utc.replace(hour=_DAY_OPEN_UTC_HOUR, minute=0, second=0, microsecond=0)
+    if now_utc < candidate:
+        candidate -= timedelta(days=1)
+    return int(candidate.timestamp())
+
+
+def _build_htf_from_1m(exchange: str, symbol: str, target_tf: str) -> list:
+    """
+    Pull today's 1m closed candles from SQLite (intraday only).
+    Aggregate them into target_tf buckets.
+    Returns a list of synthesized candles for the current trading day.
+    """
+    day_start = _get_day_start_ts()
+    raw_1m = candle_db.get_candles_since(exchange, symbol, "1m", day_start)
+    if not raw_1m:
+        return []
+
+    bucket_secs = TF_INTERVAL_SECS.get(target_tf, 300)
+    buckets: dict = {}
+    for c in raw_1m:
+        ts = int(c.get("ts", c.get("timestamp", 0)))
+        if ts < day_start:
+            continue   # strict intraday boundary
+        bucket_ts = (ts // bucket_secs) * bucket_secs
+        if bucket_ts not in buckets:
+            buckets[bucket_ts] = {
+                "ts":    bucket_ts, "open": float(c["open"]),
+                "high":  float(c["high"]), "low":  float(c["low"]),
+                "close": float(c["close"]), "volume": float(c.get("volume", 0)),
+            }
+        else:
+            b = buckets[bucket_ts]
+            b["high"]   = max(b["high"],  float(c["high"]))
+            b["low"]    = min(b["low"],   float(c["low"]))
+            b["close"]  = float(c["close"])
+            b["volume"] += float(c.get("volume", 0))
+
+    return [buckets[k] for k in sorted(buckets)]
+
+
+def _build_htf_from_5m(exchange: str, symbol: str, target_tf: str) -> list:
+    """
+    Pull all 5m closed candles from SQLite for the last 10 days.
+    Aggregate them into target_tf buckets (1d / 1w).
+    """
+    since_ts = int(time.time()) - 10 * 86400
+    raw_5m = candle_db.get_candles_since(exchange, symbol, "5m", since_ts)
+    if not raw_5m:
+        return []
+
+    bucket_secs = TF_INTERVAL_SECS.get(target_tf, 86400)
+    buckets: dict = {}
+    for c in raw_5m:
+        ts = int(c.get("ts", c.get("timestamp", 0)))
+        bucket_ts = (ts // bucket_secs) * bucket_secs
+        if bucket_ts not in buckets:
+            buckets[bucket_ts] = {
+                "ts":    bucket_ts, "open": float(c["open"]),
+                "high":  float(c["high"]), "low":  float(c["low"]),
+                "close": float(c["close"]), "volume": float(c.get("volume", 0)),
+            }
+        else:
+            b = buckets[bucket_ts]
+            b["high"]   = max(b["high"],  float(c["high"]))
+            b["low"]    = min(b["low"],   float(c["low"]))
+            b["close"]  = float(c["close"])
+            b["volume"] += float(c.get("volume", 0))
+
+    return [buckets[k] for k in sorted(buckets)]
+
+
+def _synthesize_htf_candles(exchange: str, symbol: str):
+    """
+    Re-compute all intraday HTF live buckets from 1m data,
+    and interday buckets from 5m data.
+    Merges synthesized candles into RAM storage.
+    """
+    # ── intraday TFs from 1m ──────────────────────────────────────────────
+    for tf in _INTRADAY_TFS:
+        try:
+            synth = _build_htf_from_1m(exchange, symbol, tf)
+            if synth:
+                _seed_storage(exchange, symbol, tf, synth)
+                logger.debug("[synth] %s:%s [%s] → %d buckets", exchange, symbol, tf, len(synth))
+        except Exception as exc:
+            logger.error("[synth] %s:%s [%s] failed: %s", exchange, symbol, tf, exc)
+
+    # ── interday TFs from 5m ─────────────────────────────────────────────
+    for tf in _INTERDAY_TFS:
+        try:
+            synth = _build_htf_from_5m(exchange, symbol, tf)
+            if synth:
+                _seed_storage(exchange, symbol, tf, synth)
+                logger.debug("[synth] %s:%s [%s] → %d buckets", exchange, symbol, tf, len(synth))
+        except Exception as exc:
+            logger.error("[synth] %s:%s [%s] failed: %s", exchange, symbol, tf, exc)
+
 
 def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int = 20):
     """
-    Fetch the very latest candles from TradingView and merge them
-    into SQLite + RAM cache.  The limit is computed dynamically from
-    the actual gap between the newest DB candle and now, so overnight
-    or downtime gaps are automatically healed on the next cycle.
+    Fetch the very latest 1m candles from TradingView via HistoricalFetcher
+    and merge into SQLite + RAM cache.
+    Dynamic limit covers any gap since the last stored candle.
     """
     key = (exchange, symbol, timeframe)
     with _gap_filling_lock:
@@ -493,21 +603,19 @@ def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int
             return   # gap-fill already running; skip
         _gap_filling.add(key)
     try:
-        # ── Compute dynamic limit based on real gap from DB ───────────────
         interval  = TF_INTERVAL_SECS.get(timeframe, 60)
         latest_ts = candle_db.get_latest_ts(exchange, symbol, timeframe)
         if latest_ts is not None:
-            gap_secs     = max(0, int(time.time()) - latest_ts)
-            missing_bars = gap_secs // interval + 5   # +5 buffer
+            gap_secs      = max(0, int(time.time()) - latest_ts)
+            missing_bars  = gap_secs // interval + 5
             dynamic_limit = max(limit, int(missing_bars))
         else:
             dynamic_limit = limit
-        # Cap at 500 bars to keep each periodic fetch fast
         dynamic_limit = min(dynamic_limit, 500)
 
         if dynamic_limit > limit:
-            logger.info("[periodic] %s:%s [%s] gap detected (%ds) → fetching %d bars",
-                        exchange, symbol, timeframe,
+            logger.info("[1m-fetch] %s:%s gap=%ds → fetching %d bars",
+                        exchange, symbol,
                         int(time.time()) - (latest_ts or 0), dynamic_limit)
 
         cookie_value = os.getenv("TRADINGVIEW_COOKIE", "").strip()
@@ -519,12 +627,11 @@ def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int
         )
         if raw:
             _seed_storage(exchange, symbol, timeframe, raw)
-            logger.info("[periodic] ✓ %s:%s [%s] refreshed %d candles",
-                        exchange, symbol, timeframe, len(raw))
+            logger.info("[1m-fetch] ✓ %s:%s refreshed %d 1m candles", exchange, symbol, len(raw))
         else:
-            logger.warning("[periodic] %s:%s [%s] — TV returned no candles", exchange, symbol, timeframe)
+            logger.warning("[1m-fetch] %s:%s — TV returned no 1m candles", exchange, symbol)
     except Exception as exc:
-        logger.error("[periodic] %s:%s [%s] failed: %s", exchange, symbol, timeframe, exc)
+        logger.error("[1m-fetch] %s:%s failed: %s", exchange, symbol, exc)
     finally:
         with _gap_filling_lock:
             _gap_filling.discard(key)
@@ -534,25 +641,27 @@ _stop_refresh = threading.Event()
 
 def _periodic_refresh_loop():
     """
-    Background thread: wakes at the top of every minute and refreshes the
-    latest candles for every persistent symbol/timeframe pair.
-    Uses short-duration fetches (20 bars) so each round-trip is fast.
+    Delta-Engine background thread:
+    1. Every 5 seconds: fetch only 1m candles from TradingView.
+    2. After each 1m fetch: synthesize all HTF candles from DB.
+       - 5m/15m/1h/4h → from today's 1m candles (intraday only).
+       - 1d/1w        → from 5m candles (last 10 days).
+    No external TradingView calls are made for any HTF.
     """
-    # Wait for the initial gap-fill to settle before starting periodic work
-    time.sleep(30)
+    time.sleep(30)  # let gap-fill settle first
     while not _stop_refresh.is_set():
         now = time.time()
-        # Align to the next 15-second boundary
-        next_period = (int(now) // 15 + 1) * 15
+        next_period = (int(now) // 5 + 1) * 5
         sleep_secs  = max(0, next_period - time.time())
         if _stop_refresh.wait(timeout=sleep_secs):
-            break   # Stop was requested
+            break
 
-        logger.info("[periodic] Running live-candle refresh for all series")
         for exchange, symbol in PERSISTENT_SYMBOLS:
-            for tf in PERSISTENT_TIMEFRAMES:
-                _fetch_latest_candles(exchange, symbol, tf, limit=20)
-                time.sleep(0.3)   # short pause — 6 TFs × 0.3 s = ~2 s total per cycle
+            # Step 1: fetch only 1m from TradingView
+            _fetch_latest_candles(exchange, symbol, "1m", limit=10)
+            # Step 2: synthesize all HTFs from DB (background, always)
+            _synthesize_htf_candles(exchange, symbol)
+            logger.info("[delta] ✓ %s:%s cycle complete", exchange, symbol)
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────

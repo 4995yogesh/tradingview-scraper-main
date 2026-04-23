@@ -145,7 +145,7 @@ def _run_training(force: bool = False) -> None:
 
     # ── 1. Load unconsumed labels ─────────────────────────────────────────────
     raw_labels = ml_db.get_unconsumed_labels()
-    if not force and len(raw_labels) < RETRAIN_EVERY_N:
+    if len(raw_labels) < RETRAIN_EVERY_N:
         _log_msg(f"[trainer] Unconsumed count {len(raw_labels)} < {RETRAIN_EVERY_N} — abort")
         return
 
@@ -167,11 +167,8 @@ def _run_training(force: bool = False) -> None:
     logger.info("[trainer] Valid rows: %d / %d (skipped %d)",
                 len(valid_rows), len(raw_labels), skipped)
 
-    if not force and len(valid_rows) < RETRAIN_EVERY_N:
+    if len(valid_rows) < RETRAIN_EVERY_N:
         _log_msg(f"[trainer] Not enough valid rows ({len(valid_rows)}) — abort")
-        return
-    elif force and len(valid_rows) < 10:
-        _log_msg(f"[trainer] Even with force, < 10 rows is too small to train — abort")
         return
 
     # ── 3. Deduplicate: keep LATEST label per box ─────────────────────────────
@@ -266,7 +263,46 @@ def _run_training(force: bool = False) -> None:
     _log_msg("[trainer] === Evaluation Results ===")
     _log_msg(f"[trainer] Precision=%.3f | Recall=%.3f | Support={support_good}" % (precision_good, recall_good))
 
-    # ── 9. Promotion gate ────────────────────────────────────────────────────
+    # Error analysis for class 'good' (0)
+    fps = np.where((y_pred == 0) & (y_val != 0))[0]
+    fns = np.where((y_pred != 0) & (y_val == 0))[0]
+    _log_msg(f"[trainer] Error Analysis (Good Class): FP={len(fps)} | FN={len(fns)}")
+    if len(fps) > 0:
+        _log_msg(f"[trainer] FP: Model predicted GOOD on {len(fps)} BAD/NEUTRAL samples")
+    if len(fns) > 0:
+        _log_msg(f"[trainer] FN: Model missed {len(fns)} true GOOD samples")
+
+    # ── 9. Export Data & Consume Labels ──────────────────────────────────────
+    import csv
+    from datetime import datetime
+
+    exports_dir = os.path.join(os.path.dirname(__file__), "..", "data", "ml_exports")
+    os.makedirs(exports_dir, exist_ok=True)
+    export_path = os.path.join(exports_dir, f"training_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv")
+    
+    try:
+        with open(export_path, "w", newline="") as f:
+            if rows_deduped:
+                # Write label row data + features
+                writer = csv.writer(f)
+                header = ["id", "box_id", "label", "created_at"]
+                if len(rows_deduped) > 0:
+                    header.extend([f"f_{i}" for i in range(len(rows_deduped[0][1]))])
+                writer.writerow(header)
+                for r, vec in rows_deduped:
+                    row = [r["id"], r["box_id"], r["label"], r.get("created_at", "")]
+                    row.extend(vec.tolist())
+                    writer.writerow(row)
+        _log_msg(f"[trainer] Exported training data to {export_path}")
+    except Exception as e:
+        _log_msg(f"[trainer] Failed exporting data: {e}")
+
+    # Consume labels unconditionally so the counter resets to 100 needed for next run
+    label_ids = [r["id"] for r, _ in rows_deduped]
+    ml_db.mark_consumed(label_ids)
+    _log_msg(f"[trainer] Marked {len(label_ids)} labels as consumed (Counter reset)")
+
+    # ── 10. Promotion gate ───────────────────────────────────────────────────
     passed = precision_good >= 0.60 and support_good >= 30
 
     if not passed:
@@ -274,7 +310,7 @@ def _run_training(force: bool = False) -> None:
             f"[trainer] Gate FAILED: Precision={precision_good:.3f} (need 0.60), "
             f"support={support_good} (need 30) — NOT promoted"
         )
-        return  # Labels stay unconsumed
+        return  # Stop here, but labels are already consumed!
 
     # ── 10. Promote ──────────────────────────────────────────────────────────
     version = ml_db.next_model_version()
@@ -298,10 +334,5 @@ def _run_training(force: bool = False) -> None:
     from ml import scorer
     scorer.load_model()
     logger.info("[trainer] Scorer reloaded with model %s", version)
-
-    # Mark labels consumed
-    label_ids = [r["id"] for r, _ in rows_deduped]
-    ml_db.mark_consumed(label_ids)
-    _log_msg(f"[trainer] Marked {len(label_ids)} labels as consumed")
 
     _log_msg(f"[trainer] === Training complete: {version} promoted ===")

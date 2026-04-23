@@ -382,7 +382,10 @@ class Streamer:
                         split_result = [x for x in re.split(r'~m~\d+~m~', result) if x]
                         for item in split_result:
                             if item:
-                                yield json.loads(item)  # Yield parsed JSON data
+                                try:
+                                    yield json.loads(item)  # Yield parsed JSON data
+                                except json.JSONDecodeError:
+                                    pass
 
                 except WebSocketConnectionClosedException:
                     logging.error("WebSocket connection closed. Attempting to reconnect...")

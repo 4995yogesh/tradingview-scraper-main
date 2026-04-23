@@ -159,7 +159,19 @@ function prepareChartData(rawCandles, timeframe) {
       }
       return { ...c, time: t };
     })
-    .filter(c => Number.isFinite(c.time));
+    .filter(c => {
+      const basic = Number.isFinite(c.time);
+      if (!basic) return false;
+      const isCandle = 'open' in c && 'high' in c && 'low' in c && 'close' in c;
+      if (isCandle) {
+        return Number.isFinite(c.open) && Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close);
+      }
+      const isVolume = 'value' in c;
+      if (isVolume) {
+        return Number.isFinite(c.value);
+      }
+      return true;
+    });
 
   // STAGE 1 DEDUPE (raw)
   data = dedupeRaw(data);
@@ -493,7 +505,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       } catch (_) {}
     };
     poll();
-    iv = setInterval(poll, 10000);
+    iv = setInterval(poll, 5000);
     return () => clearInterval(iv);
   }, []);
 

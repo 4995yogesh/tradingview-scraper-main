@@ -94,20 +94,18 @@ class CandleDB:
         """
         Bulk insert-or-replace candles.
 
-        Accepts dicts in the raw HistoricalFetcher format:
-            {'timestamp': <unix_float>, 'open': ..., 'high': ..., 'low': ..., 'close': ..., ['volume': ...]}
-
-        Also accepts already-formatted dicts that have 'time' instead of 'timestamp'
-        (as used internally by _seed_storage).
+        Accepts dicts in the following formats:
+          - Raw HistoricalFetcher: {'timestamp': <unix_float>, 'open': ..., ...}
+          - Formatted storage:    {'time': <unix_int or 'YYYY-MM-DD'>, 'open': ..., ...}
+          - Synthesized:          {'ts': <unix_int>, 'open': ..., ...}
         """
         if not raw_candles:
             return
 
         rows = []
         for c in raw_candles:
-            # Support both 'timestamp' (raw fetcher) and 'time' (formatted) keys
-            raw_ts = c.get("timestamp", c.get("time", 0))
-            # Convert date strings ("2024-01-15") to epoch via a simple workaround
+            # Support 'ts' (synthesized), 'timestamp' (HistoricalFetcher), 'time' (formatted)
+            raw_ts = c.get("ts", c.get("timestamp", c.get("time", 0)))
             if isinstance(raw_ts, str):
                 from datetime import datetime, timezone
                 try:
@@ -173,6 +171,14 @@ class CandleDB:
         sql = f"SELECT * FROM candles {where} ORDER BY ts DESC {limit_clause}"
         rows = conn.execute(sql, params).fetchall()
         return [dict(r) for r in reversed(rows)]
+
+    def get_candles_since(self, exchange: str, symbol: str, timeframe: str,
+                          since_ts: int) -> List[dict]:
+        """
+        Return all candles with ts >= since_ts, sorted ascending.
+        Used by the delta-engine HTF synthesizer to read today's 1m/5m data.
+        """
+        return self.get_candles(exchange, symbol, timeframe, start_ts=since_ts)
 
     def get_latest_ts(self, exchange: str, symbol: str, timeframe: str) -> Optional[int]:
         """Most recent candle Unix timestamp, or None if no data exists."""
