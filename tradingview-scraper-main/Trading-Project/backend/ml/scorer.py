@@ -24,7 +24,7 @@ _model_lock = threading.RLock()
 
 # ── Fallback response ─────────────────────────────────────────────────────────
 FALLBACK = {
-    "probabilities": {"good": 0.33, "bad": 0.33, "neutral": 0.34},
+    "probabilities": {"very_good": 0.25, "good": 0.25, "bad": 0.25, "very_bad": 0.25},
     "confidence": 0.01,
     "model_version": None,
     "is_fallback": True,
@@ -94,9 +94,10 @@ def score_box(box_id: str) -> dict:
         X = np.array([vec], dtype=np.float32)
         proba = m.predict_proba(X)[0]
         p = {
-            "good":    float(proba[0]),
-            "bad":     float(proba[1]),
-            "neutral": float(proba[2]),
+            "very_good": float(proba[0]),
+            "good":      float(proba[1]),
+            "bad":       float(proba[2]),
+            "very_bad":  float(proba[3]),
         }
         return {
             "probabilities": p,
@@ -142,9 +143,10 @@ def batch_score(box_ids: list) -> dict:
         for i, bid in enumerate(ids_ordered):
             proba = probas[i]
             p = {
-                "good":    float(proba[0]),
-                "bad":     float(proba[1]),
-                "neutral": float(proba[2]),
+                "very_good": float(proba[0]),
+                "good":      float(proba[1]),
+                "bad":       float(proba[2]),
+                "very_bad":  float(proba[3]),
             }
             result[bid] = {
                 "probabilities": p,

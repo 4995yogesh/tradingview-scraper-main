@@ -43,8 +43,8 @@ class LabelPayload(BaseModel):
 
     @validator("label")
     def label_valid(cls, v):
-        if v not in ("good", "bad", "neutral"):
-            raise ValueError("label must be 'good', 'bad', or 'neutral'")
+        if v not in ("very_good", "good", "bad", "very_bad"):
+            raise ValueError("label must be 'very_good', 'good', 'bad', or 'very_bad'")
         return v
 
 

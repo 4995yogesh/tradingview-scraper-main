@@ -27,8 +27,9 @@ def consolidation_boxes(
     # Hour array for time filter (0 for daily/weekly indices without .hour)
     if use_time_filter:
         idx = df.index
+        # Shift UTC index to IST (UTC+5.5) before extracting hour
         hour_arr = np.array(
-            [v.hour if hasattr(v, "hour") else 0 for v in idx],
+            [(v + pd.Timedelta(hours=5, minutes=30)).hour if hasattr(v, "hour") else 0 for v in idx],
             dtype=np.int8,
         )
     else:

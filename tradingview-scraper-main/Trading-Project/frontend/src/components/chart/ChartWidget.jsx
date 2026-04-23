@@ -7,6 +7,7 @@ import {
   normalizeTimeForChart, TF_COLORS, FILLED_COLOR,
 } from '../../lib/swingLevels';
 import LabelDialog from './LabelDialog';
+import { ConsolidationBoxesPrimitive } from './plugins/BoxPrimitive';
 
 
 // Sensible number of bars to fetch per timeframe so candles are visible at the initial zoom
@@ -226,8 +227,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const seriesRef              = useRef(null);
   const isLoadingMoreRef       = useRef(false);
   const swingSeriesRef         = useRef([]); // swing level LineSeries
-  const consolidationSeriesRef = useRef([]); // consolidation box series
+  const consolidationPrimitiveRef = useRef(null); // Fast native shape plugin
   const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
+
+  const [domZones, setDomZones] = useState([]);
+  const domZonesRef = useRef([]);
 
   const [chartData, setChartData] = useState(null);
   const chartDataRef = useRef(null);
@@ -348,11 +352,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     // Clear indicator series refs since the chart (and all its series) is destroyed
     swingSeriesRef.current = [];
-    consolidationSeriesRef.current = [];
+    consolidationPrimitiveRef.current = null;
 
     const container = chartContainerRef.current;
-    const bg = chartSettings?.background || '#131722';
-    const gridColor = chartSettings?.showGrid !== false ? (chartSettings?.gridColor || '#1E222D') : 'transparent';
+    const bg = chartSettings?.background || '#000000';
+    const gridColor = chartSettings?.showGrid !== false ? (chartSettings?.gridColor || '#000000') : 'transparent';
     const crosshairMode = chartSettings?.crosshairMode === 'magnet' ? 1 : 0;
 
     const chart = createChart(container, {
@@ -529,33 +533,45 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       // HTF toggle: ztfIdx < chartTfIdx means zone is from a higher TF
       if (!showHTF && ztfIdx < chartTfIdx) return false;
 
+      // IST Session Filter (00:00 to 06:00 IST): For chart <= 1h
+      // IST is UTC +5:30 (19800000 ms)
+      if (chartTfIdx >= 3 && z.timeStart) {
+        const istTime = z.timeStart + 19800000;
+        const hr = new Date(istTime).getUTCHours();
+        if (hr >= 0 && hr < 6) return false;
+      }
+
       return true;
     });
   }, [consolidations, timeframe, consolidationSettings?.enabled, consolidationSettings?.settings?.showHTF]);
 
 
+  // Keep the raw parsed zones so we can filter them dynamically on scroll
+  const rawParsedZonesRef = useRef({ curr: [], htf: [] });
+
   useEffect(() => {
     const chart = chartRef.current;
-    consolidationSeriesRef.current.forEach(s => { try { chart?.removeSeries(s); } catch {} });
-    consolidationSeriesRef.current = [];
+    const series = seriesRef.current;
+    if (!chart || !series || !chartDataRef.current?.candleData?.length || !consolidationSettings?.enabled) return;
 
-    if (!chart || !chartDataRef.current?.candleData?.length || !consolidationSettings?.enabled) return;
+    if (!consolidationPrimitiveRef.current) {
+      consolidationPrimitiveRef.current = new ConsolidationBoxesPrimitive();
+      series.attachPrimitive(consolidationPrimitiveRef.current);
+    }
 
     const candles  = chartDataRef.current.candleData;
     const getUnix  = (t) => typeof t === 'string' ? new Date(t).getTime() / 1000 : Number(t);
-    const normTf   = (tf) => tf.toLowerCase();
     const lastUnix = getUnix(candles[candles.length - 1].time);
-    const chartTf  = normTf(timeframe);
+    const chartTfIdx = ALL_TFS.indexOf(timeframe.toLowerCase());
 
-    // Same TF filter logic as swing indicator:
-    // Show consolidation zones from same TF or any higher TF, except:
-    //   - Skip 15m zones on 5m chart
-    //   - Skip 5m zones on 1m chart
-    const chartTfIdx = ALL_TFS.indexOf(chartTf);
     const zones = visibleZones;
-    if (!zones.length) return;
+    if (!zones.length) {
+      consolidationPrimitiveRef.current.setData([]);
+      activeBoxesRef.current = [];
+      rawParsedZonesRef.current = { curr: [], htf: [] };
+      return;
+    }
 
-    // Pre-build sorted unix-second array once — reused for all O(log N) lookups
     const unixArr    = candles.map(c => getUnix(c.time));
     const bisectLeft = (arr, target) => {
       let lo = 0, hi = arr.length;
@@ -571,13 +587,17 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       return (unixSec - before <= after - unixSec) ? candles[idx - 1].time : candles[idx].time;
     };
 
+    const parsedCurr = [];
+    const parsedHtf = [];
+
     zones.forEach(zone => {
+      const ztfIdx = ALL_TFS.indexOf((zone.timeframe || '').toLowerCase());
+      const isHTF  = ztfIdx < chartTfIdx;
+
       const startUnix = Math.floor(zone.timeStart / 1000);
       const endUnix   = Math.floor(zone.timeEnd   / 1000);
 
-
       const t1 = snapToChart(startUnix);
-      // Extend to current bar if zone is still active
       const t2 = endUnix >= lastUnix ? candles[candles.length - 1].time : snapToChart(endUnix);
       if (!t1 || !t2 || t1 === t2) return;
 
@@ -589,76 +609,109 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       const points = candles.slice(lo, hi).map(c => c.time);
       if (points.length < 2) return;
 
-      // Store zone for overlay rendering
       if (zone.box_id) zoneMapRef.current[zone.box_id] = zone;
 
-      try {
-        // Determine color based on label / score
-        const hasLabel  = zone.label != null;
-        const score     = zone.score || {};
-        const isFb      = score.is_fallback !== false;
-        const pGood     = !isFb ? (score.probabilities?.good || 0) : null;
+      const hasLabel  = zone.label != null;
+      const score     = zone.score || {};
+      const isFb      = score.is_fallback !== false;
+      const pGood     = !isFb ? ((score.probabilities?.good || 0) + (score.probabilities?.very_good || 0)) : null;
 
-        let borderColor, fillColor;
-        if (hasLabel) {
-          if (zone.label === 'good')    { borderColor = 'rgba(38,166,154,0.85)'; fillColor = 'rgba(38,166,154,0.12)'; }
-          else if (zone.label === 'bad') { borderColor = 'rgba(239,83,80,0.85)';  fillColor = 'rgba(239,83,80,0.12)'; }
-          else                           { borderColor = 'rgba(255,167,38,0.85)'; fillColor = 'rgba(255,167,38,0.12)'; }
-        } else if (!isFb && pGood != null) {
-          // Color-code by P(good): green if high, red if low
-          const r = Math.round(239 - pGood * (239 - 38));
-          const g = Math.round(83  + pGood * (166 - 83));
-          const b = Math.round(80  + pGood * (154 - 80));
-          borderColor = `rgba(${r},${g},${b},0.85)`;
-          fillColor   = `rgba(${r},${g},${b},0.10)`;
-        } else {
-          borderColor = 'rgba(144, 202, 249, 0.85)';
-          fillColor   = 'rgba(144, 202, 249, 0.15)';
-        }
-
-        const topLine = chart.addSeries(LineSeries, {
-          color: borderColor, lineWidth: 1, lineStyle: 0,
-          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-        });
-        const botLine = chart.addSeries(LineSeries, {
-          color: borderColor, lineWidth: 1, lineStyle: 0,
-          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-        });
-
-        topLine.setData(points.map(t => ({ time: t, value: zone.priceHigh })));
-        botLine.setData(points.map(t => ({ time: t, value: zone.priceLow  })));
-
-        const fillArea = chart.addSeries(BaselineSeries, {
-          baseValue:        { type: 'price', price: zone.priceLow },
-          topLineColor:     'transparent',
-          topFillColor1:    fillColor,
-          topFillColor2:    fillColor,
-          bottomLineColor:  'transparent',
-          bottomFillColor1: 'transparent',
-          bottomFillColor2: 'transparent',
-          lineWidth: 0,
-          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
-        });
-        fillArea.setData(points.map(t => ({ time: t, value: zone.priceHigh })));
-
-        consolidationSeriesRef.current.push(topLine, botLine, fillArea);
-        
-        if (zone.box_id) {
-          activeBoxesRef.current.push({
-            box_id: zone.box_id,
-            drawT1: points[0],
-            drawT2: points[points.length - 1],
-            priceHigh: zone.priceHigh
-          });
-        }
-      } catch (e) {
-        console.warn('Consolidation box draw error:', e);
+      let borderColor, fillColor;
+      if (hasLabel) {
+        if (zone.label === 'very_good') { borderColor = 'rgba(0,191,165,0.85)';  fillColor = 'rgba(0,191,165,0.12)'; }
+        else if (zone.label === 'good') { borderColor = 'rgba(38,166,154,0.85)'; fillColor = 'rgba(38,166,154,0.12)'; }
+        else if (zone.label === 'bad')  { borderColor = 'rgba(239,83,80,0.85)';  fillColor = 'rgba(239,83,80,0.12)'; }
+        else                            { borderColor = 'rgba(211,47,47,0.85)';  fillColor = 'rgba(211,47,47,0.12)'; }
+      } else if (!isFb && pGood != null) {
+        const r = Math.round(239 - pGood * (239 - 38));
+        const g = Math.round(83  + pGood * (166 - 83));
+        const b = Math.round(80  + pGood * (154 - 80));
+        borderColor = `rgba(${r},${g},${b},0.85)`;
+        fillColor   = `rgba(${r},${g},${b},0.10)`;
+      } else {
+        borderColor = 'rgba(144, 202, 249, 0.85)';
+        fillColor   = 'rgba(144, 202, 249, 0.15)';
       }
+
+      const boxDef = {
+        box_id: zone.box_id,
+        t1: points[0],
+        t2: points[points.length - 1],
+        drawT1: points[0],
+        drawT2: points[points.length - 1],
+        priceHigh: zone.priceHigh,
+        priceLow: zone.priceLow,
+        borderColor,
+        fillColor,
+        s1, s2
+      };
+
+      if (isHTF) parsedHtf.push(boxDef);
+      else parsedCurr.push(boxDef);
     });
 
+    rawParsedZonesRef.current = { curr: parsedCurr, htf: parsedHtf };
+
+    // --- Dynamic Windowing Handler ---
+    const updateVisibleBoxes = () => {
+      const range = chart.timeScale().getVisibleLogicalRange();
+      if (!range) return;
+
+      const limitTarget = (arr, maxCount) => {
+        if (arr.length <= maxCount) return arr;
+        // logical range typically maps to indices in the candle array
+        const startIdx = Math.max(0, Math.floor(range.from));
+        const endIdx   = Math.min(candles.length - 1, Math.ceil(range.to));
+        
+        const visStartUnix = getUnix(candles[startIdx]?.time || candles[0].time);
+        const visEndUnix   = getUnix(candles[endIdx]?.time || candles[candles.length - 1].time);
+
+        // Filter boxes that intersect with the visible range
+        let visible = arr.filter(b => b.s1 <= visEndUnix && b.s2 >= visStartUnix);
+        
+        // If there are more visible than the max, slice the most recent
+        if (visible.length > maxCount) {
+          visible = visible.slice(visible.length - maxCount);
+        } else if (visible.length < maxCount) {
+          // If we have budget left, fill with adjacent closest chronological boxes
+          const result = [...visible];
+          let remainder = maxCount - visible.length;
+          // grab boxes immediately to the left of the screen, working backwards
+          const idxBefore = arr.findIndex(b => b === visible[0]);
+          if (idxBefore > 0) {
+            const takeLeft = Math.min(remainder, idxBefore);
+            result.unshift(...arr.slice(idxBefore - takeLeft, idxBefore));
+          }
+          return result;
+        }
+        return visible;
+      };
+
+      const finalCurr = limitTarget(rawParsedZonesRef.current.curr, 30);
+      const finalHtf  = limitTarget(rawParsedZonesRef.current.htf, 30);
+      const finalSet = [...finalCurr, ...finalHtf];
+
+      consolidationPrimitiveRef.current.setData(finalSet);
+      
+      const nextActive = finalSet.filter(b => b.box_id);
+      activeBoxesRef.current = nextActive;
+      
+      // Update DOM components strictly only when the identity of active boxes changes
+      // to avoid 60fps React rendering loops
+      const currentIds = domZonesRef.current.map(b => b.box_id).join(',');
+      const nextIds = nextActive.map(b => b.box_id).join(',');
+      
+      if (currentIds !== nextIds) {
+        domZonesRef.current = nextActive;
+        setDomZones(nextActive);
+      }
+    };
+
+    chart.timeScale().subscribeVisibleLogicalRangeChange(updateVisibleBoxes);
+    updateVisibleBoxes(); // initial run
+
     return () => {
-      consolidationSeriesRef.current.forEach(s => { try { chartRef.current?.removeSeries(s); } catch {} });
-      consolidationSeriesRef.current = [];
+      chart.timeScale().unsubscribeVisibleLogicalRangeChange(updateVisibleBoxes);
       activeBoxesRef.current = [];
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -935,13 +988,13 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   return (
     <div className="w-full h-full relative">
       {loading && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#131722]">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#000000]">
           <div className="w-8 h-8 border-2 border-[#2962FF] border-t-transparent rounded-full animate-spin mb-3" />
           <span className="text-[#787B86] text-[12px]">Loading live data…</span>
         </div>
       )}
       {error && !loading && (
-        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#131722]">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#000000]">
           <span className="text-[#EF5350] text-[13px] mb-1">{error}</span>
           <span className="text-[#787B86] text-[11px]">Make sure the backend is running on port 8000</span>
         </div>
@@ -950,7 +1003,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       
       {/* Absolute Box Label Overlays */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-30">
-        {visibleZones.map(zone => {
+        {domZones.map(zone => {
           if (!zone.box_id) return null;
           return (
             <div 
@@ -959,7 +1012,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
               className="absolute top-0 left-0"
               style={{ display: 'none', pointerEvents: 'auto', transformOrigin: 'bottom center' }}
             >
-              <LabelDialog zone={zone} />
+              <LabelDialog zone={zoneMapRef.current[zone.box_id] || zone} />
             </div>
           );
         })}

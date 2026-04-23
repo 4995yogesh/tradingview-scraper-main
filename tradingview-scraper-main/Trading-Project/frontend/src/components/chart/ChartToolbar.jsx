@@ -68,7 +68,7 @@ const ChartToolbar = ({
   const currentTfLabel = timeframes.find(t => t.value === timeframe)?.label || 'D';
 
   return (
-    <div className="bg-[#131722] border-b border-[#2A2E39] shrink-0">
+    <div className="bg-[#000000] border-b border-[#2A2E39] shrink-0">
       {/* Main toolbar row */}
       <div className="h-[38px] flex items-center px-1 gap-[2px]">
         {/* Hamburger menu */}
@@ -188,7 +188,7 @@ const ChartToolbar = ({
           >
             <Activity size={14} />
             {totalActiveIndicators > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-[14px] h-[14px] bg-[#27a7b0] text-[#131722] text-[8px] font-bold rounded-full flex items-center justify-center leading-none">
+              <span className="absolute -top-0.5 -right-0.5 w-[14px] h-[14px] bg-[#27a7b0] text-[#000000] text-[8px] font-bold rounded-full flex items-center justify-center leading-none">
                 {totalActiveIndicators}
               </span>
             )}

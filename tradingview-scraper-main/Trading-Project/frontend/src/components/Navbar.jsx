@@ -7,7 +7,7 @@ const Navbar = () => {
   const [searchOpen, setSearchOpen] = useState(false);
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#131722] border-b border-[#2A2E39]">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#000000] border-b border-[#2A2E39]">
       <div className="max-w-[1440px] mx-auto px-4 h-[52px] flex items-center justify-between">
         {/* Left section */}
         <div className="flex items-center gap-1">
@@ -69,7 +69,7 @@ const Navbar = () => {
       {searchOpen && (
         <div className="absolute top-[52px] left-0 right-0 bg-[#1E222D] border-b border-[#2A2E39] p-4">
           <div className="max-w-[600px] mx-auto">
-            <div className="flex items-center gap-3 bg-[#131722] border border-[#2A2E39] rounded-lg px-4 py-3">
+            <div className="flex items-center gap-3 bg-[#000000] border border-[#2A2E39] rounded-lg px-4 py-3">
               <Search size={18} className="text-[#787B86]" />
               <input
                 type="text"

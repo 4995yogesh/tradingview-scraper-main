@@ -57,7 +57,7 @@ def init_db() -> None:
                 time_end_ms        INTEGER NOT NULL,
                 price_high         REAL NOT NULL,
                 price_low          REAL NOT NULL,
-                label              TEXT NOT NULL CHECK(label IN ('good','bad','neutral')),
+                label              TEXT NOT NULL CHECK(label IN ('very_good','good','bad','very_bad')),
                 schema_ver         INTEGER NOT NULL DEFAULT 1,
                 train_consumed     INTEGER NOT NULL DEFAULT 0,
                 created_at         INTEGER NOT NULL,

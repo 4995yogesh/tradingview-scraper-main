@@ -96,7 +96,7 @@ const ChartPage = () => {
 
   const [logScale, setLogScale] = useChartMemory('logScale', false);
   const [chartSettings, setChartSettings] = useChartMemory('chartSettings', {
-    background: '#131722', showGrid: true, crosshairMode: 'normal',
+    background: '#000000', gridColor: '#000000', showGrid: true, crosshairMode: 'normal',
     upColor: '#26A69A', downColor: '#EF5350', timezone: 'exchange',
     sessionBreaks: false, watermark: false,
   });
@@ -269,7 +269,7 @@ const ChartPage = () => {
     const activeIndicators = pane.indicators || [];
 
     return (
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-1 px-2 py-1 bg-[#131722E0] border-b border-[#2A2E39]" onClick={e => e.stopPropagation()}>
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-1 px-2 py-1 bg-[#000000E0] border-b border-[#2A2E39]" onClick={e => e.stopPropagation()}>
         <span className="text-[6px] font-semibold text-white">{FIXED_SYMBOL}</span>
         <div className="relative">
           <button onClick={() => { setShowTf(!showTf); setShowInput(false); }} className="text-[5px] text-[#787B86] hover:text-white bg-[#2A2E39] px-1.5 py-0.5 rounded transition-colors">
@@ -439,7 +439,7 @@ const ChartPage = () => {
   };
 
   return (
-    <div ref={containerRef} className="h-screen w-screen bg-[#131722] flex flex-col overflow-hidden select-none">
+    <div ref={containerRef} className="h-screen w-screen bg-[#000000] flex flex-col overflow-hidden select-none">
 
       {/* Keyboard buffer HUD – shows what keys have been typed so far */}
       {kbBuffer && (
@@ -477,7 +477,7 @@ const ChartPage = () => {
         {getLayoutCharts()}
       </div>
 
-      <div className="h-[26px] bg-[#131722] border-t border-[#2A2E39] flex items-center px-2 justify-between shrink-0">
+      <div className="h-[26px] bg-[#000000] border-t border-[#2A2E39] flex items-center px-2 justify-between shrink-0">
         <div className="flex items-center gap-1">
           {['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '5Y', 'All'].map((r) => (
             <button key={r} onClick={() => handleBottomRange(r === 'All' ? 'all' : r)}

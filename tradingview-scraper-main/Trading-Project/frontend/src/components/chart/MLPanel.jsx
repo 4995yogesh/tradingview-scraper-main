@@ -4,9 +4,10 @@ import { X, Bot, ChevronRight } from 'lucide-react';
 const API = 'http://localhost:8000/api/ml';
 
 const LABEL_COLORS = {
-  good:    { bg: '#26A69A20', border: '#26A69A60', text: '#26A69A', dot: '#26A69A' },
-  bad:     { bg: '#EF535020', border: '#EF535060', text: '#EF5350', dot: '#EF5350' },
-  neutral: { bg: '#FFA72620', border: '#FFA72660', text: '#FFA726', dot: '#FFA726' },
+  very_good: { bg: '#00BFA520', border: '#00BFA560', text: '#00BFA5', dot: '#00BFA5' },
+  good:      { bg: '#26A69A20', border: '#26A69A60', text: '#26A69A', dot: '#26A69A' },
+  bad:       { bg: '#EF535020', border: '#EF535060', text: '#EF5350', dot: '#EF5350' },
+  very_bad:  { bg: '#D32F2F20', border: '#D32F2F60', text: '#D32F2F', dot: '#D32F2F' },
 };
 
 const fmt = (n) => (n != null ? (n * 100).toFixed(0) + '%' : '?');
@@ -148,9 +149,10 @@ export default function MLPanel({ open, onClose, onLabeled }) {
               {!isFallback && (
                 <div className="flex gap-1 mb-2">
                   {[
-                    { k: 'good',    label: 'G', color: '#26A69A' },
-                    { k: 'bad',     label: 'B', color: '#EF5350' },
-                    { k: 'neutral', label: 'N', color: '#FFA726' },
+                    { k: 'very_good', label: 'VG', color: '#00BFA5' },
+                    { k: 'good',      label: 'G',  color: '#26A69A' },
+                    { k: 'bad',       label: 'B',  color: '#EF5350' },
+                    { k: 'very_bad',  label: 'VB', color: '#D32F2F' },
                   ].map(({ k, label, color }) => (
                     <div key={k} className="flex-1 flex flex-col gap-0.5">
                       <div className="h-[3px] rounded-full bg-[#2A2E39] overflow-hidden">
@@ -176,9 +178,10 @@ export default function MLPanel({ open, onClose, onLabeled }) {
               ) : (
                 <div className="flex gap-1">
                   {[
-                    { label: 'good',    display: '✓ Good',    cls: 'hover:bg-[#26A69A20] hover:text-[#26A69A] hover:border-[#26A69A60]' },
-                    { label: 'bad',     display: '✗ Bad',     cls: 'hover:bg-[#EF535020] hover:text-[#EF5350] hover:border-[#EF535060]' },
-                    { label: 'neutral', display: '~ Neut',    cls: 'hover:bg-[#FFA72620] hover:text-[#FFA726] hover:border-[#FFA72660]' },
+                    { label: 'very_good', display: '++ VG', cls: 'hover:bg-[#00BFA520] hover:text-[#00BFA5] hover:border-[#00BFA560]' },
+                    { label: 'good',      display: '+ G',   cls: 'hover:bg-[#26A69A20] hover:text-[#26A69A] hover:border-[#26A69A60]' },
+                    { label: 'bad',       display: '- B',   cls: 'hover:bg-[#EF535020] hover:text-[#EF5350] hover:border-[#EF535060]' },
+                    { label: 'very_bad',  display: '-- VB', cls: 'hover:bg-[#D32F2F20] hover:text-[#D32F2F] hover:border-[#D32F2F60]' },
                   ].map(({ label, display, cls }) => (
                     <button
                       key={label}

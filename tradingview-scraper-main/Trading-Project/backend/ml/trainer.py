@@ -11,6 +11,7 @@ import os
 import threading
 import logging
 import time
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -21,8 +22,12 @@ from ml.features import FEATURE_VERSION
 logger = logging.getLogger(__name__)
 
 RETRAIN_EVERY_N = 500
-CLASS_MAP = {"good": 0, "bad": 1, "neutral": 2}
-CLASS_WEIGHTS = {0: 1.0, 1: 1.0, 2: 0.4}
+
+# ── Globals ───────────────────────────────────────────────────────────────────
+
+# very_good = strong positive, good = positive, bad = negative, very_bad = strong negative
+CLASS_MAP = {"very_good": 0, "good": 1, "bad": 2, "very_bad": 3}
+CLASS_WEIGHTS = {0: 3.0, 1: 1.0, 2: 1.0, 3: 2.0}
 
 _train_lock = threading.Lock()
 
@@ -88,10 +93,9 @@ def has_gpu() -> bool:
 _USE_GPU: Optional[bool] = None  # cached after first call
 
 def _device() -> str:
-    global _USE_GPU
-    if _USE_GPU is None:
-        _USE_GPU = has_gpu()
-    return "gpu" if _USE_GPU else "cpu"
+    # Forced GPU execution
+    # Warning: If OpenCL/CUDA drivers are not installed, training will crash.
+    return "gpu"
 
 
 # ── Trigger ───────────────────────────────────────────────────────────────────
@@ -192,8 +196,8 @@ def _run_training(force: bool = False) -> None:
     logger.info("[trainer] Class distribution: %s", dist)
 
     # Need at least some "good" samples for meaningful gate check
-    if dist.get(0, 0) < 5:
-        logger.warning("[trainer] Too few 'good' samples (%d) — abort", dist.get(0, 0))
+    if dist.get(0, 0) + dist.get(1, 0) < 5:
+        logger.warning("[trainer] Too few 'good' samples (%d) — abort", dist.get(0, 0) + dist.get(1, 0))
         return
 
     # ── 5. Stratified train/val split ────────────────────────────────────────
@@ -212,7 +216,7 @@ def _run_training(force: bool = False) -> None:
     device = _device()
     lgb_params = {
         "objective": "multiclass",
-        "num_class": 3,
+        "num_class": 4,
         "metric": "multi_logloss",
         "learning_rate": 0.05,
         "num_leaves": 31,
@@ -249,26 +253,38 @@ def _run_training(force: bool = False) -> None:
 
     report = classification_report(
         y_val, y_pred,
-        target_names=["good", "bad", "neutral"],
+        target_names=["very_good", "good", "bad", "very_bad"],
         output_dict=True,
         zero_division=0,
     )
     cm = confusion_matrix(y_val, y_pred)
 
-    precision_good = report.get("good", {}).get("precision", 0.0)
-    recall_good    = report.get("good", {}).get("recall", 0.0)
-    f1_good        = report.get("good", {}).get("f1-score", 0.0)
-    support_good   = int(report.get("good", {}).get("support", 0))
+    # Define target classes that represent "success"
+    precision_vg = report.get("very_good", {}).get("precision", 0)
+    support_vg   = report.get("very_good", {}).get("support", 0)
+    
+    precision_g  = report.get("good", {}).get("precision", 0)
+    support_g    = report.get("good", {}).get("support", 0)
 
-    _log_msg("[trainer] === Evaluation Results ===")
-    _log_msg(f"[trainer] Precision=%.3f | Recall=%.3f | Support={support_good}" % (precision_good, recall_good))
+    # Combined check logic (needs enough support across both positive classes)
+    total_good_support = support_vg + support_g
+    avg_good_precision = ((precision_vg * support_vg) + (precision_g * support_g)) / max(1, total_good_support)
+
+    gate_passed = avg_good_precision >= 0.60 and total_good_support >= 30
+
+    _log_msg(f"[trainer] Gate check: Avg(very_good, good) Precision={avg_good_precision:.2f} (support={total_good_support})")
+    
+    if not gate_passed:
+        _log_msg("[trainer] Gate FAILED — NOT promoted")
+        return
 
     # Error analysis for class 'good' (0)
-    fps = np.where((y_pred == 0) & (y_val != 0))[0]
-    fns = np.where((y_pred != 0) & (y_val == 0))[0]
+    fps_mask = (y_val != 0) & (y_val != 1) & ((y_pred == 0) | (y_pred == 1))
+    fps = np.where(fps_mask)[0]
+    fns = np.where((y_pred != 0) & (y_pred != 1) & ((y_val == 0) | (y_val == 1)))[0]
     _log_msg(f"[trainer] Error Analysis (Good Class): FP={len(fps)} | FN={len(fns)}")
     if len(fps) > 0:
-        _log_msg(f"[trainer] FP: Model predicted GOOD on {len(fps)} BAD/NEUTRAL samples")
+        _log_msg(f"[trainer] FP: Model predicted VERY_GOOD/GOOD on {len(fps)} BAD/VERY_BAD samples")
     if len(fns) > 0:
         _log_msg(f"[trainer] FN: Model missed {len(fns)} true GOOD samples")
 
@@ -302,37 +318,42 @@ def _run_training(force: bool = False) -> None:
     ml_db.mark_consumed(label_ids)
     _log_msg(f"[trainer] Marked {len(label_ids)} labels as consumed (Counter reset)")
 
-    # ── 10. Promotion gate ───────────────────────────────────────────────────
-    passed = precision_good >= 0.60 and support_good >= 30
-
-    if not passed:
-        _log_msg(
-            f"[trainer] Gate FAILED: Precision={precision_good:.3f} (need 0.60), "
-            f"support={support_good} (need 30) — NOT promoted"
-        )
-        return  # Stop here, but labels are already consumed!
-
-    # ── 10. Promote ──────────────────────────────────────────────────────────
-    version = ml_db.next_model_version()
-    os.makedirs(_MODELS_DIR, exist_ok=True)
-    pkl_path = os.path.join(_MODELS_DIR, f"model_{version.replace('.', '_')}.pkl")
-
-    joblib.dump(calibrated, pkl_path)
-    logger.info("[trainer] Saved model → %s", pkl_path)
-
-    metrics = {
-        "label_count":    len(rows_deduped),
-        "precision_good": precision_good,
-        "recall_good":    recall_good,
-        "f1_good":        f1_good,
-        "support_good":   support_good,
+    # ── 9. Save & Promote ────────────────────────────────────────────────────
+    model_version = int(time.time())
+    model_meta = {
+        "version": model_version,
+        "feature_version": FEATURE_VERSION,
+        "classes": ["very_good", "good", "bad", "very_bad"],
+        "precision_good": float(avg_good_precision),
+        "recall_good": float(report.get("good", {}).get("recall", 0.0)),
+        "f1_good": float(report.get("good", {}).get("f1-score", 0.0)),
+        "support_good": int(total_good_support),
+        "trained_on_samples": len(rows_deduped),
+        "created_at_iso": datetime.utcnow().isoformat() + "Z"
     }
-    ml_db.save_checkpoint(version, metrics, pkl_path, FEATURE_VERSION)
-    ml_db.promote_checkpoint(version)
 
-    # Reload model in scorer (hot swap — no restart needed)
+    _log_msg(f"[trainer] Saving model v{model_version}...")
+    model_dir = Path("models")
+    model_dir.mkdir(exist_ok=True)
+    model_path = model_dir / f"lightgbm_v{model_version}.pkl"
+
+    joblib.dump({
+        "model": calibrated,
+        "meta": model_meta
+    }, model_path)
+
+    ml_db.save_model_metadata(
+        version_id=model_version,
+        precision_good=float(avg_good_precision),
+        recall_good=float(report.get("good", {}).get("recall", 0.0)),
+        f1_good=float(report.get("good", {}).get("f1-score", 0.0)),
+        support_good=int(total_good_support),
+        samples_count=len(rows_deduped),
+        feature_ver=FEATURE_VERSION,
+        path=str(model_path)
+    )
+
     from ml import scorer
     scorer.load_model()
-    logger.info("[trainer] Scorer reloaded with model %s", version)
 
-    _log_msg(f"[trainer] === Training complete: {version} promoted ===")
+    _log_msg(f"[trainer] === Training complete: {model_version} promoted ===")

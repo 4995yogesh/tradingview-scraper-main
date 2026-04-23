@@ -19,7 +19,7 @@ const ColorSwatch = ({ color, onChange, label }) => {
   const presets = ['#26A69A', '#4CAF50', '#00E676', '#00BCD4', '#2196F3', '#2962FF',
     '#EF5350', '#F44336', '#FF5252', '#FF7043', '#E91E63', '#9C27B0',
     '#FF9800', '#FFC107', '#FFEB3B', '#8BC34A', '#607D8B', '#795548',
-    '#FFFFFF', '#D1D4DC', '#787B86', '#363A45', '#1E222D', '#131722'];
+    '#FFFFFF', '#D1D4DC', '#787B86', '#363A45', '#1E222D', '#000000'];
 
   const handleOpen = () => {
     if (btnRef.current) {
@@ -222,16 +222,16 @@ const SettingsPanel = ({ settings, onSettingsChange, onClose }) => {
       </div>
       <div className="flex items-center justify-between py-2">
         <span className="text-[13px] text-[#D1D4DC]">Color</span>
-        <ColorSwatch color={settings.background || '#131722'} onChange={c => update('background', c)} />
+        <ColorSwatch color={settings.background || '#000000'} onChange={c => update('background', c)} />
       </div>
 
       <div className="h-px bg-[#2A2E39] my-4" />
       <div className="text-[11px] text-[#787B86] font-medium uppercase tracking-wider mb-3">Grid</div>
       <CheckRow checked={settings.showVertGrid !== false} onChange={v => update('showVertGrid', v)} label="Vertical grid lines">
-        <ColorSwatch color={settings.gridColor || '#1E222D'} onChange={c => update('gridColor', c)} />
+        <ColorSwatch color={settings.gridColor || '#000000'} onChange={c => update('gridColor', c)} />
       </CheckRow>
       <CheckRow checked={settings.showHorzGrid !== false} onChange={v => update('showHorzGrid', v)} label="Horizontal grid lines">
-        <ColorSwatch color={settings.gridColor || '#1E222D'} onChange={c => update('gridColor', c)} />
+        <ColorSwatch color={settings.gridColor || '#000000'} onChange={c => update('gridColor', c)} />
       </CheckRow>
 
       <div className="h-px bg-[#2A2E39] my-4" />

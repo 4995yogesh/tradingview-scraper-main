@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, XCircle, Minus } from 'lucide-react';
+import { ChevronsUp, ChevronUp, ChevronDown, ChevronsDown } from 'lucide-react';
 
 const API = 'http://localhost:8000/api/ml';
 
@@ -54,24 +54,26 @@ export default function LabelDialog({ zone, onLabeled }) {
       {/* Probability bar or current label */}
       {!isFb && !curLabel && (
         <div className="flex gap-1 w-full justify-between items-center px-1">
+          <span className="text-[9px] font-bold text-[#00BFA5]">{fmtPct(probs.very_good)}</span>
           <span className="text-[9px] font-bold text-[#26A69A]">{fmtPct(probs.good)}</span>
           <span className="text-[9px] font-bold text-[#EF5350]">{fmtPct(probs.bad)}</span>
-          <span className="text-[9px] font-bold text-[#FFA726]">{fmtPct(probs.neutral)}</span>
+          <span className="text-[9px] font-bold text-[#D32F2F]">{fmtPct(probs.very_bad)}</span>
         </div>
       )}
       
       {curLabel && (
         <div className="text-[9px] text-[#787B86] px-1 font-medium capitalize">
-          Labeled: <span className={curLabel === 'good' ? 'text-[#26A69A]' : curLabel === 'bad' ? 'text-[#EF5350]' : 'text-[#FFA726]'}>{curLabel}</span>
+          Labeled: <span className={curLabel === 'very_good' ? 'text-[#00BFA5]' : curLabel === 'good' ? 'text-[#26A69A]' : curLabel === 'bad' ? 'text-[#EF5350]' : 'text-[#D32F2F]'}>{curLabel.replace('_', ' ')}</span>
         </div>
       )}
 
       {/* Buttons */}
       <div className="flex gap-0.5">
         {[
-          { label: 'good', icon: <Check size={11} />, color: '#26A69A' },
-          { label: 'bad', icon: <XCircle size={11} />, color: '#EF5350' },
-          { label: 'neutral', icon: <Minus size={11} />, color: '#FFA726' },
+          { label: 'very_good', icon: <ChevronsUp size={12} />, color: '#00BFA5' },
+          { label: 'good', icon: <ChevronUp size={12} />, color: '#26A69A' },
+          { label: 'bad', icon: <ChevronDown size={12} />, color: '#EF5350' },
+          { label: 'very_bad', icon: <ChevronsDown size={12} />, color: '#D32F2F' },
         ].map(({ label, icon, color }) => (
           <button
             key={label}
