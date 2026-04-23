@@ -922,7 +922,7 @@ def get_consolidations_all():
     def _compute_tf(exchange: str, symbol: str, tf: str) -> list:
         zones = []
         try:
-            stored = storage.get_candles(exchange, symbol, tf, count=1000)
+            stored = storage.get_candles(exchange, symbol, tf, count=10000)
             if not stored or len(stored) < 5:
                 return zones
 

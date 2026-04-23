@@ -1,7 +1,7 @@
 """
 ml/trainer.py — LightGBM training pipeline with concurrency safety.
 
-Trigger: every 100 unconsumed labels globally.
+Trigger: every 500 unconsumed labels globally.
 Gate: Precision_good >= 0.60 AND support_good >= 30.
 On success: promote model, reload scorer, mark labels consumed.
 On failure: keep old model, do NOT consume labels.
@@ -20,7 +20,7 @@ from ml.features import FEATURE_VERSION
 
 logger = logging.getLogger(__name__)
 
-RETRAIN_EVERY_N = 100
+RETRAIN_EVERY_N = 500
 CLASS_MAP = {"good": 0, "bad": 1, "neutral": 2}
 CLASS_WEIGHTS = {0: 1.0, 1: 1.0, 2: 0.4}
 
@@ -129,7 +129,7 @@ def maybe_trigger_retrain() -> None:
 def _run_training(force: bool = False) -> None:
     """
     Full training pipeline. Runs inside _train_lock.
-    If force=True, bypass the 100 label minimum check.
+    If force=True, bypass the 500 label minimum check.
     """
     import lightgbm as lgb
     from sklearn.calibration import CalibratedClassifierCV
@@ -297,7 +297,7 @@ def _run_training(force: bool = False) -> None:
     except Exception as e:
         _log_msg(f"[trainer] Failed exporting data: {e}")
 
-    # Consume labels unconditionally so the counter resets to 100 needed for next run
+    # Consume labels unconditionally so the counter resets to 500 needed for next run
     label_ids = [r["id"] for r, _ in rows_deduped]
     ml_db.mark_consumed(label_ids)
     _log_msg(f"[trainer] Marked {len(label_ids)} labels as consumed (Counter reset)")

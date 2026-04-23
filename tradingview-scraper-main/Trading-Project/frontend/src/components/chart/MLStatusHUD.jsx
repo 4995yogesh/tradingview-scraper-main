@@ -20,7 +20,7 @@ export default function MLStatusHUD({ onToggle }) {
 
   const cold   = !status || status.cold_start;
   const ver    = status?.model_version ?? null;
-  const until  = status?.labels_until_retrain ?? 100;
+  const until  = status?.labels_until_retrain ?? 500;
   const total  = status?.labels_collected ?? 0;
   const prec   = status?.precision_good;
 

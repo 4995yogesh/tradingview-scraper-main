@@ -78,7 +78,18 @@ export default function MLTrainingMonitor() {
               <>
                 <div className="flex justify-between text-[#787B86]">
                   <span>Iteration:</span>
-                  <span className="text-[#D1D4DC]">{data?.iteration} / {data?.max_iterations}</span>
+                  <span className="text-[#D1D4DC]">
+                    {data?.iteration} / {data?.max_iterations}
+                    {data?.max_iterations > 0 && ` (${Math.round((data.iteration / data.max_iterations) * 100)}%)`}
+                  </span>
+                </div>
+                <div className="h-[4px] w-full bg-[#2A2E39] rounded-full overflow-hidden my-1">
+                  <div
+                    className="h-full bg-[#2962FF] transition-all duration-300"
+                    style={{
+                      width: `${data?.max_iterations > 0 ? (data.iteration / data.max_iterations) * 100 : 0}%`
+                    }}
+                  />
                 </div>
                 <div className="flex justify-between text-[#787B86]">
                   <span>Val LogLoss:</span>

@@ -674,35 +674,69 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         handle = requestAnimationFrame(syncOverlays);
         return;
       }
-      
-      const timeScale = chart.timeScale();
-      
+
+      const timeScale   = chart.timeScale();
+      const chartWidth  = chart.timeScale().width();   // visible chart pixel width
+
       activeBoxesRef.current.forEach(box => {
         const el = document.getElementById(`mlbox-${box.box_id}`);
         if (!el) return;
-        
+
         try {
           const mappedT1 = mapOverlayTime(box.drawT1, timeframe);
           const mappedT2 = mapOverlayTime(box.drawT2, timeframe);
-          const x1 = timeScale.timeToCoordinate(mappedT1);
-          const x2 = timeScale.timeToCoordinate(mappedT2);
-          if (x1 === null || x2 === null) {
-            el.style.display = 'none';
+          let x1 = timeScale.timeToCoordinate(mappedT1);
+          let x2 = timeScale.timeToCoordinate(mappedT2);
+
+          // Clamp off-screen edges to viewport boundaries so the label
+          // remains visible as long as any part of the box is on screen.
+          const LEFT_EDGE  = 0;
+          const RIGHT_EDGE = chartWidth;
+
+          // Both edges off the same side → box entirely off-screen → hide
+          if (
+            (x1 !== null && x2 !== null && x1 < LEFT_EDGE  && x2 < LEFT_EDGE) ||
+            (x1 !== null && x2 !== null && x1 > RIGHT_EDGE && x2 > RIGHT_EDGE)
+          ) {
+            if (el.dataset.lastDisplay !== 'none') {
+              el.style.display = 'none';
+              el.dataset.lastDisplay = 'none';
+            }
             return;
           }
-          
+
+          // Clamp nulls and out-of-bounds edges
+          if (x1 === null) x1 = LEFT_EDGE;
+          if (x2 === null) x2 = RIGHT_EDGE;
+          x1 = Math.max(LEFT_EDGE,  Math.min(RIGHT_EDGE, x1));
+          x2 = Math.max(LEFT_EDGE,  Math.min(RIGHT_EDGE, x2));
+
           const midX = (x1 + x2) / 2;
           const topY = series.priceToCoordinate(box.priceHigh);
-          
+
           if (topY !== null) {
-            el.style.display = 'block';
-            // Anchor neatly above the box center
-            el.style.transform = `translate(calc(${midX}px - 50%), calc(${topY}px - 100% - 6px))`;
+            if (el.dataset.lastDisplay !== 'block') {
+              el.style.display = 'block';
+              el.dataset.lastDisplay = 'block';
+            }
+            
+            // Anchor neatly above the box center (clamped to visible area)
+            const newTransform = `translate(calc(${midX}px - 50%), calc(${topY}px - 100% - 6px))`;
+            if (el.dataset.lastTransform !== newTransform) {
+              el.style.transform = newTransform;
+              el.dataset.lastTransform = newTransform;
+            }
           } else {
-            el.style.display = 'none';
+            if (el.dataset.lastDisplay !== 'none') {
+              el.style.display = 'none';
+              el.dataset.lastDisplay = 'none';
+            }
           }
         } catch (_) {
-          el.style.display = 'none';
+          if (el.dataset.lastDisplay !== 'none') {
+            el.style.display = 'none';
+            el.dataset.lastDisplay = 'none';
+          }
         }
       });
       handle = requestAnimationFrame(syncOverlays);
