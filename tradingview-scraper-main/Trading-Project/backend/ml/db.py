@@ -61,6 +61,7 @@ def init_db() -> None:
                 price_high         REAL NOT NULL,
                 price_low          REAL NOT NULL,
                 label              TEXT NOT NULL CHECK(label IN ('very_good','good','bad','very_bad')),
+                comment            TEXT,
                 schema_ver         INTEGER NOT NULL DEFAULT 1,
                 train_consumed     INTEGER NOT NULL DEFAULT 0,
                 created_at         INTEGER NOT NULL,
@@ -73,6 +74,12 @@ def init_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_labels_box_created
                 ON labels(box_id, created_at DESC)
         """)
+
+        # Add comment column if not exists (migration)
+        try:
+            conn.execute("ALTER TABLE labels ADD COLUMN comment TEXT")
+        except sqlite3.OperationalError:
+            pass # already exists
 
         # Model checkpoints
         conn.execute("""
@@ -110,6 +117,7 @@ def save_label(
     box_id: str,
     label: str,
     zone_meta: dict,
+    comment: Optional[str] = None,
     feature_ver: str = "v1",
     model_version_used: Optional[str] = None,
 ) -> int:
@@ -119,8 +127,8 @@ def save_label(
             INSERT INTO labels
                 (box_id, exchange, symbol, timeframe,
                  time_start_ms, time_end_ms, price_high, price_low,
-                 label, created_at, feature_ver, model_version_used)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                 label, comment, created_at, feature_ver, model_version_used)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             box_id,
             zone_meta.get("exchange", "OANDA"),
@@ -131,6 +139,7 @@ def save_label(
             zone_meta.get("priceHigh", 0.0),
             zone_meta.get("priceLow", 0.0),
             label,
+            comment,
             int(time.time()),
             feature_ver,
             model_version_used,
@@ -189,6 +198,17 @@ def count_all_labels() -> int:
     with _conn() as conn:
         row = conn.execute("SELECT COUNT(*) as n FROM labels").fetchone()
         return row["n"] if row else 0
+
+
+def count_labels_by_class() -> dict:
+    with _conn() as conn:
+        rows = conn.execute(
+            "SELECT label, COUNT(*) as c FROM labels GROUP BY label"
+        ).fetchall()
+        counts = {"very_good": 0, "good": 0, "bad": 0, "very_bad": 0}
+        for r in rows:
+            counts[r["label"]] = r["c"]
+        return counts
 
 
 def get_unconsumed_labels() -> list:

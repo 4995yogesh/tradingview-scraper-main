@@ -12,11 +12,14 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Hide Emergent Logo */
+/* Hide Emergent / TradingView Logos */
 #emergent-logo,
 .emergent-logo,
 [class*="emergent"],
-[class*="Emergent"] {
+[class*="Emergent"],
+.tv-lightweight-charts-logo,
+#tv-attr-logo,
+a[href*="tradingview.com"] {
   display: none !important;
   opacity: 0 !important;
   visibility: hidden !important;

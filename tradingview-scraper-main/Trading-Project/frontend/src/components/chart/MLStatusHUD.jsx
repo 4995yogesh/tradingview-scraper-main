@@ -28,6 +28,9 @@ export default function MLStatusHUD({ onToggle }) {
   const unconsumed = status?.unconsumed_count ?? 0;
   const fillPct    = Math.min(100, (unconsumed / 100) * 100);
 
+  const goodCnt = (status?.labels_by_class?.very_good || 0) + (status?.labels_by_class?.good || 0);
+  const badCnt  = (status?.labels_by_class?.very_bad || 0) + (status?.labels_by_class?.bad || 0);
+
   return (
     <button
       id="ml-status-hud"
@@ -43,11 +46,11 @@ export default function MLStatusHUD({ onToggle }) {
       <Bot size={11} />
       {cold ? (
         <span className="text-[10px] font-medium whitespace-nowrap">
-          Needs {until} labels
+          {total} Lbls (<span className="text-[#00BFA5]">{goodCnt}</span>/<span className="text-[#EF5350]">{badCnt}</span>)
         </span>
       ) : (
         <span className="text-[10px] font-medium whitespace-nowrap">
-          {ver} · {unconsumed}/100
+          {ver} · {unconsumed}/100 (<span className="text-[#00BFA5]">{goodCnt}</span>/<span className="text-[#EF5350]">{badCnt}</span>)
           {prec != null && ` · P✓${(prec * 100).toFixed(0)}%`}
         </span>
       )}

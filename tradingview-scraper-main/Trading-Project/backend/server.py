@@ -29,6 +29,7 @@ import multiprocessing as _mp
 _CPU_WORKERS: int = max(4, _mp.cpu_count())
 from dotenv import load_dotenv
 
+# Load API keys from .env file if present
 load_dotenv()
 
 from typing import List, Optional

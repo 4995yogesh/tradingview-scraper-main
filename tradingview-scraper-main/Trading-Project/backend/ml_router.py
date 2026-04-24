@@ -18,6 +18,7 @@ from ml import db as ml_db
 from ml import scorer
 from ml import trainer
 from ml.features import extract_features, FEATURE_VERSION
+from ml import llm_translator
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +38,10 @@ class ZoneMeta(BaseModel):
 
 
 class LabelPayload(BaseModel):
-    box_id: str
-    label:  str
-    zone:   ZoneMeta
+    box_id:  str
+    label:   str
+    zone:    ZoneMeta
+    comment: Optional[str] = None
 
     @validator("label")
     def label_valid(cls, v):
@@ -135,6 +137,12 @@ def _backfill_features(zone: ZoneMeta, box_id: str) -> bool:
             "priceLow":   zone.priceLow,
         }
         vec = extract_features(zone_dict, candles, swings)
+        
+        # Base vector is 18 features. We append 6 neutral LLM features so
+        # the baseline length is 24, allowing training to proceed even without comments.
+        from ml.llm_translator import NEUTRAL_LLM_FEATURES
+        vec.extend(NEUTRAL_LLM_FEATURES)
+
         ml_db.save_feature_vec(box_id, vec, FEATURE_VERSION)
         logger.info("[ml_router] Feature backfill OK for %s (ver=%s)", box_id, FEATURE_VERSION)
         return True
@@ -167,6 +175,7 @@ def label_box(payload: LabelPayload):
         box_id=payload.box_id,
         label=payload.label,
         zone_meta=zone_meta,
+        comment=payload.comment,
         feature_ver=FEATURE_VERSION,
         model_version_used=scorer.get_model_version(),
     )
@@ -175,6 +184,24 @@ def label_box(payload: LabelPayload):
 
     # Feature backfill (immediate, non-blocking since it's fast)
     _backfill_features(payload.zone, payload.box_id)
+
+    # LLM feature enrichment — async, never blocks the label save
+    if payload.comment:
+        def _enrich():
+            try:
+                existing_vec = ml_db.get_feature_vec(payload.box_id)
+                if existing_vec is not None and len(existing_vec) >= 18:
+                    # Snip off the neutral 6 feats to get the pure base 18 feats
+                    base_vec = existing_vec[:18]
+                    enriched = llm_translator.append_llm_to_vector(
+                        base_vec, payload.comment, payload.label
+                    )
+                    # Store enriched vector under the correct version
+                    ml_db.save_feature_vec(payload.box_id, enriched, FEATURE_VERSION)
+                    logger.info("[ml/label] LLM enrichment done for %s", payload.box_id)
+            except Exception as exc:
+                logger.warning("[ml/label] LLM enrichment failed: %s", exc)
+        threading.Thread(target=_enrich, daemon=True, name="llm-enricher").start()
 
     # Trigger retrain check (non-blocking thread)
     trainer.maybe_trigger_retrain()
@@ -247,12 +274,14 @@ def get_status():
     checkpoint = ml_db.get_active_model()
     unconsumed  = ml_db.count_unconsumed()
     total       = ml_db.count_all_labels()
+    by_class    = ml_db.count_labels_by_class()
 
     return {
         "model_version":        checkpoint["version"] if checkpoint else None,
         "model_ready":          checkpoint is not None,
         "cold_start":           checkpoint is None,
         "labels_collected":     total,
+        "labels_by_class":      by_class,
         "unconsumed_count":     unconsumed,
         "labels_until_retrain": max(0, trainer.RETRAIN_EVERY_N - unconsumed),
         "precision_good":       checkpoint["precision_good"] if checkpoint else None,
@@ -288,9 +317,12 @@ def manual_retrain():
             try:
                 from ml.trainer import TRAINING_STATE
                 TRAINING_STATE["logs"] = []
+                TRAINING_STATE["is_training"] = True
                 trainer._run_training(force=True)
             except Exception as exc:
                 logger.error("[ml/retrain] Force retrain failed: %s", exc, exc_info=True)
+                from ml.trainer import TRAINING_STATE
+                TRAINING_STATE["logs"].append(f"Fatal error: {exc}")
             finally:
                 from ml.trainer import TRAINING_STATE
                 TRAINING_STATE["is_training"] = False

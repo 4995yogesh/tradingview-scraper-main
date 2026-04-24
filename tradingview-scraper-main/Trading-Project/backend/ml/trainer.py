@@ -115,6 +115,7 @@ def maybe_trigger_retrain() -> None:
         with _train_lock:
             try:
                 TRAINING_STATE["logs"] = []
+                TRAINING_STATE["is_training"] = True
                 _log_msg("[trainer] Starting async training job...")
                 _run_training()
             except Exception as exc:
@@ -193,7 +194,7 @@ def _run_training(force: bool = False) -> None:
     # Check class distribution
     unique, counts = np.unique(y, return_counts=True)
     dist = dict(zip(unique.tolist(), counts.tolist()))
-    logger.info("[trainer] Class distribution: %s", dist)
+    _log_msg(f"[trainer] Classes: {dist}")
 
     # Need at least some "good" samples for meaningful gate check
     if dist.get(0, 0) + dist.get(1, 0) < 5:
@@ -244,8 +245,14 @@ def _run_training(force: bool = False) -> None:
 
     # ── 7. Calibrate ─────────────────────────────────────────────────────────
     _log_msg("[trainer] Calibrating model...")
-    calibrated = CalibratedClassifierCV(lgbm_clf, cv=5, method="sigmoid")
-    calibrated.fit(X_train, y_train, sample_weight=w_train)
+    try:
+        # Cross-validation calibration needs enough samples per class
+        calibrated = CalibratedClassifierCV(lgbm_clf, cv=min(5, len(X_train)), method="sigmoid")
+        calibrated.fit(X_train, y_train, sample_weight=w_train)
+    except Exception as e:
+        _log_msg(f"[trainer] CV calibration failed ({e}). Falling back to prefit.")
+        calibrated = CalibratedClassifierCV(lgbm_clf, cv="prefit", method="sigmoid")
+        calibrated.fit(X_val, y_val)
 
     # ── 8. Evaluate ──────────────────────────────────────────────────────────
     y_pred = calibrated.predict(X_val)
@@ -270,9 +277,13 @@ def _run_training(force: bool = False) -> None:
     total_good_support = support_vg + support_g
     avg_good_precision = ((precision_vg * support_vg) + (precision_g * support_g)) / max(1, total_good_support)
 
+    _log_msg(f"[trainer] Evaluation:")
+    _log_msg(f"  -> VG: P={precision_vg:.2f} (supp={support_vg})")
+    _log_msg(f"  ->  G: P={precision_g:.2f} (supp={support_g})")
+    
     gate_passed = avg_good_precision >= 0.60 and total_good_support >= 30
 
-    _log_msg(f"[trainer] Gate check: Avg(very_good, good) Precision={avg_good_precision:.2f} (support={total_good_support})")
+    _log_msg(f"[trainer] Gate check: Avg Good P={avg_good_precision:.2f} (need 0.60), Support={total_good_support} (need 30)")
     
     if not gate_passed:
         _log_msg("[trainer] Gate FAILED — NOT promoted")

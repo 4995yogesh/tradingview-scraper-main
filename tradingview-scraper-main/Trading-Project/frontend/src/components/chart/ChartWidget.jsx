@@ -9,6 +9,8 @@ import {
 import LabelDialog from './LabelDialog';
 import { ConsolidationBoxesPrimitive } from './plugins/BoxPrimitive';
 
+let globalLastBarSpacing = null;
+let globalLastCenterTime = null;
 
 // Sensible number of bars to fetch per timeframe so candles are visible at the initial zoom
 const TF_CANDLE_COUNT = {
@@ -370,12 +372,12 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         }
       },
       layout: { background: { type: 'solid', color: bg }, textColor: chartSettings?.priceScaleColor || '#787B86', fontSize: 9, fontFamily: 'Inter, -apple-system, sans-serif' },
-      grid: { vertLines: { color: gridColor, style: 1 }, horzLines: { color: gridColor, style: 1 } },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
       crosshair: { mode: crosshairMode, vertLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' }, horzLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' } },
       timeScale: {
         borderColor: chartSettings?.priceScaleColor || '#2A2E39', 
         timeVisible: ['1m', '5m', '15m', '1h', '4h'].includes(timeframe),
-        secondsVisible: false, rightOffset: 10, barSpacing: TF_BAR_SPACING[timeframe] || 8, minBarSpacing: 1,
+        secondsVisible: false, rightOffset: 10, barSpacing: globalLastBarSpacing || TF_BAR_SPACING[timeframe] || 8, minBarSpacing: 1,
         tickMarkFormatter: (time, tickMarkType, locale) => {
           if (typeof time === 'string') return time;
           const date = new Date(time * 1000);
@@ -454,8 +456,16 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(async (logicalRange) => {
       if (!logicalRange) return;
+      globalLastBarSpacing = chart.timeScale().options().barSpacing;
+      
+      const currentData = chartDataRef.current;
+      if (currentData && currentData.candleData.length > 0) {
+        const midLogical = (logicalRange.from + logicalRange.to) / 2;
+        const idx = Math.max(0, Math.min(currentData.candleData.length - 1, Math.round(midLogical)));
+        globalLastCenterTime = currentData.candleData[idx].time;
+      }
+
       if (logicalRange.from < -5 && !isLoadingMoreRef.current) {
-        const currentData = chartDataRef.current;
         if (!currentData || currentData.candleData.length === 0) return;
         
         isLoadingMoreRef.current = true;
@@ -773,8 +783,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
               el.dataset.lastDisplay = 'block';
             }
             
-            // Anchor neatly above the box center (clamped to visible area)
-            const newTransform = `translate(calc(${midX}px - 50%), calc(${topY}px - 100% - 6px))`;
+            // Anchor neatly above the box center, shifted further up to prevent blocking candles
+            const newTransform = `translate(calc(${midX}px - 50%), calc(${topY}px - 100% - 20px))`;
             if (el.dataset.lastTransform !== newTransform) {
               el.style.transform = newTransform;
               el.dataset.lastTransform = newTransform;
@@ -912,6 +922,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         const s = chart.addSeries(LineSeries, {
           color, lineWidth: 1, lineStyle: 0,
           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+          autoscaleInfoProvider: () => null,
         });
         s.setData(pts);
         swingSeriesRef.current.push(s);
@@ -961,11 +972,38 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           to: candleData.length + 3 
         });
       } else {
-        const initBars = 100;
-        if (candleData.length > initBars) {
-          chart.timeScale().setVisibleLogicalRange({ from: candleData.length - initBars, to: candleData.length + 3 });
+        if (globalLastBarSpacing && globalLastCenterTime) {
+          chart.timeScale().applyOptions({ barSpacing: globalLastBarSpacing });
+          
+          let centerIdx = candleData.length - 1;
+          let lo = 0, hi = candleData.length - 1;
+          
+          const gt = typeof globalLastCenterTime === 'string' ? new Date(globalLastCenterTime).getTime()/1000 : globalLastCenterTime;
+          
+          while (lo <= hi) {
+            const mid = (lo + hi) >>> 1;
+            const ct = typeof candleData[mid].time === 'string' ? new Date(candleData[mid].time).getTime()/1000 : candleData[mid].time;
+            if (ct < gt) lo = mid + 1;
+            else if (ct > gt) hi = mid - 1;
+            else { centerIdx = mid; break; }
+          }
+          if (lo > hi) centerIdx = Math.min(candleData.length - 1, lo);
+          
+          const containerWidth = chartContainerRef.current?.clientWidth || 800;
+          const logicalWidth = containerWidth / globalLastBarSpacing;
+          
+          chart.timeScale().setVisibleLogicalRange({
+            from: centerIdx - (logicalWidth / 2),
+            to: centerIdx + (logicalWidth / 2)
+          });
+
         } else {
-          chart.timeScale().fitContent();
+          const initBars = 100;
+          if (candleData.length > initBars) {
+            chart.timeScale().setVisibleLogicalRange({ from: candleData.length - initBars, to: candleData.length + 3 });
+          } else {
+            chart.timeScale().fitContent();
+          }
         }
       }
     }
@@ -1009,7 +1047,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
             <div 
               key={zone.box_id} 
               id={`mlbox-${zone.box_id}`}
-              className="absolute top-0 left-0"
+              className="absolute top-0 left-0 transition-opacity duration-200 opacity-60 hover:opacity-100 focus-within:opacity-100"
               style={{ display: 'none', pointerEvents: 'auto', transformOrigin: 'bottom center' }}
             >
               <LabelDialog zone={zoneMapRef.current[zone.box_id] || zone} />

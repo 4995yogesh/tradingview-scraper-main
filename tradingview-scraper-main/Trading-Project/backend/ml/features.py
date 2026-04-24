@@ -14,7 +14,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-FEATURE_VERSION = "v1"
+FEATURE_VERSION = "v2_llm"
 
 FEATURE_NAMES = [
     # Geometry (3)
@@ -40,9 +40,16 @@ FEATURE_NAMES = [
     "dist_ema50_pct",
     "price_percentile",
     "bars_since_breakout",
+    # LLM additions (6)
+    "llm_trend_alignment",
+    "llm_range_tightness",
+    "llm_breakout_strength",
+    "llm_volume_quality",
+    "llm_structure_quality",
+    "llm_sentiment_score",
 ]
 
-assert len(FEATURE_NAMES) == 18, "Feature count must be 18"
+assert len(FEATURE_NAMES) == 24, "Feature count must be 24 (18 base + 6 LLM)"
 
 
 # ── Helper math ───────────────────────────────────────────────────────────────

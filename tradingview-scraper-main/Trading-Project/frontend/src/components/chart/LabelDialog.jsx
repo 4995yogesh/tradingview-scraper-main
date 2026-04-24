@@ -7,6 +7,7 @@ const fmtPct = (n) => (n * 100).toFixed(0) + '%';
 
 export default function LabelDialog({ zone, onLabeled }) {
   const [pending, setPending] = useState(null);
+  const [comment, setComment] = useState("");
 
   if (!zone) return null;
 
@@ -34,6 +35,7 @@ export default function LabelDialog({ zone, onLabeled }) {
             exchange:   zone.exchange || 'OANDA',
             symbol:     zone.symbol   || 'EURUSD',
           },
+          comment: comment.trim() || undefined,
         }),
       });
       if (res.ok) {
@@ -48,9 +50,20 @@ export default function LabelDialog({ zone, onLabeled }) {
 
   return (
     <div 
-      className="flex flex-col items-center gap-1 p-1 bg-[#1E222D] border border-[#363A45] rounded shadow-lg opacity-90 hover:opacity-100 transition-opacity"
+      className="group flex flex-col items-center p-1 bg-[#1E222D] border border-[#363A45] rounded shadow-lg transition-all min-w-[16px] min-h-[16px]"
       style={{ fontFamily: 'Inter, sans-serif', pointerEvents: 'auto' }}
     >
+      {/* COLLAPSED STATE (Tiny Dot) */}
+      <div className="flex group-hover:hidden group-focus-within:hidden w-2 h-2 items-center justify-center m-[2px]">
+        {curLabel ? (
+          <div className={`w-2 h-2 rounded-full ${curLabel.includes('good') ? 'bg-[#00BFA5]' : 'bg-[#EF5350]'}`} />
+        ) : (
+          <div className="w-1.5 h-1.5 rounded-full bg-[#787B86]" />
+        )}
+      </div>
+
+      {/* EXPANDED STATE (Full UI) */}
+      <div className="hidden group-hover:flex group-focus-within:flex flex-col items-center gap-1 w-full min-w-[140px]">
       {/* Probability bar or current label */}
       {!isFb && !curLabel && (
         <div className="flex gap-1 w-full justify-between items-center px-1">
@@ -90,6 +103,18 @@ export default function LabelDialog({ zone, onLabeled }) {
             {icon}
           </button>
         ))}
+      </div>
+
+      {/* Comment Input */}
+      <textarea 
+        className="w-full mt-1 p-1.5 text-[12px] bg-[#131722] text-[#D1D4DC] border border-[#363A45] rounded resize-none focus:outline-none focus:border-[#2962FF]"
+        placeholder="Why is this a good/bad box?"
+        rows={2}
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        onKeyDown={(e) => { e.stopPropagation(); }}
+        onMouseDown={(e) => { e.stopPropagation(); }}
+      />
       </div>
     </div>
   );

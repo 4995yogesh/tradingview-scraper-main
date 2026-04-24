@@ -38,6 +38,9 @@ class ConsolidationBoxesPaneView {
   renderer() {
     return new ConsolidationBoxesPaneRenderer(this._source);
   }
+  zOrder() {
+    return 'bottom';
+  }
 }
 
 class ConsolidationBoxesPaneRenderer {
