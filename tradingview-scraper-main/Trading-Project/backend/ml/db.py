@@ -15,8 +15,11 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# DB path — same folder as existing ml_feedback.db
-_DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "ml_feedback.db")
+# DB path — prefer env override (used by .exe build), else default to data/ folder
+_DB_PATH = os.environ.get(
+    "ML_DB_PATH",
+    os.path.join(os.path.dirname(__file__), "..", "data", "ml_feedback.db")
+)
 
 @contextmanager
 def _conn():

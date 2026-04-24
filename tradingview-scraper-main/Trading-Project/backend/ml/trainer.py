@@ -149,7 +149,7 @@ def _run_training(force: bool = False) -> None:
 
     # ── 1. Load unconsumed labels ─────────────────────────────────────────────
     raw_labels = ml_db.get_unconsumed_labels()
-    if len(raw_labels) < RETRAIN_EVERY_N:
+    if not force and len(raw_labels) < RETRAIN_EVERY_N:
         _log_msg(f"[trainer] Unconsumed count {len(raw_labels)} < {RETRAIN_EVERY_N} — abort")
         return
 
@@ -171,8 +171,8 @@ def _run_training(force: bool = False) -> None:
     logger.info("[trainer] Valid rows: %d / %d (skipped %d)",
                 len(valid_rows), len(raw_labels), skipped)
 
-    if len(valid_rows) < RETRAIN_EVERY_N:
-        _log_msg(f"[trainer] Not enough valid rows ({len(valid_rows)}) — abort")
+    if not force and len(valid_rows) < 100:
+        _log_msg(f"[trainer] Not enough valid rows ({len(valid_rows)}) — abort (need 100)")
         return
 
     # ── 3. Deduplicate: keep LATEST label per box ─────────────────────────────

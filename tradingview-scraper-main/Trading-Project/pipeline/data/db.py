@@ -17,8 +17,10 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 # ── Database path: Trading-Project/data/candles.db ───────────────────────────
-# This file is two packages above pipeline/data/
-DB_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "candles.db"
+# Prefer env override (used by .exe builds), otherwise resolve relative to this file.
+import os as _os
+_env_db = _os.environ.get("CANDLE_DB_PATH")
+DB_PATH = Path(_env_db) if _env_db else (Path(__file__).resolve().parent.parent.parent / "data" / "candles.db")
 
 
 class CandleDB:
