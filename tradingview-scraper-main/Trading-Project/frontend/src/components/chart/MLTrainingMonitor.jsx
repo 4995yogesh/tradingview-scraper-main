@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Activity, X, Terminal } from 'lucide-react';
+import { Activity, X, Terminal, AlertTriangle, Search } from 'lucide-react';
 
 const API = 'http://localhost:8000/api/ml';
+
+function formatDt(dtStr, timeStartMs) {
+  if (!timeStartMs) return dtStr || 'unknown';
+  // Chart displays IST (UTC+5:30), convert for consistency
+  const ist = new Date(timeStartMs + 5.5 * 60 * 60 * 1000);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${ist.getUTCFullYear()}-${pad(ist.getUTCMonth()+1)}-${pad(ist.getUTCDate())} ${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())} IST`;
+}
 
 export default function MLTrainingMonitor() {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState(null);
+  const [tab, setTab] = useState('logs'); // 'logs' | 'fp' | 'fn'
   const logsEndRef = useRef(null);
 
   useEffect(() => {
@@ -15,19 +24,53 @@ export default function MLTrainingMonitor() {
         if (res.ok) setData(await res.json());
       } catch (e) { }
     };
-    
     fetchProgress();
     const iv = setInterval(fetchProgress, 1000);
     return () => clearInterval(iv);
   }, []);
 
   useEffect(() => {
-    if (isOpen && logsEndRef.current) {
+    if (isOpen && tab === 'logs' && logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [data?.logs, isOpen]);
+  }, [data?.logs, isOpen, tab]);
 
   const isTraining = data?.is_training;
+  const fp = data?.error_boxes?.fp || [];
+  const fn = data?.error_boxes?.fn || [];
+
+  const ErrorBoxRow = ({ box, type }) => (
+    <div
+      className="flex flex-col gap-0.5 px-2 py-1.5 rounded bg-[#131722] border border-[#2A2E39] hover:border-[#363A45] cursor-pointer group transition-colors"
+      onClick={() => {
+        // Post a custom event so ChartWidgets can scroll to this box
+        window.dispatchEvent(new CustomEvent('ml-goto-box', { detail: box }));
+      }}
+      title={`Click to navigate chart to this box`}
+    >
+      <div className="flex items-center justify-between">
+        <span className={`text-[9px] font-bold uppercase px-1 rounded ${
+          type === 'fp'
+            ? 'bg-[#EF535020] text-[#EF5350]'
+            : 'bg-[#FFA72620] text-[#FFA726]'
+        }`}>
+          {type === 'fp' ? 'FP' : 'FN'}
+        </span>
+        <span className="text-[9px] text-[#787B86] font-mono">{box.timeframe?.toUpperCase()}</span>
+      </div>
+      <div className="flex items-center gap-1 text-[9px] font-mono text-[#D1D4DC]">
+        <Search size={8} className="text-[#2962FF] shrink-0 group-hover:scale-110 transition-transform" />
+        {formatDt(box.datetime, box.time_start_ms)}
+      </div>
+      <div className="flex items-center justify-between text-[9px] font-mono text-[#787B86]">
+        <span>True: <span className="text-[#26A69A]">{box.true_label}</span></span>
+        <span>Pred: <span className="text-[#EF5350]">{box.pred_label}</span></span>
+      </div>
+      <div className="text-[8px] font-mono text-[#4A4E59]">
+        H:{Number(box.price_high).toFixed(5)} L:{Number(box.price_low).toFixed(5)}
+      </div>
+    </div>
+  );
 
   return (
     <>
@@ -40,10 +83,16 @@ export default function MLTrainingMonitor() {
       >
         <Activity size={12} className={isTraining ? 'animate-pulse' : ''} />
         <span className="text-[10px] font-medium">Monitor</span>
+        {(fp.length > 0 || fn.length > 0) && !isTraining && (
+          <span className="w-4 h-4 rounded-full bg-[#EF5350] text-white text-[8px] font-bold flex items-center justify-center leading-none">
+            {fp.length + fn.length}
+          </span>
+        )}
       </button>
 
       {isOpen && (
-        <div className="absolute top-[40px] right-[200px] w-[340px] bg-[#1E222D] border border-[#363A45] rounded-md shadow-2xl z-50 flex flex-col font-mono text-[11px] overflow-hidden">
+        <div className="absolute top-[40px] right-[200px] w-[360px] bg-[#1E222D] border border-[#363A45] rounded-md shadow-2xl z-50 flex flex-col font-mono text-[11px] overflow-hidden">
+          {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 bg-[#2A2E39] border-b border-[#363A45]">
             <div className="flex items-center gap-2 text-[#D1D4DC]">
               <Terminal size={14} className="text-[#2962FF]" />
@@ -55,6 +104,7 @@ export default function MLTrainingMonitor() {
             </button>
           </div>
 
+          {/* Status bar */}
           <div className="p-3 bg-[#131722] flex flex-col gap-2">
             <div className="flex justify-between items-center text-[#787B86]">
               <div className="flex items-center gap-2">
@@ -86,9 +136,7 @@ export default function MLTrainingMonitor() {
                 <div className="h-[4px] w-full bg-[#2A2E39] rounded-full overflow-hidden my-1">
                   <div
                     className="h-full bg-[#2962FF] transition-all duration-300"
-                    style={{
-                      width: `${data?.max_iterations > 0 ? (data.iteration / data.max_iterations) * 100 : 0}%`
-                    }}
+                    style={{ width: `${data?.max_iterations > 0 ? (data.iteration / data.max_iterations) * 100 : 0}%` }}
                   />
                 </div>
                 <div className="flex justify-between text-[#787B86]">
@@ -99,26 +147,74 @@ export default function MLTrainingMonitor() {
             )}
           </div>
 
-          <div className="flex-1 h-[200px] overflow-y-auto p-3 bg-[#0A0E17] text-[#A0A3AB] font-mono leading-relaxed space-y-1">
-            {data?.logs?.length === 0 && <div className="italic text-[#4A4E59]">No logs available...</div>}
-            {data?.logs?.map((msg, idx) => {
-              const isErr = msg.toLowerCase().includes('failed') || msg.toLowerCase().includes('error');
-              const isWarn = msg.toLowerCase().includes('warning') || msg.toLowerCase().includes('abort');
-              
-              let color = 'text-[#D1D4DC]';
-              if (isErr) color = 'text-[#EF5350] font-semibold';
-              else if (isWarn) color = 'text-[#FFA726]';
-              else if (msg.includes('===') || msg.includes('Promote')) color = 'text-[#2962FF] font-semibold';
-              
-              return (
-                <div key={idx} className={`${color} break-words`}>
-                  <span className="text-[#4A4E59] mr-2">&gt;</span>
-                  {msg}
-                </div>
-              );
-            })}
-            <div ref={logsEndRef} />
+          {/* Tab bar */}
+          <div className="flex border-b border-[#363A45]">
+            {[
+              { id: 'logs', label: 'Logs' },
+              { id: 'fp', label: `FP (${fp.length})`, color: fp.length ? '#EF5350' : null },
+              { id: 'fn', label: `FN (${fn.length})`, color: fn.length ? '#FFA726' : null },
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`flex-1 py-1.5 text-[10px] font-semibold transition-colors ${
+                  tab === t.id
+                    ? 'bg-[#2A2E39] text-[#D1D4DC] border-b-2 border-[#2962FF]'
+                    : 'text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#1A1E2A]'
+                }`}
+                style={tab !== t.id && t.color ? { color: t.color } : {}}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
+
+          {/* Tab content */}
+          {tab === 'logs' && (
+            <div className="flex-1 h-[200px] overflow-y-auto p-3 bg-[#0A0E17] text-[#A0A3AB] font-mono leading-relaxed space-y-1">
+              {data?.logs?.length === 0 && <div className="italic text-[#4A4E59]">No logs available...</div>}
+              {data?.logs?.map((msg, idx) => {
+                const isErr = msg.toLowerCase().includes('failed') || msg.toLowerCase().includes('error');
+                const isWarn = msg.toLowerCase().includes('warning') || msg.toLowerCase().includes('abort');
+                let color = 'text-[#D1D4DC]';
+                if (isErr) color = 'text-[#EF5350] font-semibold';
+                else if (isWarn) color = 'text-[#FFA726]';
+                else if (msg.includes('===') || msg.includes('Promote')) color = 'text-[#2962FF] font-semibold';
+                return (
+                  <div key={idx} className={`${color} break-words`}>
+                    <span className="text-[#4A4E59] mr-2">&gt;</span>
+                    {msg}
+                  </div>
+                );
+              })}
+              <div ref={logsEndRef} />
+            </div>
+          )}
+
+          {(tab === 'fp' || tab === 'fn') && (
+            <div className="flex-1 h-[250px] overflow-y-auto p-2 bg-[#0A0E17] space-y-1.5">
+              {tab === 'fp' && (
+                <div className="flex items-center gap-1 text-[9px] text-[#787B86] mb-2">
+                  <AlertTriangle size={9} className="text-[#EF5350]" />
+                  Model predicted GOOD on these BAD boxes — consider relabeling
+                </div>
+              )}
+              {tab === 'fn' && (
+                <div className="flex items-center gap-1 text-[9px] text-[#787B86] mb-2">
+                  <AlertTriangle size={9} className="text-[#FFA726]" />
+                  Model missed these real GOOD boxes — add more similar labels
+                </div>
+              )}
+              {(tab === 'fp' ? fp : fn).length === 0 && (
+                <div className="italic text-[#4A4E59] text-[10px] text-center mt-8">
+                  No {tab.toUpperCase()} boxes — run Force Train first
+                </div>
+              )}
+              {(tab === 'fp' ? fp : fn).map((box, i) => (
+                <ErrorBoxRow key={i} box={box} type={tab} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </>

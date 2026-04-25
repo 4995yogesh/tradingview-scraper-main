@@ -138,6 +138,12 @@ export default function LabelDialog({ zone, onLabeled }) {
         onChange={(e) => setComment(e.target.value)}
         onKeyDown={(e) => { e.stopPropagation(); }}
         onMouseDown={(e) => { e.stopPropagation(); }}
+        onBlur={() => {
+          // Auto-save comment if label exists and comment changed
+          if (curLabel && comment.trim() !== (zone?.comment || "")) {
+            handleLabel(curLabel);
+          }
+        }}
       />
       </div>
     </div>

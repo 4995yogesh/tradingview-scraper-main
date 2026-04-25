@@ -359,6 +359,7 @@ const ChartPage = () => {
           swingSettings={swingSettings}
           consolidationSettings={consolidationSettings}
           liveTickKey={liveTickKey}
+          aiMode={showML}
         />
         {/* Show mini toolbar for every pane in multi-layout */}
         {activeLayout !== '1' && (
@@ -432,6 +433,7 @@ const ChartPage = () => {
             swingSettings={getSwingSettings(panes[0] || {})}
             consolidationSettings={getConsolidationSettings(panes[0] || {})}
             liveTickKey={liveTickKey}
+            aiMode={showML}
           />
         </div>
       );
@@ -469,6 +471,7 @@ const ChartPage = () => {
         onToggleIndicators={() => setShowIndicators(prev => !prev)}
         countdown={countdown}
         panes={panes}
+        aiMode={showML}
         onToggleML={() => setShowML(prev => !prev)}
       />
 

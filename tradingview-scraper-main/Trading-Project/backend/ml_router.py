@@ -53,12 +53,9 @@ class LabelPayload(BaseModel):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def compute_box_id(symbol: str, zone: dict) -> str:
-    """sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars."""
-    key = (
-        f"{symbol}:{zone['timeframe']}:"
-        f"{zone['timeStart']}:{zone['timeEnd']}:"
-        f"{zone['priceHigh']:.5f}:{zone['priceLow']:.5f}"
-    )
+    """sha256(symbol:tf:tStart) → first 16 hex chars. 
+    Stable for live boxes that expand."""
+    key = f"{symbol}:{zone['timeframe']}:{zone['timeStart']}"
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
@@ -203,8 +200,8 @@ def label_box(payload: LabelPayload):
                 logger.warning("[ml/label] LLM enrichment failed: %s", exc)
         threading.Thread(target=_enrich, daemon=True, name="llm-enricher").start()
 
-    # Trigger retrain check (non-blocking thread)
-    trainer.maybe_trigger_retrain()
+    # Auto-train disabled — training is manual only (Force Train button)
+    # trainer.maybe_trigger_retrain()
 
     unconsumed = ml_db.count_unconsumed()
     threshold = trainer.get_retrain_threshold()

@@ -37,7 +37,7 @@ def get_retrain_threshold() -> int:
 
 # very_good = strong positive, good = positive, bad = negative, very_bad = strong negative
 CLASS_MAP = {"very_good": 0, "good": 1, "bad": 2, "very_bad": 3}
-CLASS_WEIGHTS = {0: 3.0, 1: 1.0, 2: 1.0, 3: 2.0}
+CLASS_WEIGHTS = {0: 4.0, 1: 3.0, 2: 2.0, 3: 2.0}
 
 _train_lock = threading.Lock()
 
@@ -49,9 +49,10 @@ _MODELS_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "models")
 TRAINING_STATE = {
     "is_training": False,
     "iteration": 0,
-    "max_iterations": 1000,
+    "max_iterations": 300,
     "val_logloss": 0.0,
-    "logs": []
+    "logs": [],
+    "error_boxes": {"fp": [], "fn": []}
 }
 
 def _log_msg(msg: str):
@@ -159,11 +160,11 @@ def _run_training(force: bool = False) -> None:
 
     _log_msg("[trainer] === Starting training run ===")
 
-    # ── 1. Load unconsumed labels ─────────────────────────────────────────────
-    raw_labels = ml_db.get_unconsumed_labels()
+    # ── 1. Load ALL labels (consumed + unconsumed) ────────────────────────────
+    raw_labels = ml_db.get_all_labels()
     threshold = get_retrain_threshold()
     if not force and len(raw_labels) < threshold:
-        _log_msg(f"[trainer] Unconsumed count {len(raw_labels)} < {threshold} — abort")
+        _log_msg(f"[trainer] Total label count {len(raw_labels)} < {threshold} — abort")
         return
 
     # ── 2. Join with feature store, skip mismatches ───────────────────────────
@@ -184,8 +185,8 @@ def _run_training(force: bool = False) -> None:
     logger.info("[trainer] Valid rows: %d / %d (skipped %d)",
                 len(valid_rows), len(raw_labels), skipped)
 
-    if not force and len(valid_rows) < 100:
-        _log_msg(f"[trainer] Not enough valid rows ({len(valid_rows)}) — abort (need 100)")
+    if not force and len(valid_rows) < threshold:
+        _log_msg(f"[trainer] Not enough valid rows ({len(valid_rows)}) — abort (need {threshold})")
         return
 
     # ── 3. Deduplicate: keep LATEST label per box ─────────────────────────────
@@ -213,30 +214,40 @@ def _run_training(force: bool = False) -> None:
         logger.warning("[trainer] Too few 'good' samples (%d) — abort", dist.get(0, 0) + dist.get(1, 0))
         return
 
-    # ── 5. Stratified train/val split ────────────────────────────────────────
+    # ── 5. Stratified train/val split — track original indices ───────────────
+    indices = np.arange(len(rows_deduped))
     try:
-        X_train, X_val, y_train, y_val, w_train, _ = train_test_split(
-            X, y, w, test_size=0.2, stratify=y, random_state=42
+        idx_train, idx_val = train_test_split(
+            indices, test_size=0.2, stratify=y, random_state=42
         )
     except ValueError:
-        # Stratify fails if class has < 2 samples — fall back to random split
         logger.warning("[trainer] Stratify failed — using non-stratified split")
-        X_train, X_val, y_train, y_val, w_train, _ = train_test_split(
-            X, y, w, test_size=0.2, random_state=42
+        idx_train, idx_val = train_test_split(
+            indices, test_size=0.2, random_state=42
         )
+
+    X_train = X[idx_train]; X_val = X[idx_val]
+    y_train = y[idx_train]; y_val = y[idx_val]
+    w_train = w[idx_train]
 
     # ── 6. Train LightGBM ────────────────────────────────────────────────────
     device = _device()
     lgb_params = {
-        "objective": "multiclass",
-        "num_class": 4,
-        "metric": "multi_logloss",
-        "learning_rate": 0.05,
-        "num_leaves": 31,
-        "n_estimators": 1000,
-        "device": device,
-        "verbose": -1,
-        "random_state": 42,
+        "objective":         "multiclass",
+        "num_class":         4,
+        "metric":            "multi_logloss",
+        "learning_rate":     0.05,
+        "num_leaves":        7,          # low complexity → less overfit
+        "n_estimators":      300,        # fewer trees (early stopping caps further)
+        "min_child_samples": 3,          # allow splits on small groups
+        "reg_alpha":         0.1,        # L1
+        "reg_lambda":        1.0,        # L2
+        "feature_fraction":  0.8,        # subfeature sampling
+        "bagging_fraction":  0.8,        # row subsampling
+        "bagging_freq":      1,
+        "device":            device,
+        "verbose":           -1,
+        "random_state":      42,
     }
 
     # LightGBM sklearn API
@@ -259,12 +270,17 @@ def _run_training(force: bool = False) -> None:
     _log_msg("[trainer] Calibrating model...")
     try:
         # Cross-validation calibration needs enough samples per class
-        calibrated = CalibratedClassifierCV(lgbm_clf, cv=min(5, len(X_train)), method="sigmoid")
-        calibrated.fit(X_train, y_train, sample_weight=w_train)
+        min_class_count = np.min(np.bincount(y_train)) if len(y_train) > 0 else 0
+        if min_class_count < 2:
+            _log_msg(f"[trainer] minimum class count ({min_class_count}) < 2. Skipping calibration.")
+            calibrated = lgbm_clf
+        else:
+            cv_folds = min(5, int(min_class_count))
+            calibrated = CalibratedClassifierCV(lgbm_clf, cv=cv_folds, method="sigmoid")
+            calibrated.fit(X_train, y_train, sample_weight=w_train)
     except Exception as e:
-        _log_msg(f"[trainer] CV calibration failed ({e}). Falling back to prefit.")
-        calibrated = CalibratedClassifierCV(lgbm_clf, cv="prefit", method="sigmoid")
-        calibrated.fit(X_val, y_val)
+        _log_msg(f"[trainer] CV calibration failed ({e}). Falling back to uncalibrated model.")
+        calibrated = lgbm_clf
 
     # ── 8. Evaluate ──────────────────────────────────────────────────────────
     y_pred = calibrated.predict(X_val)
@@ -289,13 +305,9 @@ def _run_training(force: bool = False) -> None:
     total_good_support = support_vg + support_g
     avg_good_precision = ((precision_vg * support_vg) + (precision_g * support_g)) / max(1, total_good_support)
 
-    _log_msg(f"[trainer] Evaluation:")
-    _log_msg(f"  -> VG: P={precision_vg:.2f} (supp={support_vg})")
-    _log_msg(f"  ->  G: P={precision_g:.2f} (supp={support_g})")
-    
-    gate_passed = avg_good_precision >= 0.60 and total_good_support >= 30
+    gate_passed = (avg_good_precision >= 0.60 and total_good_support >= 30) or force
 
-    _log_msg(f"[trainer] Gate check: Avg Good P={avg_good_precision:.2f} (need 0.60), Support={total_good_support} (need 30)")
+    _log_msg(f"[trainer] Gate check: Avg Good P={avg_good_precision:.2f} (need 0.60), Support={total_good_support} (need 30) | Force={force}")
     
     if not gate_passed:
         _log_msg("[trainer] Gate FAILED — NOT promoted")
@@ -303,13 +315,40 @@ def _run_training(force: bool = False) -> None:
 
     # Error analysis for class 'good' (0)
     fps_mask = (y_val != 0) & (y_val != 1) & ((y_pred == 0) | (y_pred == 1))
+    fns_mask = (y_pred != 0) & (y_pred != 1) & ((y_val == 0) | (y_val == 1))
     fps = np.where(fps_mask)[0]
-    fns = np.where((y_pred != 0) & (y_pred != 1) & ((y_val == 0) | (y_val == 1)))[0]
+    fns = np.where(fns_mask)[0]
     _log_msg(f"[trainer] Error Analysis (Good Class): FP={len(fps)} | FN={len(fns)}")
     if len(fps) > 0:
         _log_msg(f"[trainer] FP: Model predicted VERY_GOOD/GOOD on {len(fps)} BAD/VERY_BAD samples")
     if len(fns) > 0:
         _log_msg(f"[trainer] FN: Model missed {len(fns)} true GOOD samples")
+
+    # Store FP/FN box metadata in TRAINING_STATE for UI display
+    CLASS_NAMES_INV = {0: "very_good", 1: "good", 2: "bad", 3: "very_bad"}
+    from datetime import datetime as _dt
+
+    def _box_meta(val_local_idx):
+        orig_idx = int(idx_val[val_local_idx])
+        r, _ = rows_deduped[orig_idx]
+        ts_ms = r.get("time_start_ms", 0)
+        ts_s = ts_ms // 1000 if ts_ms else 0
+        dt_str = _dt.utcfromtimestamp(ts_s).strftime('%Y-%m-%d %H:%M') if ts_s else 'unknown'
+        return {
+            "box_id":    r.get("box_id", ""),
+            "timeframe": r.get("timeframe", ""),
+            "time_start_ms": ts_ms,
+            "price_high": r.get("price_high", 0),
+            "price_low":  r.get("price_low", 0),
+            "true_label": CLASS_NAMES_INV.get(int(y_val[val_local_idx]), "?"),
+            "pred_label": CLASS_NAMES_INV.get(int(y_pred[val_local_idx]), "?"),
+            "datetime":  dt_str,
+        }
+
+    TRAINING_STATE["error_boxes"] = {
+        "fp": [_box_meta(i) for i in fps],
+        "fn": [_box_meta(i) for i in fns],
+    }
 
     # ── 9. Export Data & Consume Labels ──────────────────────────────────────
     import csv
@@ -330,7 +369,7 @@ def _run_training(force: bool = False) -> None:
                 writer.writerow(header)
                 for r, vec in rows_deduped:
                     row = [r["id"], r["box_id"], r["label"], r.get("created_at", "")]
-                    row.extend(vec.tolist())
+                    row.extend(list(vec))
                     writer.writerow(row)
         _log_msg(f"[trainer] Exported training data to {export_path}")
     except Exception as e:

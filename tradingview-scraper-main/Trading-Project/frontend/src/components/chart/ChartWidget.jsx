@@ -223,13 +223,14 @@ function mapOverlayTime(realTime, tf) {
 
 
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, liveTickKey, isSubchart, initialBars }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, liveTickKey, aiMode, isSubchart, initialBars }, ref) => {
   const chartContainerRef      = useRef(null);
   const chartRef               = useRef(null);
   const seriesRef              = useRef(null);
   const isLoadingMoreRef       = useRef(false);
   const swingSeriesRef         = useRef([]); // swing level LineSeries
   const consolidationPrimitiveRef = useRef(null); // Fast native shape plugin
+  const aiPrimitiveRef = useRef(null); // Separate AI-predicted box layer
   const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
 
   const [domZones, setDomZones] = useState([]);
@@ -343,6 +344,43 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       }
     })();
   }, [liveTickKey]);
+
+  // ── Navigate chart to a box when FP/FN entry is clicked in Monitor ─────────
+  useEffect(() => {
+    const handleGotoBox = (e) => {
+      const box = e.detail;
+      if (!box || !box.time_start_ms) return;
+      const chart = chartRef.current;
+      const candles = chartDataRef.current?.candleData;
+      if (!chart || !candles?.length) return;
+
+      const targetUnix = Math.floor(box.time_start_ms / 1000);
+      const getUnix = (t) => typeof t === 'string' ? new Date(t + (t.length === 10 ? 'T00:00:00Z' : '')).getTime() / 1000 : Number(t);
+
+      // Find nearest candle to target
+      let nearestIdx = 0;
+      let minDiff = Infinity;
+      candles.forEach((c, i) => {
+        const diff = Math.abs(getUnix(c.time) - targetUnix);
+        if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
+      });
+
+      // Center view: show ~80 candles around the target
+      const half = 40;
+      const from = Math.max(0, nearestIdx - half);
+      const to   = Math.min(candles.length - 1, nearestIdx + half);
+
+      try {
+        chart.timeScale().setVisibleRange({
+          from: candles[from].time,
+          to:   candles[to].time,
+        });
+      } catch (_) {}
+    };
+
+    window.addEventListener('ml-goto-box', handleGotoBox);
+    return () => window.removeEventListener('ml-goto-box', handleGotoBox);
+  }, []);  // no deps — reads refs directly
 
   // Structural Initialization of HTML Canvas ONLY
   const initChart = useCallback(() => {
@@ -484,6 +522,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
               };
             });
           }
+        } catch (err) {
+          console.warn('Infinite scroll fetch failed:', err?.message);
         } finally {
           setTimeout(() => { isLoadingMoreRef.current = false; }, 500);
         }
@@ -752,6 +792,110 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [consolidations, timeframe, chartKey, consolidationSettings?.enabled, consolidationSettings?.settings?.showHTF]);
+
+  // ── AI Mode: Separate overlay (does NOT interfere with indicator boxes) ──────
+  useEffect(() => {
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+    if (!chart || !series || !chartDataRef.current?.candleData?.length) return;
+
+    if (!aiMode) {
+      // Remove AI layer if toggled off
+      if (aiPrimitiveRef.current) {
+        try { series.detachPrimitive(aiPrimitiveRef.current); } catch (_) {}
+        aiPrimitiveRef.current = null;
+      }
+      return;
+    }
+
+    // Build the AI-filtered zone list from ALL consolidations (ignoring indicator settings)
+    const chartTf    = timeframe.toLowerCase();
+    const chartTfIdx = ALL_TFS.indexOf(chartTf);
+
+    const aiZones = consolidations.filter(z => {
+      const ztf = (z.timeframe || '').toLowerCase();
+      const ztfIdx = ALL_TFS.indexOf(ztf);
+      if (ztfIdx === -1 || ztfIdx > chartTfIdx) return false;
+      if (!z.score || z.score.is_fallback) return false;
+      const p = z.score.probabilities || {};
+      const maxScore = Math.max(p.very_good || 0, p.good || 0, p.bad || 0, p.very_bad || 0);
+      return (maxScore === p.very_good || maxScore === p.good) && maxScore >= 0.6;
+    });
+
+    if (!aiPrimitiveRef.current) {
+      aiPrimitiveRef.current = new ConsolidationBoxesPrimitive();
+      series.attachPrimitive(aiPrimitiveRef.current);
+    }
+
+    const candles  = chartDataRef.current.candleData;
+    const getUnix  = (t) => typeof t === 'string' ? new Date(t).getTime() / 1000 : Number(t);
+    const lastUnix = getUnix(candles[candles.length - 1].time);
+    const unixArr  = candles.map(c => getUnix(c.time));
+    const bisectLeft = (arr, target) => {
+      let lo = 0, hi = arr.length;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (arr[mid] < target) lo = mid + 1; else hi = mid; }
+      return lo;
+    };
+    const snapToChart = (unixSec) => {
+      if (!unixArr.length) return null;
+      const idx = bisectLeft(unixArr, unixSec);
+      if (idx === 0) return candles[0].time;
+      if (idx >= unixArr.length) return candles[candles.length - 1].time;
+      const before = unixArr[idx - 1], after = unixArr[idx];
+      return (unixSec - before <= after - unixSec) ? candles[idx - 1].time : candles[idx].time;
+    };
+
+    const aiBoxDefs = [];
+    aiZones.forEach(zone => {
+      const startUnix = Math.floor(zone.timeStart / 1000);
+      const endUnix   = Math.floor(zone.timeEnd   / 1000);
+      const t1 = snapToChart(startUnix);
+      const t2 = endUnix >= lastUnix ? candles[candles.length - 1].time : snapToChart(endUnix);
+      if (!t1 || !t2 || t1 === t2) return;
+
+      const s1 = Math.min(getUnix(t1), getUnix(t2));
+      const s2 = Math.max(getUnix(t1), getUnix(t2));
+      const lo = bisectLeft(unixArr, s1);
+      const hi = bisectLeft(unixArr, s2 + 1);
+      const points = candles.slice(lo, hi).map(c => c.time);
+      if (points.length < 2) return;
+
+      const p  = zone.score.probabilities || {};
+      const vg = (p.very_good || 0);
+      const g  = (p.good      || 0);
+      const maxPClass = vg > g ? 'very_good' : 'good';
+      const borderColor = maxPClass === 'very_good'
+        ? 'rgba(0,230,180,0.95)'
+        : 'rgba(41,182,246,0.95)';
+      const fillColor = maxPClass === 'very_good'
+        ? 'rgba(0,230,180,0.08)'
+        : 'rgba(41,182,246,0.08)';
+
+      aiBoxDefs.push({
+        box_id:      `ai_${zone.box_id}`,
+        t1:          points[0],
+        t2:          points[points.length - 1],
+        drawT1:      points[0],
+        drawT2:      points[points.length - 1],
+        priceHigh:   zone.priceHigh,
+        priceLow:    zone.priceLow,
+        borderColor,
+        fillColor,
+        isDashed:    false,
+        s1, s2,
+      });
+    });
+
+    aiPrimitiveRef.current.setData(aiBoxDefs);
+
+    return () => {
+      if (aiPrimitiveRef.current) {
+        try { series.detachPrimitive(aiPrimitiveRef.current); } catch (_) {}
+        aiPrimitiveRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consolidations, timeframe, chartKey, aiMode]);
 
   // ── Sync HTML Overlays to Chart Coordinates ────────────────────────────────
   useEffect(() => {

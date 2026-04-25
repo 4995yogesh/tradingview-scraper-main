@@ -77,12 +77,9 @@ logger = logging.getLogger(__name__)
 
 
 def _compute_box_id(symbol: str, zone: dict) -> str:
-    """sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars."""
-    key = (
-        f"{symbol}:{zone['timeframe']}:"
-        f"{zone['timeStart']}:{zone['timeEnd']}:"
-        f"{zone['priceHigh']:.5f}:{zone['priceLow']:.5f}"
-    )
+    """sha256(symbol:tf:tStart) → first 16 hex chars. 
+    Stable for live boxes that expand."""
+    key = f"{symbol}:{zone['timeframe']}:{zone['timeStart']}"
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 # ── Constants ─────────────────────────────────────────────────────────────────

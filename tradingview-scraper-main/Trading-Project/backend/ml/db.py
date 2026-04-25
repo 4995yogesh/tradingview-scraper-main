@@ -222,6 +222,16 @@ def get_unconsumed_labels() -> list:
         return [dict(r) for r in rows]
 
 
+def get_all_labels() -> list:
+    """Return ALL labels (consumed + unconsumed) for training."""
+    with _conn() as conn:
+        rows = conn.execute("""
+            SELECT * FROM labels
+            ORDER BY created_at ASC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
 def mark_consumed(label_ids: list) -> None:
     """Mark label rows as consumed after successful training."""
     if not label_ids:
@@ -328,3 +338,26 @@ def next_model_version() -> str:
         ).fetchone()
         n = row["n"] + 1 if row else 1
         return f"v1.{n}"
+def save_model_metadata(
+    version_id,
+    precision_good: float,
+    recall_good: float,
+    f1_good: float,
+    support_good: int,
+    samples_count: int,
+    feature_ver: str,
+    path: str,
+) -> None:
+    """Alias matching trainer.py call signature."""
+    save_checkpoint(
+        version=str(version_id),
+        metrics={
+            "label_count": samples_count,
+            "precision_good": precision_good,
+            "recall_good": recall_good,
+            "f1_good": f1_good,
+            "support_good": support_good,
+        },
+        pkl_path=path,
+        feature_ver=feature_ver,
+    )

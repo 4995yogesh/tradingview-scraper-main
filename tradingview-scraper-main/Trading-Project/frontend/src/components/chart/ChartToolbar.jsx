@@ -23,7 +23,7 @@ const ChartToolbar = ({
   onSettings, onRefresh,
   activeLayout, onLayoutChange, showLayout, onToggleLayout,
   showIndicators, onToggleIndicators, panes,
-  countdown, onToggleML,
+  countdown, aiMode, onToggleML,
 }) => {
   const [showTimeframes, setShowTimeframes] = useState(false);
   const [showTfInput, setShowTfInput] = useState(false);
@@ -171,9 +171,22 @@ const ChartToolbar = ({
           </div>
         )}
 
+        {/* AI Mode Toggle button */}
+        <button
+          onClick={onToggleML}
+          title="Toggle AI Drawn Predictor Boxes"
+          className={`h-[26px] px-2 flex items-center justify-center rounded-[4px] border transition-all text-[11px] font-bold tracking-wide mr-1 ${
+            aiMode
+              ? 'border-[#00BFA5] bg-[#00BFA515] text-[#00BFA5] shadow-[0_0_8px_rgba(0,191,165,0.15)]'
+              : 'border-[#2A2E39] text-[#787B86] hover:bg-[#2A2E3960] hover:text-[#D1D4DC]'
+          }`}
+        >
+          AI MODE
+        </button>
+
         {/* ML Status HUD & Monitor */}
         <div className="flex items-center gap-1">
-          <MLStatusHUD onToggle={onToggleML} />
+          <MLStatusHUD />
           <MLTrainingMonitor />
         </div>
 
