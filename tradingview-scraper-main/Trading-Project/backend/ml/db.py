@@ -166,7 +166,7 @@ def get_labels_for_boxes(box_ids: list) -> dict:
     placeholders = ",".join("?" * len(box_ids))
     with _conn() as conn:
         rows = conn.execute(f"""
-            SELECT box_id, label, created_at
+            SELECT box_id, label, comment, created_at
             FROM labels
             WHERE box_id IN ({placeholders})
             ORDER BY created_at DESC
@@ -177,7 +177,7 @@ def get_labels_for_boxes(box_ids: list) -> dict:
     for row in rows:
         bid = row["box_id"]
         if bid not in result:
-            result[bid] = row["label"]
+            result[bid] = {"label": row["label"], "comment": row["comment"]}
     # Fill missing
     for bid in box_ids:
         if bid not in result:

@@ -21,7 +21,17 @@ from ml.features import FEATURE_VERSION
 
 logger = logging.getLogger(__name__)
 
-RETRAIN_EVERY_N = 500
+INITIAL_RETRAIN_N = 50
+SUBSEQUENT_RETRAIN_N = 50
+
+def get_retrain_threshold() -> int:
+    try:
+        total = ml_db.count_all_labels()
+        if total < INITIAL_RETRAIN_N:
+            return INITIAL_RETRAIN_N
+        return SUBSEQUENT_RETRAIN_N
+    except Exception:
+        return SUBSEQUENT_RETRAIN_N
 
 # ── Globals ───────────────────────────────────────────────────────────────────
 
@@ -105,7 +115,8 @@ def maybe_trigger_retrain() -> None:
     Non-blocking. Called after every new label.
     Uses lock.locked() to avoid duplicate jobs.
     """
-    if ml_db.count_unconsumed() < RETRAIN_EVERY_N:
+    threshold = get_retrain_threshold()
+    if ml_db.count_unconsumed() < threshold:
         return
     if _train_lock.locked():
         logger.info("[trainer] Training already in progress — skip duplicate trigger")
@@ -150,8 +161,9 @@ def _run_training(force: bool = False) -> None:
 
     # ── 1. Load unconsumed labels ─────────────────────────────────────────────
     raw_labels = ml_db.get_unconsumed_labels()
-    if not force and len(raw_labels) < RETRAIN_EVERY_N:
-        _log_msg(f"[trainer] Unconsumed count {len(raw_labels)} < {RETRAIN_EVERY_N} — abort")
+    threshold = get_retrain_threshold()
+    if not force and len(raw_labels) < threshold:
+        _log_msg(f"[trainer] Unconsumed count {len(raw_labels)} < {threshold} — abort")
         return
 
     # ── 2. Join with feature store, skip mismatches ───────────────────────────
@@ -324,7 +336,7 @@ def _run_training(force: bool = False) -> None:
     except Exception as e:
         _log_msg(f"[trainer] Failed exporting data: {e}")
 
-    # Consume labels unconditionally so the counter resets to 500 needed for next run
+    # Consume labels unconditionally so the counter resets
     label_ids = [r["id"] for r, _ in rows_deduped]
     ml_db.mark_consumed(label_ids)
     _log_msg(f"[trainer] Marked {len(label_ids)} labels as consumed (Counter reset)")

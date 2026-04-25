@@ -995,7 +995,10 @@ def get_consolidations_all():
             for z in all_zones:
                 bid = z["box_id"]
                 z["score"] = scores_map.get(bid, _ml_scorer.FALLBACK)
-                z["label"] = labels_map.get(bid)
+                lbl_obj = labels_map.get(bid)
+                if lbl_obj:
+                    z["label"] = lbl_obj["label"]
+                    z["comment"] = lbl_obj["comment"]
         except Exception as _enrich_exc:
             logger.warning("ML enrichment failed (non-fatal): %s", _enrich_exc)
 

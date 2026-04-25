@@ -207,11 +207,12 @@ def label_box(payload: LabelPayload):
     trainer.maybe_trigger_retrain()
 
     unconsumed = ml_db.count_unconsumed()
+    threshold = trainer.get_retrain_threshold()
     return {
         "success":              True,
         "label_id":             label_id,
         "unconsumed_count":     unconsumed,
-        "labels_until_retrain": max(0, trainer.RETRAIN_EVERY_N - unconsumed),
+        "labels_until_retrain": max(0, threshold - unconsumed),
     }
 
 
@@ -275,6 +276,7 @@ def get_status():
     unconsumed  = ml_db.count_unconsumed()
     total       = ml_db.count_all_labels()
     by_class    = ml_db.count_labels_by_class()
+    threshold   = trainer.get_retrain_threshold()
 
     return {
         "model_version":        checkpoint["version"] if checkpoint else None,
@@ -283,7 +285,7 @@ def get_status():
         "labels_collected":     total,
         "labels_by_class":      by_class,
         "unconsumed_count":     unconsumed,
-        "labels_until_retrain": max(0, trainer.RETRAIN_EVERY_N - unconsumed),
+        "labels_until_retrain": max(0, threshold - unconsumed),
         "precision_good":       checkpoint["precision_good"] if checkpoint else None,
         "recall_good":          checkpoint["recall_good"] if checkpoint else None,
         "support_good":         checkpoint["support_good"] if checkpoint else None,

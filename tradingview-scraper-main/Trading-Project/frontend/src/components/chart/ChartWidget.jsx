@@ -247,8 +247,9 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const [activeLabelZone, setActiveLabelZone] = useState(null);
   const [hoveredBoxId, setHoveredBoxId] = useState(null);
   // Store zone data keyed by box_id for overlay rendering
-  const zoneMapRef = useRef({});
   const activeBoxesRef = useRef([]);
+
+
 
 
   useImperativeHandle(ref, () => ({
@@ -496,6 +497,16 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const [consolidations, setConsolidations] = useState([]);
   const [swingLevels, setSwingLevels]       = useState([]);
 
+  const globalZoneMap = React.useMemo(() => {
+    const map = {};
+    if (chartData && consolidations) {
+      consolidations.forEach(z => { 
+        if (z.box_id) map[z.box_id] = z; 
+      });
+    }
+    return map;
+  }, [consolidations, chartData]);
+
   useEffect(() => {
     let iv;
     const poll = async () => {
@@ -619,25 +630,39 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       const points = candles.slice(lo, hi).map(c => c.time);
       if (points.length < 2) return;
 
-      if (zone.box_id) zoneMapRef.current[zone.box_id] = zone;
+      if (points.length < 2) return;
 
       const hasLabel  = zone.label != null;
       const score     = zone.score || {};
       const isFb      = score.is_fallback !== false;
       const pGood     = !isFb ? ((score.probabilities?.good || 0) + (score.probabilities?.very_good || 0)) : null;
 
-      let borderColor, fillColor;
+      let borderColor, fillColor, isDashed = false;
+      let aiLabel = null;
+
+      if (!isFb && score.probabilities) {
+        const p = score.probabilities;
+        const maxScore = Math.max(p.very_good || 0, p.good || 0, p.bad || 0, p.very_bad || 0);
+        if (maxScore === p.very_good) aiLabel = 'very_good';
+        else if (maxScore === p.good) aiLabel = 'good';
+        else if (maxScore === p.bad) aiLabel = 'bad';
+        else aiLabel = 'very_bad';
+        
+        // Save the argmax label back into score for LabelDialog to consume easily
+        score.aiLabel = aiLabel;
+      }
+
       if (hasLabel) {
         if (zone.label === 'very_good') { borderColor = 'rgba(0,191,165,0.85)';  fillColor = 'rgba(0,191,165,0.12)'; }
         else if (zone.label === 'good') { borderColor = 'rgba(38,166,154,0.85)'; fillColor = 'rgba(38,166,154,0.12)'; }
         else if (zone.label === 'bad')  { borderColor = 'rgba(239,83,80,0.85)';  fillColor = 'rgba(239,83,80,0.12)'; }
         else                            { borderColor = 'rgba(211,47,47,0.85)';  fillColor = 'rgba(211,47,47,0.12)'; }
-      } else if (!isFb && pGood != null) {
-        const r = Math.round(239 - pGood * (239 - 38));
-        const g = Math.round(83  + pGood * (166 - 83));
-        const b = Math.round(80  + pGood * (154 - 80));
-        borderColor = `rgba(${r},${g},${b},0.85)`;
-        fillColor   = `rgba(${r},${g},${b},0.10)`;
+      } else if (aiLabel) {
+        isDashed = true;
+        if (aiLabel === 'very_good') { borderColor = 'rgba(0,191,165,0.85)';  fillColor = 'rgba(0,191,165,0.12)'; }
+        else if (aiLabel === 'good') { borderColor = 'rgba(38,166,154,0.85)'; fillColor = 'rgba(38,166,154,0.12)'; }
+        else if (aiLabel === 'bad')  { borderColor = 'rgba(239,83,80,0.85)';  fillColor = 'rgba(239,83,80,0.12)'; }
+        else                         { borderColor = 'rgba(211,47,47,0.85)';  fillColor = 'rgba(211,47,47,0.12)'; }
       } else {
         borderColor = 'rgba(144, 202, 249, 0.85)';
         fillColor   = 'rgba(144, 202, 249, 0.15)';
@@ -653,6 +678,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         priceLow: zone.priceLow,
         borderColor,
         fillColor,
+        isDashed,
         s1, s2
       };
 
@@ -1050,7 +1076,12 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
               className="absolute top-0 left-0 transition-opacity duration-200 opacity-60 hover:opacity-100 focus-within:opacity-100"
               style={{ display: 'none', pointerEvents: 'auto', transformOrigin: 'bottom center' }}
             >
-              <LabelDialog zone={zoneMapRef.current[zone.box_id] || zone} />
+              <LabelDialog 
+                zone={globalZoneMap[zone.box_id] || zone} 
+                onLabeled={({ comment, label }) => {
+                  // No-op for now, the UI will sync naturally when API polls
+                }}
+              />
             </div>
           );
         })}

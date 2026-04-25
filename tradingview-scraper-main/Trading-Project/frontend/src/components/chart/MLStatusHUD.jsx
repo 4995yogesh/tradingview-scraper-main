@@ -20,13 +20,13 @@ export default function MLStatusHUD({ onToggle }) {
 
   const cold   = !status || status.cold_start;
   const ver    = status?.model_version ?? null;
-  const until  = status?.labels_until_retrain ?? 500;
+  const until  = status?.labels_until_retrain ?? 50;
   const total  = status?.labels_collected ?? 0;
   const prec   = status?.precision_good;
 
   // Progress bar fill — towards next retrain
   const unconsumed = status?.unconsumed_count ?? 0;
-  const fillPct    = Math.min(100, (unconsumed / 100) * 100);
+  const fillPct    = Math.min(100, (unconsumed / 50) * 100);
 
   const goodCnt = (status?.labels_by_class?.very_good || 0) + (status?.labels_by_class?.good || 0);
   const badCnt  = (status?.labels_by_class?.very_bad || 0) + (status?.labels_by_class?.bad || 0);
@@ -50,7 +50,7 @@ export default function MLStatusHUD({ onToggle }) {
         </span>
       ) : (
         <span className="text-[10px] font-medium whitespace-nowrap">
-          {ver} · {unconsumed}/100 (<span className="text-[#00BFA5]">{goodCnt}</span>/<span className="text-[#EF5350]">{badCnt}</span>)
+          {ver} · {unconsumed}/50 (<span className="text-[#00BFA5]">{goodCnt}</span>/<span className="text-[#EF5350]">{badCnt}</span>)
           {prec != null && ` · P✓${(prec * 100).toFixed(0)}%`}
         </span>
       )}

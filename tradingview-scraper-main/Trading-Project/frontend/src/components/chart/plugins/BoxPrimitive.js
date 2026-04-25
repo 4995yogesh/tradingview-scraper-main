@@ -89,6 +89,12 @@ class ConsolidationBoxesPaneRenderer {
           ctx.strokeStyle = box.borderColor;
           ctx.lineWidth = 1 * vRatio;
           
+          if (box.isDashed) {
+            ctx.setLineDash([5 * hRatio, 5 * hRatio]);
+          } else {
+            ctx.setLineDash([]);
+          }
+          
           // Top Line
           ctx.moveTo(left, top);
           ctx.lineTo(right, top);
@@ -97,6 +103,7 @@ class ConsolidationBoxesPaneRenderer {
           ctx.moveTo(left, bottom);
           ctx.lineTo(right, bottom);
           ctx.stroke();
+          ctx.setLineDash([]); // Reset
         }
       }
     });
