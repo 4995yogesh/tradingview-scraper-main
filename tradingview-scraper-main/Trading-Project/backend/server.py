@@ -76,9 +76,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 
-def _compute_box_id(symbol: str, zone: dict) -> str:
-    """sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars. 
-    Stable for live boxes that expand."""
+def _compute_box_id_long(symbol: str, zone: dict) -> str:
+    """sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars."""
     key = (
         f"{symbol}:{zone['timeframe']}:"
         f"{zone.get('timeStart', zone.get('time_start_ms'))}:"
@@ -86,6 +85,11 @@ def _compute_box_id(symbol: str, zone: dict) -> str:
         f"{float(zone.get('priceHigh', zone.get('price_high') or 0)):.5f}:"
         f"{float(zone.get('priceLow', zone.get('price_low') or 0)):.5f}"
     )
+    return hashlib.sha256(key.encode()).hexdigest()[:16]
+
+def _compute_box_id_short(symbol: str, zone: dict) -> str:
+    """sha256(symbol:tf:tStart) → first 16 hex chars."""
+    key = f"{symbol}:{zone['timeframe']}:{zone.get('timeStart', zone.get('time_start_ms'))}"
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -1018,23 +1022,41 @@ def get_consolidations_all():
                 if eb["box_id"] not in existing_ids:
                     all_zones.append(eb)
 
-            # 2. Re-calculate box_ids for any new live zones (if needed) and attach symbol
-            for ex, sym in PERSISTENT_SYMBOLS:
-                for z in all_zones:
-                    if "box_id" not in z:
-                        z["symbol"] = sym
-                        z["box_id"] = _compute_box_id(sym, z)
+            # 2. Assign primary box_id and identify potential legacy matches
+            for z in all_zones:
+                sym = z.get("symbol", "EURUSD")
+                z["box_id_long"] = _compute_box_id_long(sym, z)
+                z["box_id_short"] = _compute_box_id_short(sym, z)
+                if "box_id" not in z:
+                    z["box_id"] = z["box_id_long"] # Default to long
 
-            box_ids = [z["box_id"] for z in all_zones]
-
-            # 3. Batch score and fetch labels
-            scores_map = _ml_scorer.batch_score(box_ids)
-            labels_map = _ml_db.get_labels_for_boxes(box_ids)
+            # Collect ALL possible IDs to check in DB
+            all_possible_ids = []
+            for z in all_zones:
+                all_possible_ids.extend([z["box_id_long"], z["box_id_short"]])
+            
+            scores_map = _ml_scorer.batch_score(all_possible_ids)
+            labels_map = _ml_db.get_labels_for_boxes(all_possible_ids)
 
             for z in all_zones:
-                bid = z["box_id"]
-                z["score"] = scores_map.get(bid, _ml_scorer.FALLBACK)
-                lbl_obj = labels_map.get(bid)
+                # Prioritize Long ID for richness, but switch to Short if label exists there
+                # Also check scores for both
+                bL = z["box_id_long"]
+                bS = z["box_id_short"]
+                
+                # Winner selection: prioritize human label
+                winner_id = bL # default
+                lbl_obj = labels_map.get(bL)
+                if not lbl_obj:
+                    # Fallback to legacy short ID
+                    lbl_obj = labels_map.get(bS)
+                    if lbl_obj:
+                        winner_id = bS
+                
+                # If we found a label (new or legacy), use THAT ID for the chart link
+                z["box_id"] = winner_id
+                z["score"] = scores_map.get(winner_id, _ml_scorer.FALLBACK)
+                
                 if lbl_obj:
                     z["label"] = lbl_obj["label"]
                     z["comment"] = lbl_obj["comment"]
