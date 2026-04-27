@@ -11,19 +11,148 @@ function formatDt(dtStr, timeStartMs) {
   return `${ist.getUTCFullYear()}-${pad(ist.getUTCMonth()+1)}-${pad(ist.getUTCDate())} ${pad(ist.getUTCHours())}:${pad(ist.getUTCMinutes())} IST`;
 }
 
+const ErrorBoxRow = ({ box, type, onSaved }) => {
+  const [isExpanding, setIsExpanding] = useState(false);
+  const [lesson, setLesson] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const handleSaveLesson = async (e) => {
+    e.stopPropagation();
+    if (!lesson.trim()) return;
+    setIsSaving(true);
+    try {
+      const payload = {
+        box_id: box.box_id,
+        label: box.true_label,
+        zone: {
+          exchange: box.exchange || 'OANDA',
+          symbol: box.symbol || 'EURUSD',
+          timeframe: box.timeframe || '',
+          timeStart: Math.round(Number(box.time_start_ms) || 0),
+          timeEnd: Math.round(Number(box.time_end_ms) || 0),
+          priceHigh: Number(box.price_high) || 0,
+          priceLow: Number(box.price_low) || 0
+        },
+        lesson: lesson.trim()
+      };
+      
+      console.log('ML Label submitting payload:', payload);
+
+      const res = await fetch(`${API}/label`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        console.log('ML Label saved successfully:', box.box_id);
+        setLesson('');
+        setIsExpanding(false);
+        setIsSuccess(true);
+        if (onSaved) onSaved();
+        setTimeout(() => setIsSuccess(false), 2000);
+      } else {
+        let errText = '';
+        try { errText = await res.text(); } catch (e) { errText = '(body unavailable)'; }
+        console.error('ML Label save failed:', res.status, errText);
+        alert(`Save failed (Status ${res.status}): ${errText}`);
+      }
+    } catch (err) {
+      console.error('ML Label save fetch error:', err);
+      alert(`Save error: ${err.message}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div
+      className="flex flex-col gap-0.5 px-2 py-1.5 rounded bg-[#131722] border border-[#2A2E39] hover:border-[#363A45] cursor-pointer group transition-colors"
+      onClick={() => {
+        window.dispatchEvent(new CustomEvent('ml-goto-box', { detail: box }));
+      }}
+      title={`Click to navigate chart and highlight this box`}
+    >
+      <div className="flex items-center justify-between">
+        <span className={`text-[9px] font-bold uppercase px-1 rounded ${
+          type === 'fp'
+            ? 'bg-[#EF535020] text-[#EF5350]'
+            : 'bg-[#FFA72620] text-[#FFA726]'
+        }`}>
+          {type === 'fp' ? 'FP' : 'FN'}
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] text-[#787B86] font-mono">{box.timeframe?.toUpperCase()}</span>
+          {isSuccess && (
+            <span className="text-[9px] text-[#26A69A] font-bold">
+              Saved!
+            </span>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsExpanding(!isExpanding); }}
+            className="text-[9px] bg-[#2962FF20] text-[#2962FF] px-1.5 rounded hover:bg-[#2962FF40] transition-colors"
+          >
+            Lesson
+          </button>
+        </div>
+      </div>
+      <div className="flex items-center gap-1 text-[9px] font-mono text-[#D1D4DC]">
+        <Search size={8} className="text-[#2962FF] shrink-0 group-hover:scale-110 transition-transform" />
+        {formatDt(box.datetime, box.time_start_ms)}
+      </div>
+      <div className="flex items-center justify-between text-[9px] font-mono text-[#787B86]">
+        <span>True: <span className="text-[#26A69A]">{box.true_label}</span></span>
+        <span>Pred: <span className="text-[#EF5350]">{box.pred_label}</span></span>
+      </div>
+      
+      {isExpanding && (
+        <div className="mt-2 flex flex-col gap-1.5" onClick={e => e.stopPropagation()}>
+          <textarea
+            className="w-full bg-[#1e222d] border border-[#363a45] rounded p-1.5 text-[10px] text-[#D1D4DC] focus:outline-none focus:border-[#2962FF] min-h-[50px] resize-none font-mono"
+            placeholder="Why was this a mistake? (e.g. Too big, during news...)"
+            value={lesson}
+            onChange={e => setLesson(e.target.value)}
+            autoFocus
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setIsExpanding(false)}
+              className="text-[9px] text-[#787B86] hover:text-[#D1D4DC]"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveLesson}
+              disabled={isSaving || !lesson.trim()}
+              className="bg-[#2962FF] text-white px-2 py-0.5 rounded text-[9px] hover:bg-[#1E88E5] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSaving ? 'Saving...' : 'Save Lesson'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="text-[8px] font-mono text-[#4A4E59]">
+        H:{Number(box.price_high).toFixed(5)} L:{Number(box.price_low).toFixed(5)}
+      </div>
+    </div>
+  );
+};
+
 export default function MLTrainingMonitor() {
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState(null);
   const [tab, setTab] = useState('logs'); // 'logs' | 'fp' | 'fn'
   const logsEndRef = useRef(null);
 
+  const fetchProgress = async () => {
+    try {
+      const res = await fetch(`${API}/training_progress`);
+      if (res.ok) setData(await res.json());
+    } catch (e) { }
+  };
+
   useEffect(() => {
-    const fetchProgress = async () => {
-      try {
-        const res = await fetch(`${API}/training_progress`);
-        if (res.ok) setData(await res.json());
-      } catch (e) { }
-    };
     fetchProgress();
     const iv = setInterval(fetchProgress, 1000);
     return () => clearInterval(iv);
@@ -38,39 +167,6 @@ export default function MLTrainingMonitor() {
   const isTraining = data?.is_training;
   const fp = data?.error_boxes?.fp || [];
   const fn = data?.error_boxes?.fn || [];
-
-  const ErrorBoxRow = ({ box, type }) => (
-    <div
-      className="flex flex-col gap-0.5 px-2 py-1.5 rounded bg-[#131722] border border-[#2A2E39] hover:border-[#363A45] cursor-pointer group transition-colors"
-      onClick={() => {
-        // Post a custom event so ChartWidgets can scroll to this box
-        window.dispatchEvent(new CustomEvent('ml-goto-box', { detail: box }));
-      }}
-      title={`Click to navigate chart to this box`}
-    >
-      <div className="flex items-center justify-between">
-        <span className={`text-[9px] font-bold uppercase px-1 rounded ${
-          type === 'fp'
-            ? 'bg-[#EF535020] text-[#EF5350]'
-            : 'bg-[#FFA72620] text-[#FFA726]'
-        }`}>
-          {type === 'fp' ? 'FP' : 'FN'}
-        </span>
-        <span className="text-[9px] text-[#787B86] font-mono">{box.timeframe?.toUpperCase()}</span>
-      </div>
-      <div className="flex items-center gap-1 text-[9px] font-mono text-[#D1D4DC]">
-        <Search size={8} className="text-[#2962FF] shrink-0 group-hover:scale-110 transition-transform" />
-        {formatDt(box.datetime, box.time_start_ms)}
-      </div>
-      <div className="flex items-center justify-between text-[9px] font-mono text-[#787B86]">
-        <span>True: <span className="text-[#26A69A]">{box.true_label}</span></span>
-        <span>Pred: <span className="text-[#EF5350]">{box.pred_label}</span></span>
-      </div>
-      <div className="text-[8px] font-mono text-[#4A4E59]">
-        H:{Number(box.price_high).toFixed(5)} L:{Number(box.price_low).toFixed(5)}
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -211,7 +307,7 @@ export default function MLTrainingMonitor() {
                 </div>
               )}
               {(tab === 'fp' ? fp : fn).map((box, i) => (
-                <ErrorBoxRow key={i} box={box} type={tab} />
+                <ErrorBoxRow key={box.box_id || i} box={box} type={tab} onSaved={fetchProgress} />
               ))}
             </div>
           )}

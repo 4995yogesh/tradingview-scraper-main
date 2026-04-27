@@ -121,7 +121,9 @@ export default function MLPanel({ open, onClose, onLabeled }) {
           return (
             <div
               key={box.box_id || idx}
-              className={`px-3 py-2.5 border-b border-[#2A2E39] transition-all ${
+              onClick={() => window.dispatchEvent(new CustomEvent('ml-goto-box', { detail: box }))}
+              title="Click to navigate chart to this box"
+              className={`px-3 py-2.5 border-b border-[#2A2E39] transition-all cursor-pointer hover:bg-[#2A2E3940] ${
                 isDone ? 'opacity-40' : ''
               }`}
             >

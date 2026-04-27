@@ -87,22 +87,37 @@ class ConsolidationBoxesPaneRenderer {
         if (box.borderColor) {
           ctx.beginPath();
           ctx.strokeStyle = box.borderColor;
-          ctx.lineWidth = 1 * vRatio;
+          ctx.lineWidth = (box.highlighted ? 4 : 1) * vRatio;
           
-          if (box.isDashed) {
+          if (box.isDashed && !box.highlighted) {
             ctx.setLineDash([5 * hRatio, 5 * hRatio]);
           } else {
             ctx.setLineDash([]);
           }
           
-          // Top Line
-          ctx.moveTo(left, top);
-          ctx.lineTo(right, top);
-          
-          // Bottom Line
-          ctx.moveTo(left, bottom);
-          ctx.lineTo(right, bottom);
-          ctx.stroke();
+          // If highlighted, draw full rectangle and thick yellow glow
+          if (box.highlighted) {
+            ctx.shadowBlur = 20 * hRatio;
+            ctx.shadowColor = '#FFEB3B'; // Bright Yellow Glow
+            ctx.strokeStyle = box.borderColor; // Keep label color
+            ctx.strokeRect(left, top, w, h);
+            
+            // Inner stroke for extra definition
+            ctx.lineWidth = 1 * vRatio;
+            ctx.strokeStyle = '#FFFFFF'; // White inner edge
+            ctx.strokeRect(left, top, w, h);
+            
+            ctx.shadowBlur = 0; // reset
+          } else {
+            // Top Line
+            ctx.moveTo(left, top);
+            ctx.lineTo(right, top);
+            
+            // Bottom Line
+            ctx.moveTo(left, bottom);
+            ctx.lineTo(right, bottom);
+            ctx.stroke();
+          }
           ctx.setLineDash([]); // Reset
         }
       }

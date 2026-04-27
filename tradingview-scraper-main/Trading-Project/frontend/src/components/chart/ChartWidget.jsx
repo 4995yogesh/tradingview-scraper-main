@@ -247,6 +247,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   // ML label dialog state
   const [activeLabelZone, setActiveLabelZone] = useState(null);
   const [hoveredBoxId, setHoveredBoxId] = useState(null);
+  const [specialHighlightedBox, setSpecialHighlightedBox] = useState(null);
+  const [highlightedBoxId, setHighlightedBoxId] = useState(null);
   // Store zone data keyed by box_id for overlay rendering
   const activeBoxesRef = useRef([]);
 
@@ -349,21 +351,52 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   useEffect(() => {
     const handleGotoBox = (e) => {
       const box = e.detail;
-      if (!box || !box.time_start_ms) return;
+      const startMs = box.time_start_ms || box.timeStart;
+      if (!box || !startMs) return;
+
+      // Auto-switch timeframe if needed (requires parent to handle ml-change-timeframe)
+      if (box.timeframe && box.timeframe.toLowerCase() !== timeframe.toLowerCase()) {
+        console.log(`[ML/Nav] Timeframe mismatch: box=${box.timeframe} vs chart=${timeframe}. Switching...`);
+        window.dispatchEvent(new CustomEvent('ml-change-timeframe', { 
+          detail: { 
+            timeframe: box.timeframe,
+            originalEvent: box 
+          } 
+        }));
+        return;
+      }
+      console.log(`[ML/Nav] Scrolling to box ${box.box_id} on ${timeframe}`);
+
       const chart = chartRef.current;
       const candles = chartDataRef.current?.candleData;
       if (!chart || !candles?.length) return;
 
-      const targetUnix = Math.floor(box.time_start_ms / 1000);
+      // Set highlights
+      setHighlightedBoxId(box.box_id);
+      setSpecialHighlightedBox(box); // Keep full meta for drawing if data hasn't arrived
+      setTimeout(() => {
+        setHighlightedBoxId(null);
+        setSpecialHighlightedBox(null);
+      }, 8000); // 8s visibility
+
+      const targetUnix = Math.floor(startMs / 1000);
       const getUnix = (t) => typeof t === 'string' ? new Date(t + (t.length === 10 ? 'T00:00:00Z' : '')).getTime() / 1000 : Number(t);
 
-      // Find nearest candle to target
-      let nearestIdx = 0;
+      // Find nearest candle in current cache
+      let nearestIdx = -1;
       let minDiff = Infinity;
       candles.forEach((c, i) => {
         const diff = Math.abs(getUnix(c.time) - targetUnix);
         if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
       });
+
+      // If nearest is more than 1 day away, assume it's out of current cache range
+      const daySecs = 86400;
+      if (nearestIdx === -1 || minDiff > daySecs) {
+          // Out of range? Just scroll to extreme left and let indicators catch up
+          chart.timeScale().scrollToPosition(-100000, true);
+          return;
+      }
 
       // Center view: show ~80 candles around the target
       const half = 40;
@@ -380,7 +413,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     window.addEventListener('ml-goto-box', handleGotoBox);
     return () => window.removeEventListener('ml-goto-box', handleGotoBox);
-  }, []);  // no deps — reads refs directly
+  }, [timeframe]);  // FIXED: Need timeframe in deps to avoid stale closure during auto-switch retry
 
   // Structural Initialization of HTML Canvas ONLY
   const initChart = useCallback(() => {
@@ -719,6 +752,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         borderColor,
         fillColor,
         isDashed,
+        highlighted: zone.box_id === highlightedBoxId,
         s1, s2
       };
 
@@ -767,9 +801,28 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       const finalHtf  = limitTarget(rawParsedZonesRef.current.htf, 30);
       const finalSet = [...finalCurr, ...finalHtf];
 
-      consolidationPrimitiveRef.current.setData(finalSet);
+      const withHighlights = finalSet.map(b => ({
+        ...b,
+        highlighted: b.box_id === highlightedBoxId
+      }));
       
-      const nextActive = finalSet.filter(b => b.box_id);
+      // If we have a special highlight from Monitor, ensure it's in the list even if not from server
+      if (specialHighlightedBox && !withHighlights.some(b => b.box_id === specialHighlightedBox.box_id)) {
+          withHighlights.push({
+              ...specialHighlightedBox,
+              t1: specialHighlightedBox.time_start_ms / 1000,
+              t2: specialHighlightedBox.time_end_ms / 1000,
+              priceHigh: specialHighlightedBox.price_high,
+              priceLow: specialHighlightedBox.price_low,
+              borderColor: '#2962FF',
+              fillColor: '#2962FF10',
+              highlighted: true
+          });
+      }
+
+      consolidationPrimitiveRef.current.setData(withHighlights);
+      
+      const nextActive = withHighlights.filter(b => b.box_id);
       activeBoxesRef.current = nextActive;
       
       // Update DOM components strictly only when the identity of active boxes changes
@@ -791,7 +844,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       activeBoxesRef.current = [];
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consolidations, timeframe, chartKey, consolidationSettings?.enabled, consolidationSettings?.settings?.showHTF]);
+  }, [consolidations, timeframe, chartKey, consolidationSettings?.enabled, consolidationSettings?.settings?.showHTF, highlightedBoxId, specialHighlightedBox]);
 
   // ── AI Mode: Separate overlay (does NOT interfere with indicator boxes) ──────
   useEffect(() => {
@@ -1217,13 +1270,17 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
             <div 
               key={zone.box_id} 
               id={`mlbox-${zone.box_id}`}
-              className="absolute top-0 left-0 transition-opacity duration-200 opacity-60 hover:opacity-100 focus-within:opacity-100"
+              className={`absolute top-0 left-0 transition-opacity duration-200 ${zone.highlighted ? 'opacity-100' : 'opacity-60'} hover:opacity-100 focus-within:opacity-100`}
               style={{ display: 'none', pointerEvents: 'auto', transformOrigin: 'bottom center' }}
             >
               <LabelDialog 
                 zone={globalZoneMap[zone.box_id] || zone} 
-                onLabeled={({ comment, label }) => {
-                  // No-op for now, the UI will sync naturally when API polls
+                onLabeled={({ label, comment }) => {
+                  setConsolidations(prev => prev.map(z => 
+                    z.box_id === zone.box_id 
+                      ? { ...z, label, comment } 
+                      : z
+                  ));
                 }}
               />
             </div>

@@ -42,6 +42,7 @@ class LabelPayload(BaseModel):
     label:   str
     zone:    ZoneMeta
     comment: Optional[str] = None
+    lesson:  Optional[str] = None
 
     @validator("label")
     def label_valid(cls, v):
@@ -53,9 +54,15 @@ class LabelPayload(BaseModel):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def compute_box_id(symbol: str, zone: dict) -> str:
-    """sha256(symbol:tf:tStart) → first 16 hex chars. 
+    """sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars. 
     Stable for live boxes that expand."""
-    key = f"{symbol}:{zone['timeframe']}:{zone['timeStart']}"
+    key = (
+        f"{symbol}:{zone['timeframe']}:"
+        f"{zone.get('timeStart', zone.get('time_start_ms'))}:"
+        f"{zone.get('timeEnd', zone.get('time_end_ms'))}:"
+        f"{float(zone.get('priceHigh', zone.get('price_high') or 0)):.5f}:"
+        f"{float(zone.get('priceLow', zone.get('price_low') or 0)):.5f}"
+    )
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
@@ -173,11 +180,38 @@ def label_box(payload: LabelPayload):
         label=payload.label,
         zone_meta=zone_meta,
         comment=payload.comment,
+        lesson=payload.lesson,
         feature_ver=FEATURE_VERSION,
         model_version_used=scorer.get_model_version(),
     )
     logger.info("[ml/label] Saved label '%s' for box %s (id=%d)",
                 payload.label, payload.box_id, label_id)
+
+    # Invalidate consolidations cache so the chart updates immediately
+    try:
+        from server import clear_consolidations_cache
+        clear_consolidations_cache()
+    except Exception:
+        pass
+
+    # If this box was in the FP/FN tracking list, remove it now that feedback is given
+    try:
+        from ml import db as _db
+        from ml import trainer as _trainer
+        before_fp = len(_trainer.TRAINING_STATE["error_boxes"]["fp"])
+        before_fn = len(_trainer.TRAINING_STATE["error_boxes"]["fn"])
+        
+        _db.clear_error_box(payload.box_id)
+        # Update in-memory state
+        _trainer.TRAINING_STATE["error_boxes"]["fp"] = [b for b in _trainer.TRAINING_STATE["error_boxes"]["fp"] if b["box_id"] != payload.box_id]
+        _trainer.TRAINING_STATE["error_boxes"]["fn"] = [b for b in _trainer.TRAINING_STATE["error_boxes"]["fn"] if b["box_id"] != payload.box_id]
+        
+        after_fp = len(_trainer.TRAINING_STATE["error_boxes"]["fp"])
+        after_fn = len(_trainer.TRAINING_STATE["error_boxes"]["fn"])
+        logger.info("[ml/label] Tracking removal: FP %d->%d, FN %d->%d for box %s", 
+                    before_fp, after_fp, before_fn, after_fn, payload.box_id)
+    except Exception as e:
+        logger.warning("[ml/label] Failed to clear error box tracing: %s", e)
 
     # Feature backfill (immediate, non-blocking since it's fast)
     _backfill_features(payload.zone, payload.box_id)

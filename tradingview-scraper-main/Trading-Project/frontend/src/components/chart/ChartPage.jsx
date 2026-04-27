@@ -247,6 +247,34 @@ const ChartPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updatePane, setTimeframe]);
 
+  const lastTfSwitchRef = useRef(0);
+  // ── ML auto-timeframe switch listener ──────────────────────────────────────
+  useEffect(() => {
+    const handleTfSwitch = (e) => {
+      let { timeframe: targetTf, originalEvent } = e.detail;
+      if (!targetTf) return;
+      targetTf = targetTf.toLowerCase();
+      
+      const now = Date.now();
+      if (now - lastTfSwitchRef.current < 2000) return; // Cooldown 2s
+      lastTfSwitchRef.current = now;
+      
+      console.log(`[App] Switching TF to ${targetTf} for ML Nav...`);
+      // Update global and pane 0 timeframe
+      setTimeframe(targetTf);
+      updatePane(0, 'timeframe', targetTf);
+      
+      // Re-trigger the goto event after the chart has had a moment to switch
+      setTimeout(() => {
+        console.log(`[App] Retrying ML Nav for ${originalEvent.box_id}...`);
+        window.dispatchEvent(new CustomEvent('ml-goto-box', { detail: originalEvent }));
+      }, 1200);
+    };
+
+    window.addEventListener('ml-change-timeframe', handleTfSwitch);
+    return () => window.removeEventListener('ml-change-timeframe', handleTfSwitch);
+  }, [setTimeframe, updatePane]);
+
   const PaneMiniToolbar = ({ pane, idx }) => {
     const [showTf, setShowTf] = useState(false);
     const [tfInput, setTfInput] = useState('');

@@ -9,11 +9,33 @@ import sqlite3
 import json
 import os
 import time
+import random
 import logging
 from contextlib import contextmanager
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+def retry_on_lock(retries=5, base_delay=0.1):
+    """Decorator to retry a function if sqlite3.OperationalError: database is locked occurs."""
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            last_exc = None
+            for i in range(retries):
+                try:
+                    return func(*args, **kwargs)
+                except sqlite3.OperationalError as e:
+                    if "locked" in str(e).lower():
+                        last_exc = e
+                        delay = (base_delay * (2 ** i)) + (random.random() * 0.1)
+                        logger.warning(f"[ml.db] Database locked, retrying {i+1}/{retries} in {delay:.2f}s...")
+                        time.sleep(delay)
+                        continue
+                    raise
+            logger.error(f"[ml.db] Database locked after {retries} retries.")
+            raise last_exc
+        return wrapper
+    return decorator
 
 # DB path — prefer env override (used by .exe build), else default to data/ folder
 _DB_PATH = os.environ.get(
@@ -23,6 +45,7 @@ _DB_PATH = os.environ.get(
 
 @contextmanager
 def _conn():
+    # check_same_thread=False is needed for FastAPI/threading; timeout=30 helps but retries are safer
     conn = sqlite3.connect(_DB_PATH, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
@@ -39,6 +62,7 @@ def _conn():
 
 # ── Migrations ────────────────────────────────────────────────────────────────
 
+@retry_on_lock()
 def init_db() -> None:
     """Run all migrations at server startup. Idempotent."""
     os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
@@ -81,6 +105,12 @@ def init_db() -> None:
         except sqlite3.OperationalError:
             pass # already exists
 
+        # Add lesson column if not exists (migration)
+        try:
+            conn.execute("ALTER TABLE labels ADD COLUMN lesson TEXT")
+        except sqlite3.OperationalError:
+            pass # already exists
+
         # Model checkpoints
         conn.execute("""
             CREATE TABLE IF NOT EXISTS model_checkpoints (
@@ -108,27 +138,58 @@ def init_db() -> None:
             )
         """)
 
+        # Error boxes (FP/FN) persistence
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS training_error_boxes (
+                box_id      TEXT PRIMARY KEY,
+                type        TEXT NOT NULL CHECK(type IN ('fp', 'fn')),
+                metadata_json TEXT NOT NULL,
+                created_at  INTEGER NOT NULL
+            )
+        """)
+
     logger.info("[ml.db] init_db() complete — tables ready")
 
 
 # ── Label operations ──────────────────────────────────────────────────────────
 
+@retry_on_lock()
 def save_label(
     box_id: str,
     label: str,
     zone_meta: dict,
     comment: Optional[str] = None,
+    lesson: Optional[str] = None,
     feature_ver: str = "v1",
     model_version_used: Optional[str] = None,
 ) -> int:
-    """Insert a label row. Returns new label id."""
+    """Upsert a label row — relabeling marks all previous rows for this
+    box_id as consumed so they don't inflate the unconsumed/total count.
+    Returns new label id."""
+    
+    # Inherit previous comment/lesson if none provided
+    prev = None
+    if not comment or not lesson:
+        prev = get_latest_label(box_id)
+        if prev:
+            if not comment:
+                comment = prev.get("comment")
+            if not lesson:
+                lesson = prev.get("lesson")
+
     with _conn() as conn:
+        # Mark every previous label row for this box as consumed so
+        # the relabel doesn't count as a brand-new label.
+        conn.execute(
+            "UPDATE labels SET train_consumed=1 WHERE box_id=? AND train_consumed=0",
+            (box_id,)
+        )
         cur = conn.execute("""
             INSERT INTO labels
                 (box_id, exchange, symbol, timeframe,
                  time_start_ms, time_end_ms, price_high, price_low,
-                 label, comment, created_at, feature_ver, model_version_used)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                 label, comment, lesson, created_at, feature_ver, model_version_used)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """, (
             box_id,
             zone_meta.get("exchange", "OANDA"),
@@ -140,6 +201,7 @@ def save_label(
             zone_meta.get("priceLow", 0.0),
             label,
             comment,
+            lesson,
             int(time.time()),
             feature_ver,
             model_version_used,
@@ -166,7 +228,7 @@ def get_labels_for_boxes(box_ids: list) -> dict:
     placeholders = ",".join("?" * len(box_ids))
     with _conn() as conn:
         rows = conn.execute(f"""
-            SELECT box_id, label, comment, created_at
+            SELECT box_id, label, comment, lesson, created_at
             FROM labels
             WHERE box_id IN ({placeholders})
             ORDER BY created_at DESC
@@ -177,7 +239,11 @@ def get_labels_for_boxes(box_ids: list) -> dict:
     for row in rows:
         bid = row["box_id"]
         if bid not in result:
-            result[bid] = {"label": row["label"], "comment": row["comment"]}
+            result[bid] = {
+                "label": row["label"], 
+                "comment": row["comment"],
+                "lesson": row["lesson"]
+            }
     # Fill missing
     for bid in box_ids:
         if bid not in result:
@@ -186,25 +252,34 @@ def get_labels_for_boxes(box_ids: list) -> dict:
 
 
 def count_unconsumed() -> int:
-    """Count labels not yet used in training (train_consumed=0)."""
+    """Count distinct box_ids with at least one unconsumed label row."""
     with _conn() as conn:
         row = conn.execute(
-            "SELECT COUNT(*) as n FROM labels WHERE train_consumed=0"
+            "SELECT COUNT(DISTINCT box_id) as n FROM labels WHERE train_consumed=0"
         ).fetchone()
         return row["n"] if row else 0
 
 
 def count_all_labels() -> int:
+    """Count distinct boxes that have been labeled (relabels don't inflate)."""
     with _conn() as conn:
-        row = conn.execute("SELECT COUNT(*) as n FROM labels").fetchone()
+        row = conn.execute("SELECT COUNT(DISTINCT box_id) as n FROM labels").fetchone()
         return row["n"] if row else 0
 
 
 def count_labels_by_class() -> dict:
+    """Count latest label per distinct box_id only."""
     with _conn() as conn:
-        rows = conn.execute(
-            "SELECT label, COUNT(*) as c FROM labels GROUP BY label"
-        ).fetchall()
+        rows = conn.execute("""
+            SELECT label, COUNT(*) as c FROM (
+                SELECT box_id, label
+                FROM labels l1
+                WHERE created_at = (
+                    SELECT MAX(created_at) FROM labels l2 WHERE l2.box_id = l1.box_id
+                )
+                GROUP BY box_id
+            ) GROUP BY label
+        """).fetchall()
         counts = {"very_good": 0, "good": 0, "bad": 0, "very_bad": 0}
         for r in rows:
             counts[r["label"]] = r["c"]
@@ -246,6 +321,7 @@ def mark_consumed(label_ids: list) -> None:
 
 # ── Feature store ─────────────────────────────────────────────────────────────
 
+@retry_on_lock()
 def save_feature_vec(box_id: str, vec: list, ver: str = "v1") -> None:
     """Upsert feature vector as JSON string."""
     with _conn() as conn:
@@ -281,6 +357,7 @@ def has_feature(box_id: str) -> bool:
 
 # ── Model checkpoints ─────────────────────────────────────────────────────────
 
+@retry_on_lock()
 def save_checkpoint(
     version: str,
     metrics: dict,
@@ -308,6 +385,7 @@ def save_checkpoint(
         ))
 
 
+@retry_on_lock()
 def promote_checkpoint(version: str) -> None:
     """Mark checkpoint as promoted (active model)."""
     with _conn() as conn:
@@ -361,3 +439,39 @@ def save_model_metadata(
         pkl_path=path,
         feature_ver=feature_ver,
     )
+
+
+# ── Error boxes (FP/FN) persistence ──────────────────────────────────────────
+
+@retry_on_lock()
+def save_error_boxes(fp_list: list, fn_list: list) -> None:
+    """Clear and save the latest set of error boxes."""
+    with _conn() as conn:
+        conn.execute("DELETE FROM training_error_boxes")
+        now = int(time.time())
+        for box in fp_list:
+            conn.execute("""
+                INSERT INTO training_error_boxes (box_id, type, metadata_json, created_at)
+                VALUES (?, 'fp', ?, ?)
+            """, (box["box_id"], json.dumps(box), now))
+        for box in fn_list:
+            conn.execute("""
+                INSERT INTO training_error_boxes (box_id, type, metadata_json, created_at)
+                VALUES (?, 'fn', ?, ?)
+            """, (box["box_id"], json.dumps(box), now))
+
+def get_error_boxes() -> dict:
+    """Return dict with 'fp' and 'fn' lists."""
+    with _conn() as conn:
+        rows = conn.execute("SELECT * FROM training_error_boxes").fetchall()
+        res = {"fp": [], "fn": []}
+        for r in rows:
+            res[r["type"]].append(json.loads(r["metadata_json"]))
+        return res
+
+@retry_on_lock()
+def clear_error_box(box_id: str) -> None:
+    """Remove a box from error tracking (usually after feedback)."""
+    with _conn() as conn:
+        conn.execute("DELETE FROM training_error_boxes WHERE box_id = ?", (box_id,))
+

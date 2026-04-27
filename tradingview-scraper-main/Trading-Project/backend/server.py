@@ -77,9 +77,15 @@ logger = logging.getLogger(__name__)
 
 
 def _compute_box_id(symbol: str, zone: dict) -> str:
-    """sha256(symbol:tf:tStart) → first 16 hex chars. 
+    """sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars. 
     Stable for live boxes that expand."""
-    key = f"{symbol}:{zone['timeframe']}:{zone['timeStart']}"
+    key = (
+        f"{symbol}:{zone['timeframe']}:"
+        f"{zone.get('timeStart', zone.get('time_start_ms'))}:"
+        f"{zone.get('timeEnd', zone.get('time_end_ms'))}:"
+        f"{float(zone.get('priceHigh', zone.get('price_high') or 0)):.5f}:"
+        f"{float(zone.get('priceLow', zone.get('price_low') or 0)):.5f}"
+    )
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -145,6 +151,13 @@ def _cache_get(key: str, ttl_s: float = 8.0):
 def _cache_set(key: str, value):
     with _cache_lock:
         _cache_store[key] = (time.time(), value)
+
+def clear_consolidations_cache():
+    """Wipe the consolidations cache to ensure fresh labels are served immediately."""
+    with _cache_lock:
+        if "consolidations" in _cache_store:
+            del _cache_store["consolidations"]
+            logger.info("[cache] Consolidations cache cleared")
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -404,8 +417,8 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
         # Minimum bars to (re-)fetch on every startup to heal internal gaps.
         # e.g. 5m × 300 = 25 h — covers any overnight / weekend hole.
         STARTUP_MIN = {
-            "1m": 500, "5m": 300, "15m": 400,
-            "1h": 300, "4h": 200, "1d": 200, "1w": 100,
+            "1m": 1500, "5m": 800, "15m": 600,
+            "1h": 400, "4h": 250, "1d": 200, "1w": 100,
         }
 
         db_count = candle_db.count(exchange, symbol, timeframe)
@@ -499,12 +512,12 @@ def _get_day_start_ts() -> int:
 
 def _build_htf_from_1m(exchange: str, symbol: str, target_tf: str) -> list:
     """
-    Pull today's 1m closed candles from SQLite (intraday only).
+    Pull 1m closed candles from SQLite for the last 48h.
     Aggregate them into target_tf buckets.
-    Returns a list of synthesized candles for the current trading day.
+    48h window ensures overnight gaps (up to 25h) are covered.
     """
-    day_start = _get_day_start_ts()
-    raw_1m = candle_db.get_candles_since(exchange, symbol, "1m", day_start)
+    since_ts = int(time.time()) - 48 * 3600   # 48h lookback
+    raw_1m = candle_db.get_candles_since(exchange, symbol, "1m", since_ts)
     if not raw_1m:
         return []
 
@@ -512,8 +525,8 @@ def _build_htf_from_1m(exchange: str, symbol: str, target_tf: str) -> list:
     buckets: dict = {}
     for c in raw_1m:
         ts = int(c.get("ts", c.get("timestamp", 0)))
-        if ts < day_start:
-            continue   # strict intraday boundary
+        if ts < since_ts:
+            continue   # skip candles outside 48h window
         bucket_ts = (ts // bucket_secs) * bucket_secs
         if bucket_ts not in buckets:
             buckets[bucket_ts] = {
@@ -609,7 +622,7 @@ def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int
             dynamic_limit = max(limit, int(missing_bars))
         else:
             dynamic_limit = limit
-        dynamic_limit = min(dynamic_limit, 500)
+        dynamic_limit = min(dynamic_limit, 1500)
 
         if dynamic_limit > limit:
             logger.info("[1m-fetch] %s:%s gap=%ds → fetching %d bars",
@@ -710,6 +723,11 @@ async def lifespan(app: FastAPI):
         try:
             _ml_init_db()
             _ml_scorer.load_model()
+            
+            # Restore persistent FP/FN boxes from DB
+            from ml import trainer as _trainer
+            _trainer.reload_error_boxes()
+            
             logger.info("=== ML system initialized ===")
         except Exception as _ml_exc:
             logger.error("ML init failed (non-fatal): %s", _ml_exc)
@@ -930,7 +948,8 @@ def get_consolidations_all():
             if use_timestamp:
                 df.index = pd.to_datetime(df["time"], unit='s', utc=True)
             else:
-                df.index = pd.to_datetime(df["time"])
+                # Force utc=True for Daily/Weekly strings to ensure deterministic UTC timestamps
+                df.index = pd.to_datetime(df["time"], utc=True)
 
             apply_time_filter = tf in ["1m", "5m", "15m", "1h"]
             boxes_df = consolidation_boxes(df, min_bars=5, use_time_filter=apply_time_filter)
@@ -974,7 +993,32 @@ def get_consolidations_all():
     # ── Enrich zones with ML box_id, label, score ────────────────────────────
     if _ML_AVAILABLE:
         try:
-            # Attach box_id and symbol to every zone
+            # 1. Inject persistent Error Boxes (FP/FN) so they are always visible for feedback
+            from ml.trainer import TRAINING_STATE
+            error_boxes = []
+            for typ in ["fp", "fn"]:
+                for eb in TRAINING_STATE["error_boxes"].get(typ, []):
+                    # Eb has: box_id, timeframe, timeStart, timeEnd, priceHigh, priceLow, ...
+                    # Ensure it has basic viz fields
+                    error_boxes.append({
+                        "timeframe": eb.get("timeframe"),
+                        "timeStart": eb.get("timeStart") or eb.get("time_start_ms"),
+                        "timeEnd":   eb.get("timeEnd")   or eb.get("time_end_ms"),
+                        "priceHigh": float(eb.get("priceHigh") or eb.get("price_high") or 0),
+                        "priceLow":  float(eb.get("priceLow")  or eb.get("price_low")  or 0),
+                        "box_id":    eb.get("box_id"),
+                        "symbol":    eb.get("symbol") or "EURUSD",
+                        "is_error":  True,
+                        "error_type": typ
+                    })
+            
+            # Combine — if box_id already exists in all_zones, don't duplicate
+            existing_ids = {z["box_id"] for z in all_zones if "box_id" in z}
+            for eb in error_boxes:
+                if eb["box_id"] not in existing_ids:
+                    all_zones.append(eb)
+
+            # 2. Re-calculate box_ids for any new live zones (if needed) and attach symbol
             for ex, sym in PERSISTENT_SYMBOLS:
                 for z in all_zones:
                     if "box_id" not in z:
@@ -983,10 +1027,8 @@ def get_consolidations_all():
 
             box_ids = [z["box_id"] for z in all_zones]
 
-            # Batch score (single predict_proba call)
+            # 3. Batch score and fetch labels
             scores_map = _ml_scorer.batch_score(box_ids)
-
-            # Latest labels for each box
             labels_map = _ml_db.get_labels_for_boxes(box_ids)
 
             for z in all_zones:
@@ -996,6 +1038,7 @@ def get_consolidations_all():
                 if lbl_obj:
                     z["label"] = lbl_obj["label"]
                     z["comment"] = lbl_obj["comment"]
+                    z["lesson"] = lbl_obj["lesson"]
         except Exception as _enrich_exc:
             logger.warning("ML enrichment failed (non-fatal): %s", _enrich_exc)
 
