@@ -678,6 +678,47 @@ def _periodic_refresh_loop():
             _synthesize_htf_candles(exchange, symbol)
             logger.info("[delta] ✓ %s:%s cycle complete", exchange, symbol)
 
+def _auto_label_loop():
+    """
+    Background loop to auto-label boxes that haven't been processed yet.
+    """
+    time.sleep(45) # let system warm up
+    while not _stop_refresh.is_set():
+        try:
+            from ml.quality.autolabel.auto_labeller import auto_label_pipeline
+            from ml.quality.db import get_auto_labels
+            from ml.quality.features import QualityExtractor
+            from ml.llm_translator import _get_client as get_gemini_client
+            
+            # 1. Get all current boxes
+            all_resp = get_consolidations_all()
+            all_zones = all_resp.get("zones", [])
+            if not all_zones:
+                time.sleep(30)
+                continue
+                
+            # 2. Filter unlabeled
+            existing_auto = get_auto_labels()
+            unlabeled = [z for z in all_zones if z.get("box_id") and z["box_id"] not in existing_auto]
+            
+            if unlabeled:
+                logger.info("[auto-label] Processing %d new boxes", len(unlabeled))
+                # Only process newest 10 at a time to avoid blocking
+                unlabeled.sort(key=lambda x: x.get("timeEnd", 0), reverse=True)
+                batch = unlabeled[:10]
+                
+                extractor = QualityExtractor(storage.get_candles)
+                gemini = get_gemini_client() # Fallback to Mock is handled in gemini_label
+                
+                auto_label_pipeline(batch, extractor, gemini)
+                logger.info("[auto-label] Batch complete")
+                
+        except Exception as e:
+            logger.error("[auto-label] Loop error: %s", e)
+            
+        if _stop_refresh.wait(timeout=60):
+            break
+
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
@@ -733,6 +774,11 @@ async def lifespan(app: FastAPI):
             _trainer.reload_error_boxes()
             
             logger.info("=== ML system initialized ===")
+            
+            # 6. Start Auto-Label Loop
+            al_thread = threading.Thread(target=_auto_label_loop, name="auto-labeller", daemon=True)
+            al_thread.start()
+            logger.info("=== Auto-Label loop started ===")
         except Exception as _ml_exc:
             logger.error("ML init failed (non-fatal): %s", _ml_exc)
 
@@ -759,7 +805,9 @@ if _ML_AVAILABLE:
     try:
         from ml_router import router as _ml_router
         app.include_router(_ml_router)
-        logger.info("ML router mounted at /api/ml/*")
+        from ml.quality.quality_router import router as _quality_router
+        app.include_router(_quality_router)
+        logger.info("ML routers mounted at /api/ml/* and /api/ml/quality/*")
     except Exception as _mr_exc:
         logger.error("Failed to mount ML router: %s", _mr_exc)
 
@@ -956,7 +1004,7 @@ def get_consolidations_all():
                 df.index = pd.to_datetime(df["time"], utc=True)
 
             apply_time_filter = tf in ["1m", "5m", "15m", "1h"]
-            boxes_df = consolidation_boxes(df, min_bars=5, use_time_filter=apply_time_filter)
+            boxes_df = consolidation_boxes(df, min_bars=6, use_time_filter=apply_time_filter)
             if boxes_df.empty:
                 return zones
 
@@ -1037,6 +1085,10 @@ def get_consolidations_all():
             
             scores_map = _ml_scorer.batch_score(all_possible_ids)
             labels_map = _ml_db.get_labels_for_boxes(all_possible_ids)
+            
+            # Fetch Hybrid Auto-Labels
+            from ml.quality.db import get_auto_labels as get_hybrid_labels
+            hybrid_map = get_hybrid_labels()
 
             for z in all_zones:
                 # Prioritize Long ID for richness, but switch to Short if label exists there
@@ -1057,6 +1109,14 @@ def get_consolidations_all():
                 z["box_id"] = winner_id
                 z["score"] = scores_map.get(winner_id, _ml_scorer.FALLBACK)
                 
+                # Hybrid Auto-Label Injection
+                hybrid_obj = hybrid_map.get(winner_id) or hybrid_map.get(bS) or hybrid_map.get(bL)
+                if hybrid_obj:
+                    z["auto_label"] = hybrid_obj["label"]
+                    z["auto_confidence"] = hybrid_obj["confidence"]
+                    z["auto_status"] = hybrid_obj["status"]
+                    z["auto_interpretation"] = hybrid_obj.get("reason")
+
                 if lbl_obj:
                     z["label"] = lbl_obj["label"]
                     z["comment"] = lbl_obj["comment"]

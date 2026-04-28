@@ -3,7 +3,7 @@ import numpy as np
 
 def consolidation_boxes(
     df: pd.DataFrame,
-    min_bars: int = 5,
+    min_bars: int = 6,
     fvg_threshold: float = 0.4,
     use_time_filter: bool = True,
 ) -> pd.DataFrame:
@@ -118,7 +118,6 @@ def consolidation_boxes(
                     if firstSwingIndex is None:
                         firstSwingIndex = swingBarIndex
 
-            barsInside = None if firstSwingIndex is None else (i - firstSwingIndex + 1)
 
             if fvgBlocked:
                 anchorIndex     = i
@@ -129,14 +128,21 @@ def consolidation_boxes(
                 fvgBlocked      = False
                 continue
 
-            if gotSwingHigh and gotSwingLow and barsInside is not None and barsInside >= min_bars:
-                rangeTop        = swingHighVal
-                rangeBottom     = swingLowVal
-                active          = True
-                searchingSwings = False
-                boxStarted      = True
-                activeBox       = {"start": firstSwingIndex, "end": i,
-                                   "top": rangeTop, "bottom": rangeBottom}
+            if gotSwingHigh and gotSwingLow and firstSwingIndex is not None:
+                # User requirement: 6 candles should close inside the box
+                closedInsideCount = 0
+                for j in range(firstSwingIndex, i + 1):
+                    if swingLowVal <= close_arr[j] <= swingHighVal:
+                        closedInsideCount += 1
+
+                if closedInsideCount >= min_bars:
+                    rangeTop        = swingHighVal
+                    rangeBottom     = swingLowVal
+                    active          = True
+                    searchingSwings = False
+                    boxStarted      = True
+                    activeBox       = {"start": firstSwingIndex, "end": i,
+                                       "top": rangeTop, "bottom": rangeBottom}
 
 
     return pd.DataFrame(boxes)

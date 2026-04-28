@@ -336,10 +336,12 @@ def _run_training(force: bool = False) -> None:
         dt_str = _dt.utcfromtimestamp(ts_s).strftime('%Y-%m-%d %H:%M') if ts_s else 'unknown'
         return {
             "box_id":    r.get("box_id", ""),
+            "symbol":    r.get("symbol", "EURUSD"),
             "timeframe": r.get("timeframe", ""),
-            "time_start_ms": ts_ms,
-            "price_high": r.get("price_high", 0),
-            "price_low":  r.get("price_low", 0),
+            "timeStart": r.get("time_start_ms", 0),
+            "timeEnd":   r.get("time_end_ms", 0),
+            "priceHigh": r.get("price_high", 0),
+            "priceLow":  r.get("price_low", 0),
             "true_label": CLASS_NAMES_INV.get(int(y_val[val_local_idx]), "?"),
             "pred_label": CLASS_NAMES_INV.get(int(y_pred[val_local_idx]), "?"),
             "datetime":  dt_str,

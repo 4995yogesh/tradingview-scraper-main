@@ -120,6 +120,58 @@ class ConsolidationBoxesPaneRenderer {
           }
           ctx.setLineDash([]); // Reset
         }
+
+        // --- Render Auto-Label Info ---
+        if (box.autoLabel) {
+          const al = box.autoLabel;
+          const fontSize = Math.max(10, 10 * hRatio);
+          ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'bottom';
+
+          const labelText = `${al.label} (${(al.confidence || 0).toFixed(2)})`;
+          const textWidth = ctx.measureText(labelText).width;
+          
+          // Positioning
+          const textX = left + 2 * hRatio;
+          const textY = top - 4 * vRatio; // Just above top edge
+          const markerY = textY - fontSize - 2 * vRatio; // Above the text
+
+          // 1. Draw small dark background for text legibility outside the box
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+          ctx.fillRect(textX - 2 * hRatio, textY - fontSize, textWidth + 4 * hRatio, fontSize + 2 * vRatio);
+
+          // 2. Draw Label Text
+          ctx.fillStyle = box.borderColor || '#FFFFFF';
+          ctx.fillText(labelText, textX, textY);
+
+          // 3. Status Indicator (Stacked above text)
+          const dotRadius = 4 * hRatio;
+          const dotX = left + 8 * hRatio;
+
+          ctx.beginPath();
+          if (al.status === 'AGREED') {
+            ctx.fillStyle = '#4CAF50'; // Green
+            ctx.arc(dotX, markerY, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+          } else if (al.status === 'DISAGREE') {
+            ctx.fillStyle = '#FF9800'; // Orange Warning
+            ctx.moveTo(dotX, markerY - dotRadius);
+            ctx.lineTo(dotX - dotRadius, markerY + dotRadius);
+            ctx.lineTo(dotX + dotRadius, markerY + dotRadius);
+            ctx.closePath();
+            ctx.fill();
+          } else {
+            ctx.fillStyle = '#9E9E9E'; // Gray Question
+            ctx.arc(dotX, markerY, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `${8 * hRatio}px Inter, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('?', dotX, markerY);
+          }
+        }
       }
     });
   }

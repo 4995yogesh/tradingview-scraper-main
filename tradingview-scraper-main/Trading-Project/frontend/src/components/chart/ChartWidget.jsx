@@ -251,6 +251,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const [highlightedBoxId, setHighlightedBoxId] = useState(null);
   // Store zone data keyed by box_id for overlay rendering
   const activeBoxesRef = useRef([]);
+  const [autoLabels, setAutoLabels] = useState([]);
 
 
 
@@ -584,9 +585,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     let iv;
     const poll = async () => {
       try {
-        const [cRes, sRes] = await Promise.all([
+        const [cRes, sRes, aRes] = await Promise.all([
           fetch('http://localhost:8000/consolidations'),
           fetch('http://localhost:8000/swings'),
+          fetch('http://localhost:8000/api/ml/quality/auto-labels'),
         ]);
         if (cRes.ok) {
           const d = await cRes.json();
@@ -599,6 +601,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           if (d.status === 'ok') {
             setSwingLevels(prev => JSON.stringify(prev) === JSON.stringify(d.swings) ? prev : (d.swings || []));
           }
+        }
+        if (aRes.ok) {
+          const d = await aRes.json();
+          setAutoLabels(prev => JSON.stringify(prev) === JSON.stringify(d) ? prev : (d || []));
         }
       } catch (_) {}
     };
@@ -741,6 +747,13 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         fillColor   = 'rgba(144, 202, 249, 0.15)';
       }
 
+      // Map Auto-Labels
+      const al = autoLabels.find(l => l.box_id === zone.box_id);
+      if (al) {
+        borderColor = al.label === 'GOOD' ? 'rgba(76, 175, 80, 0.85)' : (al.label === 'BAD' ? 'rgba(244, 67, 54, 0.85)' : 'rgba(255, 235, 59, 0.85)');
+        fillColor = al.label === 'GOOD' ? 'rgba(76, 175, 80, 0.15)' : (al.label === 'BAD' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(255, 235, 59, 0.15)');
+      }
+
       const boxDef = {
         box_id: zone.box_id,
         t1: points[0],
@@ -753,7 +766,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         fillColor,
         isDashed,
         highlighted: zone.box_id === highlightedBoxId,
-        s1, s2
+        s1, s2,
+        autoLabel: al
       };
 
       if (isHTF) parsedHtf.push(boxDef);

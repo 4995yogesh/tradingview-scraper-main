@@ -123,6 +123,28 @@ export default function LabelDialog({ zone, onLabeled }) {
         </div>
       )}
 
+      {/* Hybrid Auto-Label Section */}
+      {zone.auto_label && (
+        <div className="flex flex-col w-full px-1 border-t border-[#363A45] pt-1.5 mt-1 border-dashed">
+          <div className="flex justify-between items-center text-[10px] mb-0.5">
+            <span className="font-semibold text-[#787B86]">Hybrid Auto:</span>
+            <span className={`font-bold capitalize ${
+              zone.auto_label === 'GOOD' ? 'text-[#00BFA5]' : 'text-[#EF5350]'
+            }`}>
+              {zone.auto_label} ({fmtPct(zone.auto_confidence)})
+            </span>
+          </div>
+          {zone.auto_interpretation && (
+             <div className="text-[9px] text-[#787B86] italic leading-tight bg-[#00000030] p-1 rounded mt-0.5">
+               "{zone.auto_interpretation}"
+             </div>
+          )}
+          <div className="text-[8px] text-[#787B86] mt-0.5 self-end">
+            Status: <span className={zone.auto_status === 'AGREED' ? 'text-[#00BFA5]' : 'text-[#FFB74D]'}>{zone.auto_status}</span>
+          </div>
+        </div>
+      )}
+
       {/* Buttons */}
       <div className="flex gap-0.5">
         {[
