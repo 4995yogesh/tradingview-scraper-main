@@ -758,18 +758,23 @@ const RefinementDashboard = () => {
             <div className="space-y-4">
               <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
                 <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3 flex items-center justify-between">
-                  Gemini Insights
-                  <span className="w-2 h-2 bg-[#9C27B0] rounded-full animate-pulse" />
+                  AI Insights (Nemotron)
+                  <span className="w-2 h-2 bg-[#00E676] rounded-full animate-pulse" />
                 </h3>
                 {lessons.length > 0 ? (
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-                    {lessons.map((l, i) => (
-                      <div key={i} className="bg-[#1E222D50] p-3 rounded-lg border border-[#2A2E39] relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-1 h-full bg-[#9C27B0]" />
-                        <div className="text-[9px] text-[#9C27B0] font-bold uppercase mb-1">Observation {lessons.length - i}</div>
-                        <p className="text-[11px] text-[#D1D4DC] leading-relaxed italic">"{l}"</p>
-                      </div>
-                    ))}
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                    {lessons.map((l, i) => {
+                      const isLong = l && l.length > 200;
+                      return (
+                        <div key={i} className="bg-[#1E222D50] p-3 rounded-lg border border-[#2A2E39] relative overflow-hidden group">
+                          <div className="absolute top-0 left-0 w-1 h-full bg-[#00E676] opacity-50 group-hover:opacity-100 transition-opacity" />
+                          <div className="text-[9px] text-[#00E676] font-bold uppercase mb-1">Observation {lessons.length - i}</div>
+                          <div className="text-[11px] text-[#D1D4DC] leading-relaxed font-light">
+                            {typeof l === 'string' ? l : JSON.stringify(l)}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center py-6 border-2 border-dashed border-[#2A2E39] rounded-xl">

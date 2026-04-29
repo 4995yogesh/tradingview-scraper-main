@@ -51,51 +51,45 @@ Rules:
 # ── Neutral fallback (no API / no comment) ────────────────────────────────────
 NEUTRAL_LLM_FEATURES = [0.0] * len(LLM_FEATURE_NAMES)
 
-_client = None
-_lock   = threading.Lock()
+import requests
 
-def _get_client():
-    """Lazy init of Gemini client."""
-    global _client
-    if _client is not None:
-        return _client
-    api_key = os.environ.get("GEMINI_API_KEY", "")
+def _get_nvidia_client():
+    api_key = os.environ.get("NVIDIA_API_KEY", "")
     if not api_key:
-        logger.warning("[llm_translator] GEMINI_API_KEY not set — LLM features disabled")
         return None
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        _client = genai.GenerativeModel("gemini-3.1-pro")
-        logger.info("[llm_translator] Gemini client initialized (gemini-3.1-pro)")
-        return _client
-    except Exception as exc:
-        logger.error("[llm_translator] Failed to init Gemini: %s", exc)
-        return None
-
+    return {
+        "url": "https://integrate.api.nvidia.com/v1/chat/completions",
+        "headers": {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+    }
 
 def extract_llm_features(comment: str, label: str) -> list:
-    """
-    Call Gemini to translate a user comment into numeric features.
-    Returns list of 6 floats. Falls back to NEUTRAL_LLM_FEATURES on error.
-    """
     if not comment or not comment.strip():
         return NEUTRAL_LLM_FEATURES
 
-    client = _get_client()
+    client = _get_nvidia_client()
     if client is None:
         return NEUTRAL_LLM_FEATURES
 
     prompt = _PROMPT_TEMPLATE.format(label=label, comment=comment.strip())
+    payload = {
+        "model": "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1",
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0.1,
+        "max_tokens": 512
+    }
+    
     try:
-        response = client.generate_content(prompt)
-        raw = response.text.strip()
+        response = requests.post(client["url"], headers=client["headers"], json=payload)
+        res_data = response.json()
+        raw = res_data['choices'][0]['message']['content'].strip()
 
-        # Strip markdown code fences if present
+        # Strip markdown code fences
         if raw.startswith("```"):
             raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
+            if raw.startswith("json"): raw = raw[4:]
             raw = raw.strip()
 
         data = json.loads(raw)
@@ -107,11 +101,9 @@ def extract_llm_features(comment: str, label: str) -> list:
             float(_clamp(data.get("llm_structure_quality", 0.0),   0.0, 1.0)),
             float(_clamp(data.get("llm_sentiment_score", 0.0),    -1.0, 1.0)),
         ]
-        logger.info("[llm_translator] Extracted: %s", dict(zip(LLM_FEATURE_NAMES, features)))
         return features
-
     except Exception as exc:
-        logger.warning("[llm_translator] Gemini extraction failed: %s", exc)
+        logger.warning("[llm_translator] Nemotron extraction failed: %s", exc)
         return NEUTRAL_LLM_FEATURES
 
 

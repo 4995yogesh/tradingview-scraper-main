@@ -1,68 +1,69 @@
 import os
+import requests
 import json
 import base64
-import google.generativeai as genai
 from training_db import training_db
+from dotenv import load_dotenv
 
-# Load API Key
-genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+load_dotenv()
+NV_API_KEY = os.environ.get("NVIDIA_API_KEY")
+NV_MODEL = "nvidia/llama-3.1-nemotron-70b-instruct" # Standard NIM name, will fallback to your 253B if specified
 
-class GeminiTrainer:
+from ml.llm_manager import llm_manager
+
+class GeminiTrainer: # Orchestrator wrapper
     def __init__(self):
-        self.model = genai.GenerativeModel('gemini-3.0-pro') # Use Pro for complex structural analysis
+        pass
 
     def process_and_save(self, box_id):
-        """Fetches a labeled box, sends to Gemini, and updates DB."""
+        """Runs the Multi-Agent pipeline and updates DB."""
+        import sqlite3
+        try:
+            print(f"DEBUG: Starting Multi-Agent Analysis for {box_id}")
+            with sqlite3.connect("training_set.db") as conn:
+                conn.row_factory = sqlite3.Row
+                sample = conn.execute("SELECT * FROM review_queue WHERE box_id = ?", (box_id,)).fetchone()
+                
+                if not sample or not sample['user_box']:
+                    return
+
+            # Execute Agentic Pipeline
+            result = llm_manager.execute_agentic_pipeline(dict(sample))
+            
+            # Store the final summary as the main analysis
+            combined_text = f"{result['observation']}\n\n---\nLOGIC: {result['suggested_logic']}"
+            
+            with sqlite3.connect("training_set.db") as conn:
+                conn.execute(
+                    "UPDATE review_queue SET gemini_analysis = ?, status = 'ANALYZED' WHERE box_id = ?",
+                    (combined_text, box_id)
+                )
+                conn.commit()
+            print(f"DEBUG: Successfully ANALYZED {box_id} via Multi-Agent Chain")
+        except Exception as e:
+            print(f"DEBUG: Agentic pipeline failed for {box_id}: {e}")
+
+
+    def reprocess_missing_analyses(self):
+        """Finds LABELED boxes without analysis and processes them."""
         import sqlite3
         try:
             with sqlite3.connect("training_set.db") as conn:
                 conn.row_factory = sqlite3.Row
-                sample = conn.execute("SELECT * FROM review_queue WHERE box_id = ?", (box_id,)).fetchone()
-                if not sample or not sample['user_box']:
-                    return
-
-            # Analyze via Gemini
-            analysis_text = self.generate_refinement_report(dict(sample))
-            
-            # Extract only the observations/rules
-            with sqlite3.connect("training_set.db") as conn:
-                conn.execute(
-                    "UPDATE review_queue SET gemini_analysis = ?, status = 'ANALYZED' WHERE box_id = ?",
-                    (analysis_text, box_id)
-                )
-                conn.commit()
+                rows = conn.execute("""
+                    SELECT box_id FROM review_queue 
+                    WHERE status = 'LABELED' 
+                    OR (status = 'ANALYZED' AND gemini_analysis LIKE '%Error%')
+                """).fetchall()
+                print(f"DEBUG: Found {len(rows)} boxes to analyze. Processing with 1s delay for NVIDIA NIM...")
+                import time
+                for r in rows:
+                    self.process_and_save(r['box_id'])
+                    time.sleep(2)
         except Exception as e:
-            print(f"Gemini processing failed: {e}")
-
-    def generate_refinement_report(self, sample):
-        """
-        Sends the OHLC data and metadata to Gemini for analysis.
-        """
-        prompt = f"""
-        TASK: Refine a Trading Consolidation Detector.
-        CONTEXT:
-        - Symbol: {sample['symbol']}
-        - Timeframe: {sample['timeframe']}
-        - Detected Box (Rule-based): {sample['original_meta']}
-        - Ideal Box (Human expert): {sample['user_box']}
-
-        OHLC DATA CONTEXT (JSON):
-        {sample['ohlc_context']}
-        
-        GOAL:
-        1. Identify WHY the human expert shifted the boundaries compared to the Rule-based box. Look closely at the OHLC Data (candles) around the timeStart and timeEnd boundaries of both boxes.
-        2. Extract features (e.g., "The user included a failed breakout wick", "The user started the box after a specific volume spike", "The user tightened the price High/Low to exclude noise").
-        3. Propose a modification to the Python logic in 'consolidation.py' to achieve this refinement automatically.
-
-        Format your response as JSON:
-        {{
-          "observation": "...",
-          "key_features": ["...", "..."],
-          "logic_adjustment": "Python code snippet or logical rule"
-        }}
-        """
-
-        response = self.model.generate_content([prompt])
-        return response.text
+            print(f"DEBUG: Reprocess failed: {e}")
 
 gemini_trainer = GeminiTrainer()
+# Auto-reprocess on startup to catch up
+import threading
+threading.Thread(target=gemini_trainer.reprocess_missing_analyses, daemon=True).start()
