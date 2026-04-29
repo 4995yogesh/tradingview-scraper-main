@@ -94,14 +94,12 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
     const bh = Math.max(2, toY(meta.priceLow) - by);
 
     ctx.save();
-    ctx.strokeStyle = '#F7C948'; ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#F7C948'; ctx.lineWidth = 1.0;
     ctx.setLineDash([5, 3]);
     ctx.strokeRect(bx, by, bw, bh);
-    ctx.fillStyle = 'rgba(247,201,72,0.06)';
+    ctx.fillStyle = 'rgba(247,201,72,0.02)';
     ctx.fillRect(bx, by, bw, bh);
     ctx.restore();
-    ctx.fillStyle = '#F7C94899'; ctx.font = 'bold 9px monospace';
-    ctx.fillText('CONSOLIDATION', bx + 3, by + 12);
   }
 
   // Candles — sequential index across windowed slice
@@ -156,6 +154,8 @@ const RefinementDashboard = () => {
   const [saving,  setSaving]  = useState(false);
   const [toast,   setToast]   = useState(null);
   const [zoom,    setZoom]    = useState(1.0);
+  const [magnet,  setMagnet]  = useState(true);
+  const [lessons, setLessons] = useState([]);
   const zoomRef               = useRef(1.0);
   const panYRef               = useRef(0);      // price-axis pan offset
   const priceZoomRef          = useRef(1.0);    // vertical price scale zoom
@@ -199,9 +199,16 @@ const RefinementDashboard = () => {
   const fetchStats = async () => {
     try {
       const res = await fetch('http://localhost:8000/api/training/stats');
-      const txt = await res.text();
-      const d   = JSON.parse(txt);
+      const d   = await res.json();
       if (d.status === 'ok') setStats(d.stats);
+    } catch (_) {}
+  };
+
+  const fetchLessons = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/training/lessons');
+      const d   = await res.json();
+      if (d.status === 'ok') setLessons(d.lessons || []);
     } catch (_) {}
   };
 
@@ -209,6 +216,7 @@ const RefinementDashboard = () => {
     let active = true;
     fetchBoxes(); 
     fetchStats(); 
+    fetchLessons(); 
 
     const poll = async () => {
       if (!active) return;
@@ -220,13 +228,21 @@ const RefinementDashboard = () => {
         if (data.status === 'ok') {
           const newBoxes = data.boxes || [];
           setBoxes(prev => {
-            if (prev.length === 0) return newBoxes;
-            const prevIds = new Set(prev.map(b => b.box_id));
-            const novel = newBoxes.filter(b => !prevIds.has(b.box_id));
-            if (novel.length > 0) return [...prev, ...novel];
+            // Full reconcile: keep local boxes only if they still exist in the server's fresh list
+            const serverIds = new Set(newBoxes.map(b => b.box_id));
+            const synced = prev.filter(b => serverIds.has(b.box_id));
+            
+            // Add any truly new boxes from server
+            const localIds = new Set(synced.map(b => b.box_id));
+            const novel = newBoxes.filter(b => !localIds.has(b.box_id));
+            
+            if (novel.length > 0 || synced.length !== prev.length) {
+              return [...synced, ...novel];
+            }
             return prev;
           });
           fetchStats();
+          fetchLessons();
         }
       } catch (_) {}
     };
@@ -347,21 +363,68 @@ const RefinementDashboard = () => {
     const onMove = e => {
       const rect = overlayRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const W = canvasRef.current.width, H = canvasRef.current.height;
+      const ratioX = W / rect.width;
+      const ratioY = H / rect.height;
+      const mx = (e.clientX - rect.left) * ratioX;
+      const my = (e.clientY - rect.top) * ratioY;
+      
+      let smx = mx, smy = my;
+      if (magnet && ohlcRef.current) {
+        const ohlc = filteredOhlcRef.current || ohlcRef.current;
+        const zoom = zoomRef.current;
+        const cw = Math.max(2, Math.round(CW * zoom));
+        const cg = Math.max(1, Math.round(CG * zoom));
+        const cH = H - PAD.t - PAD.b;
+        const cW = W - PAD.l - PAD.r;
+        const totW = ohlc.length * (cw + cg);
+        const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+
+        // Snap X to nearest candle center
+        const cIdx = Math.max(0, Math.min(ohlc.length - 1, Math.round((mx - sx) / (cw + cg))));
+        smx = sx + cIdx * (cw + cg) + (cw / 2);
+
+        // Snap Y to nearest High/Low of that candle
+        const candle = ohlc[cIdx];
+        if (candle) {
+          const highs = ohlc.map(c => c.high);
+          const lows  = ohlc.map(c => c.low);
+          const maxP  = Math.max(...highs);
+          const minP  = Math.min(...lows);
+          const rng   = (maxP - minP || 0.0001);
+          const midP    = (maxP + minP) / 2 + panYRef.current;
+          const halfRng = (rng / 2) / priceZoomRef.current;
+          const adjMax  = midP + halfRng;
+          const adjRng  = adjMax - (midP - halfRng);
+
+          const yH = PAD.t + ((adjMax - candle.high) / adjRng) * cH;
+          const yL = PAD.t + ((adjMax - candle.low) / adjRng) * cH;
+          if (Math.abs(my - yH) < 30 || Math.abs(my - yL) < 30) {
+            smy = Math.abs(my - yH) < Math.abs(my - yL) ? yH : yL;
+          }
+        }
+      }
+
+      // Convert back to screen-space for the DOM-based drawBox
+      const finalX = smx / ratioX;
+      const finalY = smy / ratioY;
+      const rawMX  = mx / ratioX;
+      const rawMY  = my / ratioY;
+
       setDrawBox(prev => {
         if (!prev) return prev;
         const { x, y, w, h } = prev;
         switch (mode) {
-          case 'DRAW': return { ...prev, w: mx-x, h: my-y };
-          case 'MOVE': return { ...prev, x: mx-off.x, y: my-off.y };
-          case 'TL':   return { ...prev, x: mx, y: my, w: w+(x-mx), h: h+(y-my) };
-          case 'TR':   return { ...prev, y: my, w: mx-x, h: h+(y-my) };
-          case 'BL':   return { ...prev, x: mx, w: w+(x-mx), h: my-y };
-          case 'BR':   return { ...prev, w: mx-x, h: my-y };
-          case 'T':    return { ...prev, y: my, h: h+(y-my) };
-          case 'B':    return { ...prev, h: my-y };
-          case 'L':    return { ...prev, x: mx, w: w+(x-mx) };
-          case 'R':    return { ...prev, w: mx-x };
+          case 'DRAW': return { ...prev, w: finalX-x, h: finalY-y };
+          case 'MOVE': return { ...prev, x: rawMX-off.x, y: rawMY-off.y }; 
+          case 'TL':   return { ...prev, x: finalX, y: finalY, w: w+(x-finalX), h: h+(y-finalY) };
+          case 'TR':   return { ...prev, y: finalY, w: finalX-x, h: h+(y-finalY) };
+          case 'BL':   return { ...prev, x: finalX, w: w+(x-finalX), h: finalY-y };
+          case 'BR':   return { ...prev, w: finalX-x, h: finalY-y };
+          case 'T':    return { ...prev, y: finalY, h: h+(y-finalY) };
+          case 'B':    return { ...prev, h: finalY-y };
+          case 'L':    return { ...prev, x: finalX, w: w+(x-finalX) };
+          case 'R':    return { ...prev, w: finalX-x };
           default:     return prev;
         }
       });
@@ -370,7 +433,7 @@ const RefinementDashboard = () => {
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [drag, mode, off]);
+  }, [drag, mode, off, magnet]);
 
   // ── Save / Skip ────────────────────────────────────────────────────────────
   const handleSave = async () => {
@@ -421,8 +484,12 @@ const RefinementDashboard = () => {
       });
       if (res.ok) {
         showToast('Labeled ✓');
-        setBoxes(prev => prev.filter(b => b.box_id !== box.box_id));
-        setDrawBox(null); setIdx(0); fetchStats();
+        setBoxes(prev => {
+          const next = prev.filter(b => b.box_id !== box.box_id);
+          if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
+          return next;
+        });
+        setDrawBox(null); fetchStats(); fetchLessons();
       } else {
         const d = JSON.parse(await res.text());
         showToast('Save failed: ' + (d.detail || '?'), 'err');
@@ -441,8 +508,12 @@ const RefinementDashboard = () => {
       });
       if (res.ok) {
         showToast('Skipped');
-        setBoxes(prev => prev.filter(b => b.box_id !== box.box_id));
-        setDrawBox(null); setIdx(0); fetchStats();
+        setBoxes(prev => {
+          const next = prev.filter(b => b.box_id !== box.box_id);
+          if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
+          return next;
+        });
+        setDrawBox(null); fetchStats(); fetchLessons();
       } else {
         showToast('Skip failed', 'err');
       }
@@ -533,38 +604,50 @@ const RefinementDashboard = () => {
                   onMouseMove={e => {
                     const rect = overlayRef.current?.getBoundingClientRect();
                     if (rect) {
-                      mouseXRef.current = e.clientX - rect.left;
+                      mouseXRef.current = (e.clientX - rect.left) * (canvasRef.current?.width / rect.width);
                       // Update cursor based on zone
                       const W = canvasRef.current?.width || 900;
                       overlayRef.current.style.cursor = mouseXRef.current > W - PAD.r ? 'ns-resize' : 'crosshair';
                     }
                   }}
-                  className="absolute inset-0 cursor-crosshair" />
-                {/* User drawn box */}
-                {drawBox && (() => {
-                  const lx = drawBox.w < 0 ? drawBox.x + drawBox.w : drawBox.x;
-                  const ly = drawBox.h < 0 ? drawBox.y + drawBox.h : drawBox.y;
-                  const lw = Math.abs(drawBox.w);
-                  const lh = Math.abs(drawBox.h);
-                  return (
-                    <div className="absolute border-2 border-[#2962FF] bg-[#2962FF15] pointer-events-none"
-                      style={{ left: lx, top: ly, width: lw, height: lh }}>
-                      {[
-                        { s:'nw', st:{top:'-4px',left:'-4px'} },
-                        { s:'ne', st:{top:'-4px',right:'-4px'} },
-                        { s:'sw', st:{bottom:'-4px',left:'-4px'} },
-                        { s:'se', st:{bottom:'-4px',right:'-4px'} },
-                      ].map(h => (
-                        <div key={h.s} className="absolute w-2 h-2 bg-white border border-[#2962FF] rounded-full"
-                          style={h.st} />
-                      ))}
-                    </div>
-                  );
-                })()}
+                  className="absolute inset-0 cursor-crosshair">
+                  
+                  {/* User drawn box handles */}
+                  {drawBox && (() => {
+                    const lx = drawBox.w < 0 ? drawBox.x + drawBox.w : drawBox.x;
+                    const ly = drawBox.h < 0 ? drawBox.y + drawBox.h : drawBox.y;
+                    const lw = Math.abs(drawBox.w);
+                    const lh = Math.abs(drawBox.h);
+                    return (
+                      <div className="absolute border-2 border-[#2962FF] bg-[#2962FF15] pointer-events-none"
+                        style={{ left: lx, top: ly, width: lw, height: lh }}>
+                        {[
+                          { s:'nw', c: 'nwse-resize', st:{top:'-4px',left:'-4px'} },
+                          { s:'ne', c: 'nesw-resize', st:{top:'-4px',right:'-4px'} },
+                          { s:'sw', c: 'nesw-resize', st:{bottom:'-4px',left:'-4px'} },
+                          { s:'se', c: 'nwse-resize', st:{bottom:'-4px',right:'-4px'} },
+                          { s:'t',  c: 'ns-resize',   st:{top:'-4px',left:'50%',marginLeft:'-4px'} },
+                          { s:'b',  c: 'ns-resize',   st:{bottom:'-4px',left:'50%',marginLeft:'-4px'} },
+                          { s:'l',  c: 'ew-resize',   st:{left:'-4px',top:'50%',marginTop:'-4px'} },
+                          { s:'r',  c: 'ew-resize',   st:{right:'-4px',top:'50%',marginTop:'-4px'} },
+                        ].map(h => (
+                          <div key={h.s} className="absolute w-2.5 h-2.5 bg-white border border-[#2962FF] rounded-full pointer-events-auto shadow-lg"
+                            style={{ ...h.st, cursor: h.c }} />
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Zoom + Pan controls */}
               <div className="flex items-center justify-end gap-2 mb-1">
+                <button onClick={() => setMagnet(!magnet)}
+                  className={`flex items-center gap-1.5 px-2.5 h-7 rounded border transition-all font-mono text-[10px] ${magnet ? 'bg-[#2962FF20] border-[#2962FF] text-[#2962FF]' : 'bg-[#1E222D] border-[#363A45] text-[#787B86]'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${magnet ? 'bg-[#2962FF] animate-pulse' : 'bg-[#787B86]'}`} />
+                  MAGNET
+                </button>
+                <div className="w-px h-4 bg-[#363A45] mx-1" />
                 <span className="text-[10px] text-[#434651] font-mono mr-1">SCROLL=pan · CTRL+SCROLL=zoom</span>
                 <button onClick={() => setZoom(z => Math.max(0.25, +(z * 0.87).toFixed(3)))}
                   className="w-7 h-7 bg-[#1E222D] hover:bg-[#2A2E39] text-white rounded font-bold border border-[#363A45] transition-all text-sm flex items-center justify-center">−</button>
@@ -599,6 +682,29 @@ const RefinementDashboard = () => {
 
             {/* Info Panel */}
             <div className="space-y-4">
+              <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
+                <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3 flex items-center justify-between">
+                  Gemini Insights
+                  <span className="w-2 h-2 bg-[#9C27B0] rounded-full animate-pulse" />
+                </h3>
+                {lessons.length > 0 ? (
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                    {lessons.map((l, i) => (
+                      <div key={i} className="bg-[#1E222D50] p-3 rounded-lg border border-[#2A2E39] relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-[#9C27B0]" />
+                        <div className="text-[9px] text-[#9C27B0] font-bold uppercase mb-1">Observation {lessons.length - i}</div>
+                        <p className="text-[11px] text-[#D1D4DC] leading-relaxed italic">"{l}"</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 border-2 border-dashed border-[#2A2E39] rounded-xl">
+                    <div className="text-[#434651] text-[10px] uppercase font-bold mb-1">Learning...</div>
+                    <div className="text-[10px] text-[#787B86]">Insights appear after AI analysis</div>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
                 <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3">Box Details</h3>
                 {[
