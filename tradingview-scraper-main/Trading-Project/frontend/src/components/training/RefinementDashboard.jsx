@@ -88,8 +88,8 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
 
   // Consolidation box — centred using relative box indices
   if (meta && meta.priceHigh != null && meta.priceLow != null) {
-    const bx = sx + boxStartIdx * (cw + cg);
-    const bw = Math.max(cw, (boxEndIdx - boxStartIdx + 1) * (cw + cg));
+    const bx = sx + boxStartIdx * (cw + cg) + (cw / 2);
+    const bw = Math.max(1, (boxEndIdx - boxStartIdx + 1) * (cw + cg));
     const by = toY(meta.priceHigh);
     const bh = Math.max(2, toY(meta.priceLow) - by);
 
@@ -156,6 +156,7 @@ const RefinementDashboard = () => {
   const [zoom,    setZoom]    = useState(1.0);
   const [magnet,  setMagnet]  = useState(true);
   const [lessons, setLessons] = useState([]);
+  const [lastBox, setLastBox] = useState(null); // for Undo
   const zoomRef               = useRef(1.0);
   const panYRef               = useRef(0);      // price-axis pan offset
   const priceZoomRef          = useRef(1.0);    // vertical price scale zoom
@@ -326,6 +327,8 @@ const RefinementDashboard = () => {
       else if (e.key === 'Escape')                  { setDrawBox(null); setDrag(false); setMode('NONE'); }
       else if (e.key === 'ArrowRight')              setIdx(i => Math.min(i + 1, boxes.length - 1));
       else if (e.key === 'ArrowLeft')               setIdx(i => Math.max(i - 1, 0));
+      else if (e.key === 'v' || e.key === 'V')      { e.preventDefault(); handleValidate(); }
+      else if (e.ctrlKey && e.key === 'z')          { e.preventDefault(); handleUndo(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -435,7 +438,59 @@ const RefinementDashboard = () => {
     return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
   }, [drag, mode, off, magnet]);
 
-  // ── Save / Skip ────────────────────────────────────────────────────────────
+  // ── Save / Skip / Undo ───────────────────────────────────────────────────
+  const handleUndo = async () => {
+    if (!lastBox) return;
+    try {
+      const res = await fetch('http://localhost:8000/api/training/undo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ box_id: lastBox.box_id }),
+      });
+      if (res.ok) {
+        showToast('Action Undone');
+        setBoxes(prev => [lastBox, ...prev]);
+        setIdx(0);
+        setLastBox(null);
+        fetchStats();
+      }
+    } catch (e) { showToast('Undo failed', 'err'); }
+  };
+
+  const handleValidate = async () => {
+    if (!box) return;
+    setSaving(true);
+    try {
+      const payload = {
+        box_id: box.box_id,
+        user_box: { 
+          timeStart: box.time_start_ms || box.timeStart, 
+          timeEnd: box.time_end_ms || box.timeEnd, 
+          priceHigh: box.price_high || box.priceHigh, 
+          priceLow: box.price_low || box.priceLow 
+        }
+      };
+      const res = await fetch('http://localhost:8000/api/training/label', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        showToast('Validated ✓');
+        setLastBox(box);
+        setBoxes(prev => {
+          const next = prev.filter(b => b.box_id !== box.box_id);
+          if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
+          return next;
+        });
+        setDrawBox(null); fetchStats(); fetchLessons();
+      } else {
+        showToast('Validation failed', 'err');
+      }
+    } catch (e) { showToast('Network error', 'err'); }
+    setSaving(false);
+  };
+
   const handleSave = async () => {
     if (!drawBox || !box) return;
     const rect = overlayRef.current.getBoundingClientRect();
@@ -484,6 +539,7 @@ const RefinementDashboard = () => {
       });
       if (res.ok) {
         showToast('Labeled ✓');
+        setLastBox(box);
         setBoxes(prev => {
           const next = prev.filter(b => b.box_id !== box.box_id);
           if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
@@ -508,6 +564,7 @@ const RefinementDashboard = () => {
       });
       if (res.ok) {
         showToast('Skipped');
+        setLastBox(box);
         setBoxes(prev => {
           const next = prev.filter(b => b.box_id !== box.box_id);
           if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
@@ -659,24 +716,41 @@ const RefinementDashboard = () => {
               </div>
 
               {/* Action bar */}
-              <div className="flex gap-3">
-                <button onClick={() => nav(-1)} disabled={idx===0}
-                  className="px-5 py-4 bg-[#1E222D] hover:bg-[#2A2E39] disabled:opacity-30 text-white rounded-xl font-bold border border-[#363A45] transition-all">
-                  ◀
-                </button>
-                <button onClick={handleSave} disabled={!drawBox || saving}
-                  className={`flex-1 py-4 rounded-xl font-bold text-base uppercase tracking-widest transition-all
-                    ${drawBox && !saving ? 'bg-[#26A69A] hover:bg-[#1E8A7E] text-white' : 'bg-[#1E222D] text-[#434651] cursor-not-allowed'}`}>
-                  {saving ? 'Saving…' : 'Confirm & Next  [Enter]'}
-                </button>
-                <button onClick={handleSkip}
-                  className="px-6 py-4 bg-[#2D1E1E] hover:bg-[#3E2A2A] text-[#EF5350] hover:text-white rounded-xl font-bold border border-[#453636] transition-all uppercase tracking-widest">
-                  Skip [S]
-                </button>
-                <button onClick={() => nav(1)} disabled={idx===boxes.length-1}
-                  className="px-5 py-4 bg-[#1E222D] hover:bg-[#2A2E39] disabled:opacity-30 text-white rounded-xl font-bold border border-[#363A45] transition-all">
-                  ▶
-                </button>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Group 1: Navigation & Undo */}
+                <div className="flex items-center gap-2">
+                  <button onClick={() => nav(-1)} disabled={idx===0}
+                    className="w-12 h-12 bg-[#1E222D] hover:bg-[#2A2E39] disabled:opacity-30 text-white rounded-xl font-bold border border-[#363A45] transition-all flex items-center justify-center">
+                    ◀
+                  </button>
+                  <button onClick={handleUndo} disabled={!lastBox}
+                    className={`flex items-center gap-2 px-4 h-12 rounded-xl font-bold border transition-all
+                      ${lastBox ? 'bg-[#1E222D] border-[#363A45] text-[#787B86] hover:text-white hover:border-[#787B86]' : 'bg-[#131722] border-[#2A2E39] text-[#434651] cursor-not-allowed'}`}>
+                    <span className="text-lg">↩</span>
+                    <span className="text-[10px] uppercase tracking-wider">Undo</span>
+                  </button>
+                  <button onClick={() => nav(1)} disabled={idx===boxes.length-1}
+                    className="w-12 h-12 bg-[#1E222D] hover:bg-[#2A2E39] disabled:opacity-30 text-white rounded-xl font-bold border border-[#363A45] transition-all flex items-center justify-center">
+                    ▶
+                  </button>
+                </div>
+
+                {/* Group 2: Labeling Actions */}
+                <div className="flex-1 flex items-center gap-3">
+                  <button onClick={handleValidate} disabled={saving}
+                    className="px-5 h-12 bg-[#1E222D] hover:bg-[#2A2E39] text-[#2962FF] hover:text-white rounded-xl font-bold border border-[#2962FF30] transition-all uppercase tracking-widest text-[11px]">
+                    Validate Original
+                  </button>
+                  <button onClick={handleSave} disabled={!drawBox || saving}
+                    className={`flex-1 h-12 rounded-xl font-bold text-sm uppercase tracking-widest transition-all
+                      ${drawBox && !saving ? 'bg-[#26A69A] hover:bg-[#1E8A7E] text-white' : 'bg-[#1E222D] text-[#434651] cursor-not-allowed'}`}>
+                    {saving ? 'Saving…' : 'Confirm & Next'}
+                  </button>
+                  <button onClick={handleSkip}
+                    className="px-5 h-12 bg-[#2D1E1E] hover:bg-[#3E2A2A] text-[#EF5350] hover:text-white rounded-xl font-bold border border-[#453636] transition-all uppercase tracking-widest text-[11px]">
+                    Skip
+                  </button>
+                </div>
               </div>
             </div>
 

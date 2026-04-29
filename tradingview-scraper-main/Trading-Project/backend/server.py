@@ -1415,6 +1415,18 @@ async def upload_screenshot(data: dict):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/training/undo")
+async def undo_training_label(data: dict):
+    from training_db import training_db
+    try:
+        box_id = data.get("box_id")
+        if not box_id:
+            raise HTTPException(status_code=400, detail="Missing box_id")
+        training_db.reset_box(box_id)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/training/stats")
 async def get_training_stats():
     import sqlite3

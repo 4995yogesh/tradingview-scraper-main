@@ -144,4 +144,14 @@ class TrainingDB:
             )
             conn.commit()
 
+    def reset_box(self, box_id):
+        with sqlite3.connect(self.db_path) as conn:
+            # Revert to PENDING (or PENDING_SCREENSHOT if it was originally that)
+            # For simplicity, we restore to PENDING as Studio only handles PENDING+
+            conn.execute(
+                "UPDATE review_queue SET user_box = NULL, gemini_analysis = NULL, status = 'PENDING' WHERE box_id = ?",
+                (box_id,)
+            )
+            conn.commit()
+
 training_db = TrainingDB()
