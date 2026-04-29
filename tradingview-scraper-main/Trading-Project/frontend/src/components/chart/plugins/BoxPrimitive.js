@@ -121,31 +121,31 @@ class ConsolidationBoxesPaneRenderer {
           ctx.setLineDash([]); // Reset
         }
 
-        // --- Render Auto-Label Info ---
-        if (box.autoLabel) {
-          const al = box.autoLabel;
+        // --- Render Structural Classification (Type & Score) ---
+        if (box.type && typeof box.score === 'number' && !isNaN(box.score)) {
+          const labelText = `${box.type} (${box.score.toFixed(2)})`;
           const fontSize = Math.max(10, 10 * hRatio);
           ctx.font = `bold ${fontSize}px Inter, sans-serif`;
           ctx.textAlign = 'left';
           ctx.textBaseline = 'bottom';
-
-          const labelText = `${al.label} (${(al.confidence || 0).toFixed(2)})`;
+          
           const textWidth = ctx.measureText(labelText).width;
           
           // Positioning
           const textX = left + 2 * hRatio;
-          const textY = top - 4 * vRatio; // Just above top edge
-          const markerY = textY - fontSize - 2 * vRatio; // Above the text
+          const textY = top - 4 * vRatio; 
+          const markerY = textY - fontSize - 2 * vRatio;
 
-          // 1. Draw small dark background for text legibility outside the box
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+          // 1. Draw small dark background for text legibility
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
           ctx.fillRect(textX - 2 * hRatio, textY - fontSize, textWidth + 4 * hRatio, fontSize + 2 * vRatio);
 
           // 2. Draw Label Text
           ctx.fillStyle = box.borderColor || '#FFFFFF';
           ctx.fillText(labelText, textX, textY);
 
-          // 3. Status Indicator (Stacked above text)
+          // 3. Status Indicator (Always gray for structural labels unless autoLabel status overrides)
+          const al = box.autoLabel;
           const dotRadius = 4 * hRatio;
           const dotX = left + 8 * hRatio;
 

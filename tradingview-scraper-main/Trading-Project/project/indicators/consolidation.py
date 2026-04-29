@@ -84,8 +84,12 @@ def consolidation_boxes(
                 firstSwingIndex = None
                 anchorIndex     = i
             else:
-                if h > rangeTop:   rangeTop    = h
-                if l < rangeBottom: rangeBottom = l
+                # LOCK: Only expand if count <= 5
+                age = i - activeBox["start"] + 1
+                if age <= 5:
+                    if h > rangeTop:    rangeTop    = h
+                    if l < rangeBottom: rangeBottom = l
+                
                 activeBox["end"]    = i
                 activeBox["top"]    = rangeTop
                 activeBox["bottom"] = rangeBottom
@@ -129,20 +133,75 @@ def consolidation_boxes(
                 continue
 
             if gotSwingHigh and gotSwingLow and firstSwingIndex is not None:
-                # User requirement: 6 candles should close inside the box
-                closedInsideCount = 0
+                # Requirement: ALL candles must close inside until we hit min_bars
+                # Extension: Expansion allowed if wicks break range but close inside
+                all_inside = True
+                tempHigh   = swingHighVal
+                tempLow    = swingLowVal
+                current_count = 0
+                
                 for j in range(firstSwingIndex, i + 1):
-                    if swingLowVal <= close_arr[j] <= swingHighVal:
-                        closedInsideCount += 1
+                    # How many candles have we processed in this potential box?
+                    pos_in_box = j - firstSwingIndex + 1
 
-                if closedInsideCount >= min_bars:
+                    # Check close against CURRENT range
+                    if tempLow <= close_arr[j] <= tempHigh:
+                        # Expansion ONLY allowed during the formation phase (first 5 candles)
+                        if pos_in_box <= 5:
+                            if low_arr[j]  < tempLow:  tempLow  = low_arr[j]
+                            if high_arr[j] > tempHigh: tempHigh = high_arr[j]
+                        
+                        current_count += 1
+                    else:
+                        all_inside = False
+                        break
+
+                if all_inside and current_count >= min_bars:
+                    swingHighVal    = tempHigh
+                    swingLowVal     = tempLow
                     rangeTop        = swingHighVal
                     rangeBottom     = swingLowVal
                     active          = True
                     searchingSwings = False
                     boxStarted      = True
-                    activeBox       = {"start": firstSwingIndex, "end": i,
-                                       "top": rangeTop, "bottom": rangeBottom}
+                    
+                    # ── Classification & Scoring ──
+                    box_candles = df.iloc[firstSwingIndex : i + 1]
+                    cl = box_candles["close"].to_numpy()
+                    op = box_candles["open"].to_numpy()
+                    hi = box_candles["high"].to_numpy()
+                    lo = box_candles["low"].to_numpy()
+                    
+                    rng = rangeTop - rangeBottom
+                    mid = (rangeTop + rangeBottom) / 2.0
+                    tightness = rng / (cl[-1] + 1e-9)
+                    
+                    displacement = abs(cl[-1] - cl[0])
+                    path_length  = np.sum(np.abs(np.diff(cl))) + 1e-9
+                    efficiency   = displacement / path_length
+                    
+                    body_avg = np.mean(np.abs(cl - op))
+                    bias     = body_avg / (rng + 1e-9)
+                    
+                    touch_thresh = rng * 0.05
+                    touches = np.sum(rangeTop - hi < touch_thresh) + np.sum(lo - rangeBottom < touch_thresh)
+                    
+                    score = (float(touches) * 0.5) + (float(efficiency) * 3.0) - (float(bias) * 2.0)
+                    
+                    box_type = "LOOSE"
+                    if tightness < 0.005 and touches >= 4:
+                        box_type = "TIGHT"
+                    elif efficiency < 0.4 and bias > 0.3:
+                        box_type = "DRIFT"
+                    
+                    activeBox = {
+                        "start": firstSwingIndex, 
+                        "end": i,
+                        "top": rangeTop, 
+                        "bottom": rangeBottom,
+                        "type": box_type,
+                        "score": round(score, 2)
+                    }
 
 
     return pd.DataFrame(boxes)

@@ -23,11 +23,18 @@ export default function DecisionCluster({ cluster }) {
   // Read live canvas scale from react-zoom-pan-pinch context
   const { transformState } = useTransformContext();
 
-  // Live tick: increment every 30s so canvas charts auto-update
+  // Live tick: increment every 5s synchronized with clock (matches ChartPage)
   const [liveTickKey, setLiveTickKey] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => setLiveTickKey(k => k + 1), 30000);
-    return () => clearInterval(id);
+    let lastPeriod = Math.floor(new Date().getSeconds() / 5);
+    const tick = setInterval(() => {
+      const currentPeriod = Math.floor(new Date().getSeconds() / 5);
+      if (currentPeriod !== lastPeriod) {
+        lastPeriod = currentPeriod;
+        setLiveTickKey(k => k + 1);
+      }
+    }, 1000);
+    return () => clearInterval(tick);
   }, []);
 
   const handlePointerDown = (e) => {

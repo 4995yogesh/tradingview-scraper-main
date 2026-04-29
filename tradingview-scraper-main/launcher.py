@@ -49,6 +49,7 @@ if not os.path.exists(PYTHON_EXEC):
 URL_BACKEND  = "http://localhost:8000/api/health"
 URL_FRONTEND = "http://localhost:3000"
 URL_CANVAS   = "http://localhost:3000/canvas"
+URL_REFINE   = "http://localhost:3000/training"
 
 # Colours (Dracula palette)
 C_BG       = "#1e1e2e"
@@ -204,6 +205,7 @@ class DashboardLauncher:
 
         for (label, url, color) in [
             ("🔭 Canvas",       URL_CANVAS,           C_PURPLE),
+            ("🎨 Refine Studio", URL_REFINE,           C_GREEN),
             ("📊 Dashboard",    URL_FRONTEND,          C_CYAN),
             ("⚙  Backend API", URL_BACKEND,            C_ORANGE),
         ]:

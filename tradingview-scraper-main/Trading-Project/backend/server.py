@@ -1018,13 +1018,36 @@ def get_consolidations_all():
                         continue
                     ts_start = int(pd.Timestamp(idx[si]).timestamp() * 1000)
                     ts_end   = int(pd.Timestamp(idx[ei]).timestamp() * 1000)
-                    zones.append({
+                    zone_data = {
+                        "symbol":    symbol,
                         "timeframe": tf,
                         "timeStart": ts_start,
                         "timeEnd":   ts_end,
                         "priceHigh": float(row["top"]),
                         "priceLow":  float(row["bottom"]),
-                    })
+                        "type":      row.get("type", "LOOSE"),
+                        "score":     float(row.get("score", 0.0))
+                    }
+                    # Compute ID and sample for Refinement Training
+                    zid = _compute_box_id_long(symbol, zone_data)
+                    zone_data["box_id"] = zid
+                    zones.append(zone_data)
+
+                    # Auto-Sampler (5m, 15m, 1h only)
+                    # Guard: only sample when ≥5 candles exist after box end (right-side context requirement)
+                    if tf in ["5m", "15m", "1h"] and (ei + 5) <= (df_len - 1):
+                        try:
+                            ctx_s = max(0, si - 25)
+                            ctx_e = min(df_len - 1, ei + 25)
+                            # Ensure time is converted to string for JSON persistence
+                            ctx_df = df.iloc[ctx_s:ctx_e+1].copy()
+                            ctx_df['time'] = ctx_df.index.strftime('%Y-%m-%dT%H:%M:%SZ')
+                            from training_db import training_db
+                            # Initially PENDING_SCREENSHOT until frontend fulfills it
+                            training_db.upsert_box(zone_data, ctx_df.to_dict('records'))
+                        except Exception as e:
+                            logger.debug("Sampling error: %s", e)
+
                 except Exception as inner_exc:
                     logger.debug("Zone parse error %s [%s]: %s", symbol, tf, inner_exc)
         except Exception as exc:
@@ -1315,6 +1338,161 @@ async def get_watchlist():
         results = await asyncio.gather(*tasks)
 
     return {"status": "success", "data": list(results)}
+
+
+
+# ── REFINEMENT TRAINING ENDPOINTS ───────────────────────────────────────────
+@app.get("/api/training/all_boxes")
+async def get_all_boxes(limit: int = 200, status: str = None):
+    """Returns ALL boxes regardless of status, with full ohlc_context for canvas rendering."""
+    import sqlite3
+    try:
+        with sqlite3.connect("training_set.db") as conn:
+            conn.row_factory = sqlite3.Row
+            if status:
+                cursor = conn.execute(
+                    "SELECT box_id, symbol, timeframe, time_start, time_end, price_high, price_low, ohlc_context, original_meta, user_box, status, created_at FROM review_queue WHERE status=? ORDER BY created_at DESC LIMIT ?",
+                    (status, limit)
+                )
+            else:
+                cursor = conn.execute(
+                    "SELECT box_id, symbol, timeframe, time_start, time_end, price_high, price_low, ohlc_context, original_meta, user_box, status, created_at FROM review_queue ORDER BY created_at DESC LIMIT ?",
+                    (limit,)
+                )
+            rows = [dict(r) for r in cursor.fetchall()]
+            
+            import json
+            valid_rows = []
+            for r in rows:
+                try:
+                    ctx = json.loads(r["ohlc_context"])
+                    # Detect abnormal gaps/missing data represented as consecutive zero-height Dojis
+                    doj_count = sum(1 for d in ctx if d['open'] == d['high'] == d['low'] == d['close'])
+                    
+                    # Detect extreme vertical price gaps (e.g. > 20 pips in EURUSD)
+                    # This handles scenarios where data simply jumped across a huge missing time span
+                    max_gap = max([0] + [abs(ctx[i]['open'] - ctx[i-1]['close']) for i in range(1, len(ctx))])
+                    
+                    if doj_count > 3 or max_gap > 0.00200:
+                        continue # Skip corrupted/abnormal box
+                        
+                    valid_rows.append(r)
+                except Exception:
+                    valid_rows.append(r) # fallback if parse fails
+                    
+            return {"status": "ok", "boxes": valid_rows, "total": len(valid_rows)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/training/pending")
+async def get_training_pending(limit: int = 50):
+    from training_db import training_db
+    try:
+        pending = training_db.get_pending(limit)
+        return {"status": "ok", "samples": pending}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/training/needs_screenshot")
+async def get_needs_screenshot(symbol: str, timeframe: str):
+    from training_db import training_db
+    try:
+        needs = training_db.get_needs_screenshot(symbol, timeframe)
+        return {"status": "ok", "boxes": needs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/training/upload_screenshot")
+async def upload_screenshot(data: dict):
+    from training_db import training_db
+    try:
+        box_id = data.get("box_id")
+        b64 = data.get("screenshot_b64")
+        if not box_id or not b64:
+            raise HTTPException(status_code=400, detail="Missing box_id or screenshot_b64")
+        training_db.save_screenshot(box_id, b64)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/training/stats")
+async def get_training_stats():
+    import sqlite3
+    try:
+        with sqlite3.connect("training_set.db") as conn:
+            conn.row_factory = sqlite3.Row
+            res = conn.execute("""
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN status = 'LABELED' OR status = 'ANALYZED' THEN 1 ELSE 0 END) as labeled
+                FROM review_queue
+            """).fetchone()
+            return {"status": "ok", "stats": dict(res)}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/training/lessons")
+async def get_training_lessons():
+    import sqlite3
+    try:
+        with sqlite3.connect("training_set.db") as conn:
+            # Fetch recent analyses
+            cursor = conn.execute("SELECT gemini_analysis FROM review_queue WHERE status = 'ANALYZED' ORDER BY created_at DESC LIMIT 10")
+            rows = cursor.fetchall()
+            # In a real implementation, we'd use Gemini to summarize these 10 rows into 5 key bullets
+            # For now, we'll just return the raw strings as lessons
+            lessons = []
+            for r in rows:
+                try:
+                    # Try parsing as JSON if Gemini output was structured
+                    d = json.loads(r[0])
+                    lessons.append(d.get('observation', r[0]))
+                except:
+                    lessons.append(r[0][:150] + "...")
+            return {"status": "ok", "lessons": lessons}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/training/label")
+async def submit_training_label(data: dict):
+    from training_db import training_db
+    from gemini_trainer import gemini_trainer
+    try:
+        box_id = data.get("box_id")
+        user_box = data.get("user_box") # {timeStart, timeEnd, priceHigh, priceLow}
+        is_skip = data.get("is_skip", False)
+
+        if not box_id:
+            raise HTTPException(status_code=400, detail="Missing box_id")
+            
+        if is_skip:
+            training_db.skip_box(box_id)
+            return {"status": "ok"}
+
+        if not user_box:
+            raise HTTPException(status_code=400, detail="Missing user_box")
+            
+        training_db.update_label(box_id, user_box)
+        
+        # Trigger Gemini Analysis in background
+        threading.Thread(target=gemini_trainer.process_and_save, args=(box_id,), daemon=True).start()
+        
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/training/skip")
+async def skip_training_sample(data: dict):
+    from training_db import training_db
+    try:
+        box_id = data.get("box_id")
+        if not box_id:
+            raise HTTPException(status_code=400, detail="Missing box_id")
+        training_db.skip_box(box_id)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

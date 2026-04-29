@@ -229,6 +229,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const seriesRef              = useRef(null);
   const isLoadingMoreRef       = useRef(false);
   const swingSeriesRef         = useRef([]); // swing level LineSeries
+  const emaHighSeriesRef       = useRef(null);
+  const emaLowSeriesRef        = useRef(null);
   const consolidationPrimitiveRef = useRef(null); // Fast native shape plugin
   const aiPrimitiveRef = useRef(null); // Separate AI-predicted box layer
   const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
@@ -322,31 +324,65 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     return () => clearTimeout(t);
   }, [error]);
 
-  // ── Live Polling: Fetch latest candles synchronized by ChartPage ──
+  // ── Live Polling: Fetch latest candles and push directly to series ──
   useEffect(() => {
-    if (loading || error || !chartData || typeof liveTickKey === 'undefined' || liveTickKey === 0) return;
+    if (loading || error || typeof liveTickKey === 'undefined' || liveTickKey === 0) return;
+    if (!seriesRef.current || !chartRef.current) return;
 
     (async () => {
       try {
-        const latest = await fetchLiveCandles(symbol, timeframe, 50);
-        if (latest && latest.candleData.length > 0) {
-          setChartData(prev => {
-            if (!prev) return latest;
-            
-            const combinedCandles = prev.candleData.concat(latest.candleData);
-            const combinedVolume  = prev.volumeData.concat(latest.volumeData);
+        const latest = await fetchLiveCandles(symbol, timeframe, 10);
+        if (!latest || latest.candleData.length === 0) return;
 
-            return {
-              candleData: prepareChartData(combinedCandles, timeframe),
-              volumeData: prepareChartData(combinedVolume, timeframe)
-            };
-          });
+        // Normalise timestamps the same way prepareChartData does
+        const mapped = latest.candleData.map(c => {
+          let t = c.time;
+          if (typeof t === 'string' && t.includes('-')) {
+            t = timeframe === '1d' ? t : new Date(t).getTime() / 1000;
+          } else {
+            t = Number(t);
+          }
+          if (timeframe === '1d') t = typeof c.time === 'string' ? c.time : new Date(c.time * 1000).toISOString().slice(0, 10);
+          if (timeframe === '1w') {
+            const d = typeof c.time === 'string' ? new Date(c.time) : new Date(c.time * 1000);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            const mon = new Date(d.setDate(diff));
+            t = mon.toISOString().slice(0, 10);
+          }
+          return { ...c, time: t };
+        }).filter(c => c.open != null && c.high != null && c.low != null && c.close != null);
+
+        // Push each candle via series.update() — the correct LightweightCharts live-update API
+        for (const candle of mapped) {
+          try {
+            if (chartType === 'line' || chartType === 'area') {
+              seriesRef.current.update({ time: candle.time, value: candle.close });
+            } else {
+              seriesRef.current.update(candle);
+            }
+          } catch (_) { /* silently skip duplicate/out-of-order candles */ }
         }
+
+        // Keep chartData state in sync so other effects (consolidations, swings) stay current
+        setChartData(prev => {
+          if (!prev) return latest;
+          try {
+            const combined = prev.candleData.concat(latest.candleData);
+            const combinedVol = prev.volumeData.concat(latest.volumeData);
+            return {
+              candleData: prepareChartData(combined, timeframe),
+              volumeData: prepareChartData(combinedVol, timeframe),
+            };
+          } catch (_) {
+            return prev; // keep old data on any pipeline error — never crash
+          }
+        });
       } catch (err) {
-        console.warn('Live fetch failed:', err?.message);
+        console.warn('[LiveTick] fetch failed:', err?.message);
       }
     })();
-  }, [liveTickKey]);
+  }, [liveTickKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Navigate chart to a box when FP/FN entry is clicked in Monitor ─────────
   useEffect(() => {
@@ -427,6 +463,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     // Clear indicator series refs since the chart (and all its series) is destroyed
     swingSeriesRef.current = [];
+    emaHighSeriesRef.current = null;
+    emaLowSeriesRef.current = null;
     consolidationPrimitiveRef.current = null;
 
     const container = chartContainerRef.current;
@@ -450,7 +488,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       timeScale: {
         borderColor: chartSettings?.priceScaleColor || '#2A2E39', 
         timeVisible: ['1m', '5m', '15m', '1h', '4h'].includes(timeframe),
-        secondsVisible: false, rightOffset: 10, barSpacing: globalLastBarSpacing || TF_BAR_SPACING[timeframe] || 8, minBarSpacing: 1,
+        secondsVisible: false, rightOffset: 10, barSpacing: TF_BAR_SPACING[timeframe] || 8, minBarSpacing: 1,
         tickMarkFormatter: (time, tickMarkType, locale) => {
           if (typeof time === 'string') return time;
           const date = new Date(time * 1000);
@@ -514,6 +552,22 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       });
     }
     seriesRef.current = mainSeries;
+
+    // --- EMA Channel Series (High/Low) ---
+    emaHighSeriesRef.current = chart.addSeries(LineSeries, {
+      color: 'rgba(0, 255, 255, 0.65)',
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
+    emaLowSeriesRef.current = chart.addSeries(LineSeries, {
+      color: 'rgba(255, 0, 255, 0.65)',
+      lineWidth: 1,
+      priceLineVisible: false,
+      lastValueVisible: false,
+      crosshairMarkerVisible: false,
+    });
 
     chart.subscribeCrosshairMove((param) => {
       if (!param || !param.time) {
@@ -747,27 +801,39 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         fillColor   = 'rgba(144, 202, 249, 0.15)';
       }
 
-      // Map Auto-Labels
+      // Map Auto-Labels (for status marker)
       const al = autoLabels.find(l => l.box_id === zone.box_id);
-      if (al) {
-        borderColor = al.label === 'GOOD' ? 'rgba(76, 175, 80, 0.85)' : (al.label === 'BAD' ? 'rgba(244, 67, 54, 0.85)' : 'rgba(255, 235, 59, 0.85)');
-        fillColor = al.label === 'GOOD' ? 'rgba(76, 175, 80, 0.15)' : (al.label === 'BAD' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(255, 235, 59, 0.15)');
+
+      // ── Structural Classification Mapping ──
+      if (zone.type === 'TIGHT') {
+        borderColor = 'rgba(76, 175, 80, 0.95)';
+        fillColor   = 'rgba(76, 175, 80, 0.08)';
+      } else if (zone.type === 'LOOSE') {
+        borderColor = 'rgba(255, 235, 59, 0.95)';
+        fillColor   = 'rgba(255, 235, 59, 0.08)';
+      } else if (zone.type === 'DRIFT') {
+        borderColor = 'rgba(255, 152, 0, 0.95)';
+        fillColor   = 'rgba(255, 152, 0, 0.08)';
       }
 
       const boxDef = {
-        box_id: zone.box_id,
-        t1: points[0],
-        t2: points[points.length - 1],
-        drawT1: points[0],
-        drawT2: points[points.length - 1],
-        priceHigh: zone.priceHigh,
-        priceLow: zone.priceLow,
+        box_id:      zone.box_id,
+        t1:          points[0],
+        t2:          points[points.length - 1],
+        drawT1:      points[0],
+        drawT2:      points[points.length - 1],
+        priceHigh:   zone.priceHigh,
+        priceLow:    zone.priceLow,
         borderColor,
         fillColor,
         isDashed,
         highlighted: zone.box_id === highlightedBoxId,
         s1, s2,
-        autoLabel: al
+        startIndex:  lo,
+        endIndex:    hi - 1,
+        autoLabel:   al,
+        type:        zone.type,
+        score:       zone.score
       };
 
       if (isHTF) parsedHtf.push(boxDef);
@@ -1194,6 +1260,22 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       seriesRef.current.setData(candleData);
     }
 
+    // --- Update EMA Channel Data ---
+    if (emaHighSeriesRef.current) {
+      emaHighSeriesRef.current.setData(
+        candleData
+          .filter(d => typeof d.emaHigh === 'number')
+          .map(d => ({ time: d.time, value: d.emaHigh }))
+      );
+    }
+    if (emaLowSeriesRef.current) {
+      emaLowSeriesRef.current.setData(
+        candleData
+          .filter(d => typeof d.emaLow === 'number')
+          .map(d => ({ time: d.time, value: d.emaLow }))
+      );
+    }
+
     onPriceUpdate?.(candleData[candleData.length - 1]);
 
     if (isFirstLoad) {
@@ -1209,8 +1291,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           to: candleData.length + 3 
         });
       } else {
-        if (globalLastBarSpacing && globalLastCenterTime) {
-          chart.timeScale().applyOptions({ barSpacing: globalLastBarSpacing });
+        // if (globalLastBarSpacing && globalLastCenterTime) {
+        //   chart.timeScale().applyOptions({ barSpacing: globalLastBarSpacing });
+        //   ...
+        if (false) { // Disabled global restoration to prevent zoom fighting
           
           let centerIdx = candleData.length - 1;
           let lo = 0, hi = candleData.length - 1;
@@ -1235,7 +1319,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           });
 
         } else {
-          const initBars = 100;
+          const initBars = 300;
           if (candleData.length > initBars) {
             chart.timeScale().setVisibleLogicalRange({ from: candleData.length - initBars, to: candleData.length + 3 });
           } else {
@@ -1245,6 +1329,110 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       }
     }
   }, [chartData, chartType, timeframe, onPriceUpdate]);
+
+  // ── Auto-Sampler: Capture Focused Canvas Screenshots for Refinement Training ──
+  useEffect(() => {
+    if (loading || error || !chartRef.current || !['5m', '15m', '1h'].includes(timeframe)) return;
+
+    const captureInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/training/needs_screenshot?symbol=${symbol}&timeframe=${timeframe}`);
+        const data = await res.json();
+        if (data.status === 'ok' && data.boxes?.length > 0) {
+          const chart = chartRef.current;
+          const timeScale = chart.timeScale();
+          
+          for (const box of data.boxes) {
+            // Find this box in our local activeBoxes state (mapped by indicator)
+            const localBox = activeBoxesRef.current.find(b => b.box_id === box.box_id);
+            if (localBox) {
+              // 1. Determine if the box is actually visible on screen right now
+              const range = timeScale.getVisibleLogicalRange();
+              if (!range) continue;
+              if (localBox.startIndex > range.to || localBox.endIndex < range.from) continue;
+
+              console.log(`[AutoSampler] Background capture for box: ${box.box_id}`);
+
+              // 2. Background Capture Logic
+              const offscreenCapture = async () => {
+                const container = document.createElement('div');
+                container.style.width = '1200px';
+                container.style.height = '600px';
+                container.style.position = 'absolute';
+                container.style.top = '-9999px';
+                document.body.appendChild(container);
+
+                try {
+                  const offChart = createChart(container, {
+                    width: 1200, height: 600,
+                    layout: { background: { color: '#000000' }, textColor: '#D1D4DC' },
+                    grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+                    timeScale: { visible: false, borderVisible: false },
+                    priceScale: { borderVisible: false },
+                    handleScroll: false, handleScale: false,
+                  });
+
+                  const offSeries = offChart.addCandlestickSeries({
+                    upColor: '#26A69A', downColor: '#EF5350',
+                    borderVisible: false, wickVisible: true,
+                  });
+
+                  const candles = chartDataRef.current?.candleData;
+                  if (!candles) throw new Error('No candles');
+
+                  offSeries.setData(candles);
+
+                  const offPrimitive = new ConsolidationBoxesPrimitive();
+                  offSeries.attachPrimitive(offPrimitive);
+                  offPrimitive.setData([{
+                    ...localBox,
+                    borderColor: 'rgba(255, 235, 59, 0.9)',
+                    fillColor: 'rgba(255, 235, 59, 0.1)',
+                    highlighted: true
+                  }]);
+
+                  const fromIdx = Math.max(0, localBox.startIndex - 5);
+                  const toIdx = Math.min(candles.length - 1, localBox.endIndex + 5);
+                  
+                  offChart.timeScale().setVisibleRange({
+                    from: candles[fromIdx].time,
+                    to: candles[toIdx].time
+                  });
+
+                  // Force auto-scale for vertical fit
+                  offChart.priceScale().applyOptions({ autoScale: true });
+
+                  await new Promise(r => setTimeout(r, 600)); // Buffer for layout
+
+                  const canvas = offChart.takeScreenshot();
+                  const b64 = canvas.toDataURL('image/png');
+
+                  await fetch('http://localhost:8000/api/training/upload_screenshot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ box_id: box.box_id, screenshot_b64: b64 })
+                  });
+
+                  console.log(`[AutoSampler] Background capture uploaded: ${box.box_id}`);
+                } catch (err) {
+                  console.warn(`[AutoSampler] Background capture failed for ${box.box_id}:`, err);
+                } finally {
+                  document.body.removeChild(container);
+                }
+              };
+
+              offscreenCapture();
+              break; 
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[AutoSampler] Focused capture failed:', err);
+      }
+    }, 12000); // Check every 12s
+
+    return () => clearInterval(captureInterval);
+  }, [symbol, timeframe, loading, error]);
 
   const handleResetView = useCallback(() => { chartRef.current?.timeScale().scrollToRealTime(); }, []);
 

@@ -7,6 +7,7 @@ import MarketOverview from './components/MarketOverview';
 import Footer from './components/Footer';
 import ChartPage from './components/chart/ChartPage';
 import InfiniteCanvasPage from './components/canvas/InfiniteCanvasPage';
+import RefinementDashboard from './components/training/RefinementDashboard';
 
 const HomePage = () => {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/chart" element={<ChartPage />} />
           <Route path="/chart/:symbol" element={<ChartPage />} />
           <Route path="/canvas" element={<InfiniteCanvasPage />} />
+          <Route path="/training" element={<RefinementDashboard />} />
           <Route path="*" element={<HomePage />} />
         </Routes>
       </BrowserRouter>
