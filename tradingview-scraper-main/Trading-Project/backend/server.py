@@ -1446,22 +1446,41 @@ async def get_training_stats():
 
 @app.get("/api/training/lessons")
 async def get_training_lessons():
-    import sqlite3
+    import sqlite3, hashlib
     try:
         with sqlite3.connect("training_set.db") as conn:
-            # Fetch recent analyses
-            cursor = conn.execute("SELECT gemini_analysis FROM review_queue WHERE status = 'ANALYZED' ORDER BY created_at DESC LIMIT 10")
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("""
+                SELECT box_id, gemini_analysis, created_at FROM review_queue
+                WHERE status = 'ANALYZED'
+                  AND gemini_analysis IS NOT NULL
+                  AND gemini_analysis NOT LIKE '%API Error%'
+                  AND gemini_analysis NOT LIKE '%429%'
+                  AND length(gemini_analysis) > 50
+                ORDER BY created_at DESC LIMIT 20
+            """)
             rows = cursor.fetchall()
-            # In a real implementation, we'd use Gemini to summarize these 10 rows into 5 key bullets
-            # For now, we'll just return the raw strings as lessons
             lessons = []
+            seen_hashes = set()  # deduplicate near-identical content
             for r in rows:
-                try:
-                    # Try parsing as JSON if Gemini output was structured
-                    d = json.loads(r[0])
-                    lessons.append(d.get('observation', r[0]))
-                except:
-                    lessons.append(r[0][:150] + "...")
+                raw = r['gemini_analysis'] or ''
+                # Take first paragraph (before LOGIC separator)
+                main = raw.split('\n\n---\n')[0].strip()
+                if not main:
+                    continue
+                # Content hash (first 120 chars) for dedup
+                content_key = hashlib.md5(main[:120].encode()).hexdigest()
+                if content_key in seen_hashes:
+                    continue
+                seen_hashes.add(content_key)
+                lessons.append({
+                    'id': r['box_id'],
+                    'text': main[:400] if len(main) > 400 else main,
+                    'created_at': r['created_at'] or '',
+                    'hash': content_key,
+                })
+                if len(lessons) >= 10:
+                    break
             return {"status": "ok", "lessons": lessons}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -1485,14 +1504,30 @@ async def submit_training_label(data: dict):
         if not user_box:
             raise HTTPException(status_code=400, detail="Missing user_box")
             
-        training_db.update_label(box_id, user_box)
+        count = training_db.update_label(box_id, user_box)
         
         # Trigger Gemini Analysis in background
         threading.Thread(target=gemini_trainer.process_and_save, args=(box_id,), daemon=True).start()
+
+        # Trigger NN Training if threshold reached (500, 1000, 1500...)
+        if count >= 500 and count % 500 == 0:
+            import subprocess
+            def run_train():
+                subprocess.run(["python", "ml/train_nn.py"], cwd=os.path.dirname(os.path.abspath(__file__)))
+            threading.Thread(target=run_train, daemon=True).start()
         
-        return {"status": "ok"}
+        return {"status": "ok", "count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/training/nn_status")
+async def get_nn_status():
+    from training_db import training_db
+    try:
+        status = training_db.get_training_status()
+        return {"status": "ok", "data": status}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 @app.post("/api/training/skip")
 async def skip_training_sample(data: dict):

@@ -1,4 +1,5 @@
 import os
+import time
 import requests
 import json
 import base64
@@ -45,23 +46,31 @@ class GeminiTrainer: # Orchestrator wrapper
 
 
     def reprocess_missing_analyses(self):
-        """Finds LABELED boxes without analysis and processes them."""
+        """Finds LABELED/ANALYZED-with-error boxes and processes them sequentially (rate-limit safe)."""
         import sqlite3
         try:
             with sqlite3.connect("training_set.db") as conn:
                 conn.row_factory = sqlite3.Row
                 rows = conn.execute("""
                     SELECT box_id FROM review_queue 
-                    WHERE status = 'LABELED' 
-                    OR (status = 'ANALYZED' AND gemini_analysis LIKE '%Error%')
+                    WHERE status = 'LABELED'
+                    OR (status = 'ANALYZED' AND (
+                        gemini_analysis LIKE '%API Error%'
+                        OR gemini_analysis LIKE '%429%'
+                        OR gemini_analysis IS NULL
+                    ))
+                    ORDER BY created_at DESC
+                    LIMIT 50
                 """).fetchall()
-                print(f"DEBUG: Found {len(rows)} boxes to analyze. Processing with 1s delay for NVIDIA NIM...")
-                import time
-                for r in rows:
-                    self.process_and_save(r['box_id'])
-                    time.sleep(2)
+
+            print(f"DEBUG: Found {len(rows)} boxes to analyze. Processing sequentially (rate-limit safe)...")
+            for r in rows:
+                self.process_and_save(r['box_id'])
+                time.sleep(2.0)  # ~30 RPM — well within 40 RPM budget
+
         except Exception as e:
             print(f"DEBUG: Reprocess failed: {e}")
+
 
 gemini_trainer = GeminiTrainer()
 # Auto-reprocess on startup to catch up

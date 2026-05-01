@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Navbar from '../Navbar';
+import NNTrainingDashboard from './NNTrainingDashboard';
 
 // ── Canvas Chart Renderer constants ──────────────────────────────────────────
 const CW = 10, CG = 2;
@@ -131,6 +132,44 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
 
 
 
+// ── Caveman bullet compressor ────────────────────────────────────────────────
+const FILLER = [
+  /^(the lesson learned (from this (exercise|analysis|code) is( the importance of)?|here is that))/i,
+  /^(this (suggests?|indicates?|shows?|means?|implies?|demonstrates?|highlights?|reveals?|confirms?|underscores?)( that| the)?)/i,
+  /^(it is (important|essential|crucial|critical|key|vital|necessary) to)/i,
+  /^(in (order|summary|conclusion|other words|this case),?)/i,
+  /^(overall[,.]?|additionally[,.]?|furthermore[,.]?|moreover[,.]?|therefore[,.]?|thus[,.]?|hence[,.]?)/i,
+  /^(by (doing so|analyzing|refining|adjusting|examining),?)/i,
+  /^(the (key|main|primary|central|core) (takeaway|lesson|insight|point|idea|message) (is|here)?)/i,
+  /^(this (is|can be) (a|an|the)?)/i,
+];
+
+function crushToBullets(raw) {
+  if (!raw || typeof raw !== 'string') return [];
+  // Split on sentence endings, numbered lists, or line breaks
+  const sentences = raw
+    .replace(/\n+/g, ' ')
+    .split(/(?<=[.!?])\s+|(?=\d+\.\s)|(?=[-•*]\s)/)
+    .map(s => s.replace(/^[\d.•*-]+\s*/, '').trim())
+    .filter(s => s.length > 15 && s.length < 300);
+
+  const bullets = [];
+  for (const s of sentences) {
+    if (bullets.length >= 5) break;
+    let b = s;
+    // Strip filler openers
+    for (const re of FILLER) b = b.replace(re, '').trim();
+    // Remove leading articles/pronouns
+    b = b.replace(/^(The |A |An |It |This |These |That |Those )/i, '');
+    // Capitalise first char
+    b = b.charAt(0).toUpperCase() + b.slice(1);
+    // Strip trailing period
+    b = b.replace(/\.$/, '');
+    if (b.length > 10) bullets.push(b);
+  }
+  return bullets;
+}
+
 // ── Status colours ────────────────────────────────────────────────────────────
 const SC = {
   PENDING_SCREENSHOT: '#F7C948',
@@ -142,31 +181,46 @@ const SC = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const RefinementDashboard = () => {
-  const [boxes,   setBoxes]   = useState([]);
-  const [idx,     setIdx]     = useState(0);
-  const [filter,  setFilter]  = useState('PENDING');
-  const [stats,   setStats]   = useState({ total: 0, pending: 0, labeled: 0 });
-  const [drawBox, setDrawBox] = useState(null);
-  const [drag,    setDrag]    = useState(false);
-  const [mode,    setMode]    = useState('NONE');
-  const [off,     setOff]     = useState({ x: 0, y: 0 });
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
-  const [toast,   setToast]   = useState(null);
-  const [zoom,    setZoom]    = useState(1.0);
-  const [magnet,  setMagnet]  = useState(true);
-  const [lessons, setLessons] = useState([]);
-  const [lastBox, setLastBox] = useState(null); // for Undo
+  const [boxes,      setBoxes]      = useState([]);
+  const [idx,        setIdx]        = useState(0);
+  const [filter,     setFilter]     = useState('PENDING');
+  const [stats,      setStats]      = useState({ total: 0, pending: 0, labeled: 0 });
+  const [drawBoxes,  setDrawBoxes]  = useState([]);   // committed array — set on mouseUp only
+  const [loading,    setLoading]    = useState(true);
+  const [saving,     setSaving]     = useState(false);
+  const [toast,      setToast]      = useState(null);
+  const [zoom,       setZoom]       = useState(1.0);
+  const [magnet,     setMagnet]     = useState(true);
+  const [lessons,    setLessons]    = useState([]);
+  const [seenHashes, setSeenHashes] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('rf_seen_hashes') || '[]')); }
+    catch { return new Set(); }
+  });
+  const [showAllInsights, setShowAllInsights] = useState(false);
+  const [lastBox,    setLastBox]    = useState(null);
   const zoomRef               = useRef(1.0);
-  const panYRef               = useRef(0);      // price-axis pan offset
-  const priceZoomRef          = useRef(1.0);    // vertical price scale zoom
-  const mouseXRef             = useRef(0);      // last known mouse X on overlay
+  const panYRef               = useRef(0);
+  const priceZoomRef          = useRef(1.0);
+  const mouseXRef             = useRef(0);
   const ohlcRef               = useRef(null);
   const metaRef               = useRef(null);
 
-  const canvasRef    = useRef(null);
-  const overlayRef   = useRef(null);
-  const filteredOhlcRef = useRef(null); // filtered (no ghosts/weekends) — used for pixel↔OHLC mapping
+  // ── Multi-box drag engine ─────────────────────────────────────────────────
+  const dragRef       = useRef(false);
+  const modeRef       = useRef('NONE');
+  const offRef        = useRef({ x: 0, y: 0 });
+  const drawBoxesRef  = useRef([]);      // live boxes array during drag
+  const activeIdxRef  = useRef(-1);
+  const lastClickTimeRef = useRef(0);     // which box is being interacted
+  const rafRef        = useRef(null);
+  const magnetRef     = useRef(true);
+  const priceRangeRef = useRef({ maxP: 0, minP: 0, rng: 0.0001 });
+
+  const canvasRef     = useRef(null);
+  const overlayRef    = useRef(null);
+  const dragCanvasRef = useRef(null);
+  const filteredOhlcRef = useRef(null);
+
 
   const box = boxes[idx] || null;
 
@@ -187,7 +241,7 @@ const RefinementDashboard = () => {
       if (data.status === 'ok') {
         setBoxes(data.boxes || []);
         setIdx(0);
-        setDrawBox(null);
+        setDrawBoxes([]);
       } else {
         showToast('API error', 'err');
       }
@@ -212,6 +266,17 @@ const RefinementDashboard = () => {
       if (d.status === 'ok') setLessons(d.lessons || []);
     } catch (_) {}
   };
+
+  // Mark all currently visible lessons as seen
+  const markAllSeen = useCallback((lessonList) => {
+    const hashes = (lessonList || []).map(l => l.hash).filter(Boolean);
+    if (!hashes.length) return;
+    setSeenHashes(prev => {
+      const next = new Set([...prev, ...hashes]);
+      try { localStorage.setItem('rf_seen_hashes', JSON.stringify([...next])); } catch (_) {}
+      return next;
+    });
+  }, []);
 
   useEffect(() => { 
     let active = true;
@@ -252,6 +317,9 @@ const RefinementDashboard = () => {
     return () => { active = false; clearInterval(iv); };
   }, [fetchBoxes, filter]);
 
+  // sync magnetRef whenever magnet state changes
+  useEffect(() => { magnetRef.current = magnet; }, [magnet]);
+
   // ── Draw chart on box or zoom change ─────────────────────────────────────
   const redraw = useCallback((z, py, pz) => {
     if (!canvasRef.current || !ohlcRef.current) return;
@@ -263,7 +331,13 @@ const RefinementDashboard = () => {
 
   useEffect(() => {
     if (!box || !canvasRef.current) return;
-    setDrawBox(null);
+    setDrawBoxes([]);
+    drawBoxesRef.current = [];
+    // Clear drag canvas
+    if (dragCanvasRef.current) {
+      const dc = dragCanvasRef.current.getContext('2d');
+      dc.clearRect(0, 0, dragCanvasRef.current.width, dragCanvasRef.current.height);
+    }
     try {
       const ohlc = typeof box.ohlc_context === 'string'
         ? JSON.parse(box.ohlc_context)
@@ -279,10 +353,18 @@ const RefinementDashboard = () => {
       };
       ohlcRef.current      = ohlc;
       metaRef.current      = meta;
-      panYRef.current      = 0; // reset pan on new box
-      priceZoomRef.current = 1.0; // reset price zoom on new box
+      panYRef.current      = 0;
+      priceZoomRef.current = 1.0;
       const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0);
-      if (filtered) filteredOhlcRef.current = filtered;
+      if (filtered) {
+        filteredOhlcRef.current = filtered;
+        // Precompute price range for O(1) magnet snapping
+        const highs = filtered.map(c => c.high);
+        const lows  = filtered.map(c => c.low);
+        const maxP  = Math.max(...highs);
+        const minP  = Math.min(...lows);
+        priceRangeRef.current = { maxP, minP, rng: maxP - minP || 0.0001 };
+      }
     } catch (e) {
       console.error('Render error', e);
     }
@@ -324,7 +406,7 @@ const RefinementDashboard = () => {
     const onKey = e => {
       if (e.key === 'Enter')                        { e.preventDefault(); handleSave(); }
       else if (e.key === 's' || e.key === 'S')      { e.preventDefault(); handleSkip(); }
-      else if (e.key === 'Escape')                  { setDrawBox(null); setDrag(false); setMode('NONE'); }
+      else if (e.key === 'Escape')                  { clearDrawing(); }
       else if (e.key === 'ArrowRight')              setIdx(i => Math.min(i + 1, boxes.length - 1));
       else if (e.key === 'ArrowLeft')               setIdx(i => Math.max(i - 1, 0));
       else if (e.key === 'v' || e.key === 'V')      { e.preventDefault(); handleValidate(); }
@@ -332,111 +414,205 @@ const RefinementDashboard = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [drawBox, box, boxes.length]);
+  }, [drawBoxes, box, boxes.length]);
 
   // ── Mouse interaction ──────────────────────────────────────────────────────
-  const onMouseDown = e => {
-    const rect = overlayRef.current.getBoundingClientRect();
-    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    const W = canvasRef.current?.width || 900;
-    // Block box drawing on the price scale (right side)
-    if (mx > W - PAD.r) return;
-    const hs = 10;
-    if (drawBox) {
-      const { x, y, w, h } = drawBox;
-      if (Math.abs(mx-x)<hs && Math.abs(my-y)<hs)           { setMode('TL'); setDrag(true); return; }
-      if (Math.abs(mx-(x+w))<hs && Math.abs(my-y)<hs)       { setMode('TR'); setDrag(true); return; }
-      if (Math.abs(mx-x)<hs && Math.abs(my-(y+h))<hs)       { setMode('BL'); setDrag(true); return; }
-      if (Math.abs(mx-(x+w))<hs && Math.abs(my-(y+h))<hs)   { setMode('BR'); setDrag(true); return; }
-      if (Math.abs(mx-(x+w/2))<hs && Math.abs(my-y)<hs)     { setMode('T');  setDrag(true); return; }
-      if (Math.abs(mx-(x+w/2))<hs && Math.abs(my-(y+h))<hs) { setMode('B');  setDrag(true); return; }
-      if (Math.abs(mx-x)<hs && Math.abs(my-(y+h/2))<hs)     { setMode('L');  setDrag(true); return; }
-      if (Math.abs(mx-(x+w))<hs && Math.abs(my-(y+h/2))<hs) { setMode('R');  setDrag(true); return; }
-      const mnX=Math.min(x,x+w), mxX=Math.max(x,x+w), mnY=Math.min(y,y+h), mxY=Math.max(y,y+h);
-      if (mx>mnX && mx<mxX && my>mnY && my<mxY) {
-        setMode('MOVE'); setOff({ x: mx-x, y: my-y }); setDrag(true); return;
+  // ── Paint live box on drag canvas (called inside RAF) ─────────────────────
+  const paintDragCanvas = useCallback(() => {
+    const dc = dragCanvasRef.current;
+    if (!dc) return;
+    const ctx = dc.getContext('2d');
+    ctx.clearRect(0, 0, dc.width, dc.height);
+    const bxs = drawBoxesRef.current;
+    if (!bxs.length) return;
+    const activeIdx = activeIdxRef.current;
+    bxs.forEach((b, i) => {
+      if (!b) return;
+      const isActive = i === activeIdx;
+      const lx = b.w < 0 ? b.x + b.w : b.x;
+      const ly = b.h < 0 ? b.y + b.h : b.y;
+      const lw = Math.abs(b.w);
+      const lh = Math.abs(b.h);
+      ctx.fillStyle = isActive ? 'rgba(41,98,255,0.10)' : 'rgba(41,98,255,0.04)';
+      ctx.fillRect(lx, ly, lw, lh);
+      ctx.strokeStyle = isActive ? '#2962FF' : '#2962FF88';
+      ctx.lineWidth = isActive ? 1.5 : 1;
+      ctx.strokeRect(lx + 0.5, ly + 0.5, lw - 1, lh - 1);
+      // Box number label
+      ctx.fillStyle = isActive ? '#2962FF' : '#2962FF88';
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText(`#${i + 1}`, lx + 4, ly + 12);
+      // Handles only for active box
+      if (isActive) {
+        const hs = 5;
+        const handles = [
+          [lx, ly],[lx+lw, ly],[lx, ly+lh],[lx+lw, ly+lh],
+          [lx+lw/2, ly],[lx+lw/2, ly+lh],[lx, ly+lh/2],[lx+lw, ly+lh/2],
+        ];
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#2962FF';
+        ctx.lineWidth = 1;
+        for (const [hx, hy] of handles) {
+          ctx.beginPath();
+          ctx.arc(hx, hy, hs, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+        }
+      }
+    });
+  }, []);
+
+
+  // ── Snap mouse to candle grid (O(1) with precomputed range) ──────────────
+  const snapToCandle = useCallback((mx, my, W, H) => {
+    if (!magnetRef.current || !filteredOhlcRef.current) return { smx: mx, smy: my };
+    const ohlc = filteredOhlcRef.current;
+    const zoom = zoomRef.current;
+    const cw = Math.max(2, Math.round(CW * zoom));
+    const cg = Math.max(1, Math.round(CG * zoom));
+    const cH = H - PAD.t - PAD.b;
+    const cW = W - PAD.l - PAD.r;
+    const totW = ohlc.length * (cw + cg);
+    const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+
+    const cIdx = Math.max(0, Math.min(ohlc.length - 1, Math.round((mx - sx) / (cw + cg))));
+    const smx = sx + cIdx * (cw + cg) + (cw / 2);
+
+    const candle = ohlc[cIdx];
+    let smy = my;
+    if (candle) {
+      const { maxP, minP, rng } = priceRangeRef.current;
+      const midP    = (maxP + minP) / 2 + panYRef.current;
+      const halfRng = (rng / 2) / priceZoomRef.current;
+      const adjMax  = midP + halfRng;
+      const adjRng  = halfRng * 2;
+      const yH = PAD.t + ((adjMax - candle.high) / adjRng) * cH;
+      const yL = PAD.t + ((adjMax - candle.low)  / adjRng) * cH;
+      if (Math.abs(my - yH) < 30 || Math.abs(my - yL) < 30) {
+        smy = Math.abs(my - yH) < Math.abs(my - yL) ? yH : yL;
       }
     }
-    setDrawBox({ x: mx, y: my, w: 0, h: 0 });
-    setMode('DRAW'); setDrag(true);
-  };
+    return { smx, smy };
+  }, []);
+
+  const onMouseDown = useCallback(e => {
+    if (Date.now() - lastClickTimeRef.current < 300) return;
+    const rect = overlayRef.current.getBoundingClientRect();
+    const W = canvasRef.current?.width || 900;
+    const H = canvasRef.current?.height || 500;
+    const ratioX = W / rect.width;
+    const ratioY = H / rect.height;
+    const mx = (e.clientX - rect.left) * ratioX;
+    const my = (e.clientY - rect.top)  * ratioY;
+    if (mx > W - PAD.r) return;
+
+    const hs = 10;
+    const bxs = drawBoxesRef.current;
+
+    // Hit-test in reverse so last-drawn (topmost) wins
+    for (let i = bxs.length - 1; i >= 0; i--) {
+      const b = bxs[i];
+      if (!b) continue;
+      const { x, y, w, h } = b;
+      const checkHandle = (hx, hy, mode) => {
+        if (Math.abs(mx - hx) < hs && Math.abs(my - hy) < hs) {
+          activeIdxRef.current = i;
+          modeRef.current = mode;
+          dragRef.current = true;
+          return true;
+        }
+        return false;
+      };
+      if (checkHandle(x,       y,       'TL')) return;
+      if (checkHandle(x+w,     y,       'TR')) return;
+      if (checkHandle(x,       y+h,     'BL')) return;
+      if (checkHandle(x+w,     y+h,     'BR')) return;
+      if (checkHandle(x+w/2,   y,       'T'))  return;
+      if (checkHandle(x+w/2,   y+h,     'B'))  return;
+      if (checkHandle(x,       y+h/2,   'L'))  return;
+      if (checkHandle(x+w,     y+h/2,   'R'))  return;
+      // Inside box → MOVE
+      const mnX=Math.min(x,x+w), mxX=Math.max(x,x+w);
+      const mnY=Math.min(y,y+h), mxY=Math.max(y,y+h);
+      if (mx>mnX && mx<mxX && my>mnY && my<mxY) {
+        activeIdxRef.current = i;
+        modeRef.current = 'MOVE';
+        offRef.current = { x: mx - x, y: my - y };
+        dragRef.current = true;
+        paintDragCanvas();
+        return;
+      }
+    }
+
+    // Empty space → start new box
+    const newBox = { x: mx, y: my, w: 0, h: 0 };
+    drawBoxesRef.current = [...bxs, newBox];
+    activeIdxRef.current = drawBoxesRef.current.length - 1;
+    modeRef.current = 'DRAW';
+    dragRef.current = true;
+    paintDragCanvas();
+  }, [paintDragCanvas]);
+
 
   useEffect(() => {
-    if (!drag) return;
     const onMove = e => {
+      if (!dragRef.current) return;
       const rect = overlayRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const W = canvasRef.current.width, H = canvasRef.current.height;
+      const W = canvasRef.current?.width  || 900;
+      const H = canvasRef.current?.height || 500;
       const ratioX = W / rect.width;
       const ratioY = H / rect.height;
       const mx = (e.clientX - rect.left) * ratioX;
-      const my = (e.clientY - rect.top) * ratioY;
-      
-      let smx = mx, smy = my;
-      if (magnet && ohlcRef.current) {
-        const ohlc = filteredOhlcRef.current || ohlcRef.current;
-        const zoom = zoomRef.current;
-        const cw = Math.max(2, Math.round(CW * zoom));
-        const cg = Math.max(1, Math.round(CG * zoom));
-        const cH = H - PAD.t - PAD.b;
-        const cW = W - PAD.l - PAD.r;
-        const totW = ohlc.length * (cw + cg);
-        const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+      const my = (e.clientY - rect.top)  * ratioY;
 
-        // Snap X to nearest candle center
-        const cIdx = Math.max(0, Math.min(ohlc.length - 1, Math.round((mx - sx) / (cw + cg))));
-        smx = sx + cIdx * (cw + cg) + (cw / 2);
+      const { smx, smy } = snapToCandle(mx, my, W, H);
+      const ai = activeIdxRef.current;
+      const bxs = drawBoxesRef.current;
+      if (ai < 0 || ai >= bxs.length) return;
+      const b = bxs[ai];
+      if (!b) return;
 
-        // Snap Y to nearest High/Low of that candle
-        const candle = ohlc[cIdx];
-        if (candle) {
-          const highs = ohlc.map(c => c.high);
-          const lows  = ohlc.map(c => c.low);
-          const maxP  = Math.max(...highs);
-          const minP  = Math.min(...lows);
-          const rng   = (maxP - minP || 0.0001);
-          const midP    = (maxP + minP) / 2 + panYRef.current;
-          const halfRng = (rng / 2) / priceZoomRef.current;
-          const adjMax  = midP + halfRng;
-          const adjRng  = adjMax - (midP - halfRng);
-
-          const yH = PAD.t + ((adjMax - candle.high) / adjRng) * cH;
-          const yL = PAD.t + ((adjMax - candle.low) / adjRng) * cH;
-          if (Math.abs(my - yH) < 30 || Math.abs(my - yL) < 30) {
-            smy = Math.abs(my - yH) < Math.abs(my - yL) ? yH : yL;
-          }
-        }
+      const { x, y, w, h } = b;
+      const off = offRef.current;
+      let updated;
+      switch (modeRef.current) {
+        case 'DRAW': updated = { ...b, w: smx-x,       h: smy-y        }; break;
+        case 'MOVE': updated = { ...b, x: mx-off.x,    y: my-off.y     }; break;
+        case 'TL':   updated = { ...b, x: smx, y: smy, w: w+(x-smx), h: h+(y-smy) }; break;
+        case 'TR':   updated = { ...b, y: smy,          w: smx-x,     h: h+(y-smy) }; break;
+        case 'BL':   updated = { ...b, x: smx,          w: w+(x-smx), h: smy-y     }; break;
+        case 'BR':   updated = { ...b, w: smx-x,        h: smy-y      }; break;
+        case 'T':    updated = { ...b, y: smy,           h: h+(y-smy)  }; break;
+        case 'B':    updated = { ...b, h: smy-y          }; break;
+        case 'L':    updated = { ...b, x: smx,           w: w+(x-smx)  }; break;
+        case 'R':    updated = { ...b, w: smx-x          }; break;
+        default: return;
       }
+      const next = [...bxs];
+      next[ai] = updated;
+      drawBoxesRef.current = next;
 
-      // Convert back to screen-space for the DOM-based drawBox
-      const finalX = smx / ratioX;
-      const finalY = smy / ratioY;
-      const rawMX  = mx / ratioX;
-      const rawMY  = my / ratioY;
-
-      setDrawBox(prev => {
-        if (!prev) return prev;
-        const { x, y, w, h } = prev;
-        switch (mode) {
-          case 'DRAW': return { ...prev, w: finalX-x, h: finalY-y };
-          case 'MOVE': return { ...prev, x: rawMX-off.x, y: rawMY-off.y }; 
-          case 'TL':   return { ...prev, x: finalX, y: finalY, w: w+(x-finalX), h: h+(y-finalY) };
-          case 'TR':   return { ...prev, y: finalY, w: finalX-x, h: h+(y-finalY) };
-          case 'BL':   return { ...prev, x: finalX, w: w+(x-finalX), h: finalY-y };
-          case 'BR':   return { ...prev, w: finalX-x, h: finalY-y };
-          case 'T':    return { ...prev, y: finalY, h: h+(y-finalY) };
-          case 'B':    return { ...prev, h: finalY-y };
-          case 'L':    return { ...prev, x: finalX, w: w+(x-finalX) };
-          case 'R':    return { ...prev, w: finalX-x };
-          default:     return prev;
-        }
-      });
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(paintDragCanvas);
     };
-    const onUp = () => { setDrag(false); setMode('NONE'); };
-    window.addEventListener('mousemove', onMove);
+
+    const onUp = () => {
+      lastClickTimeRef.current = Date.now();
+      if (!dragRef.current) return;
+      dragRef.current = false;
+      modeRef.current = 'NONE';
+      // Commit full array → React state (single re-render)
+      setDrawBoxes([...drawBoxesRef.current]);
+    };
+
+    window.addEventListener('mousemove', onMove, { passive: true });
     window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [drag, mode, off, magnet]);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [snapToCandle, paintDragCanvas]);
+
 
   // ── Save / Skip / Undo ───────────────────────────────────────────────────
   const handleUndo = async () => {
@@ -483,7 +659,7 @@ const RefinementDashboard = () => {
           if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
           return next;
         });
-        setDrawBox(null); fetchStats(); fetchLessons();
+        setDrawBoxes([]); fetchStats(); fetchLessons();
       } else {
         showToast('Validation failed', 'err');
       }
@@ -492,21 +668,15 @@ const RefinementDashboard = () => {
   };
 
   const handleSave = async () => {
-    if (!drawBox || !box) return;
-    const rect = overlayRef.current.getBoundingClientRect();
+    const bxs = drawBoxes.length > 0 ? drawBoxes : drawBoxesRef.current;
+    if (!bxs.length || !box) return;
     setSaving(true);
     try {
-      // Convert pixels back to time/price — use filtered array to match what was actually rendered
       const W = canvasRef.current.width, H = canvasRef.current.height;
       const ohlc = filteredOhlcRef.current || ohlcRef.current;
       const zoom = zoomRef.current;
-      
-      const highs = ohlc.map(c => c.high);
-      const lows  = ohlc.map(c => c.low);
-      const maxP  = Math.max(...highs);
-      const minP  = Math.min(...lows);
-      const rng   = maxP - minP || 0.0001;
-      
+      const { maxP, minP, rng } = priceRangeRef.current;
+
       const cw   = Math.max(2, Math.round(CW * zoom));
       const cg   = Math.max(1, Math.round(CG * zoom));
       const cH   = H - PAD.t - PAD.b;
@@ -514,24 +684,34 @@ const RefinementDashboard = () => {
       const totW = ohlc.length * (cw + cg);
       const sx   = PAD.l + Math.max(0, (cW - totW) / 2);
 
-      const realX = Math.min(drawBox.x, drawBox.x + drawBox.w);
-      const realW = Math.abs(drawBox.w);
-      const realY = Math.min(drawBox.y, drawBox.y + drawBox.h);
-      const realH = Math.abs(drawBox.h);
+      const midP    = (maxP + minP) / 2 + panYRef.current;
+      const halfRng = (rng / 2) / priceZoomRef.current;
+      const adjMax  = midP + halfRng;
+      const adjRng  = halfRng * 2;
 
-      const startIdx = Math.max(0, Math.round((realX - sx) / (cw + cg)));
-      const endIdx   = Math.min(ohlc.length - 1, Math.round((realX + realW - sx) / (cw + cg)));
-      
-      const timeStart = ohlc[startIdx]?.time || ohlc[0].time;
-      const timeEnd   = ohlc[endIdx]?.time || ohlc[ohlc.length - 1].time;
-      
-      const priceHigh = maxP - ((realY - PAD.t) / cH) * rng;
-      const priceLow  = maxP - ((realY + realH - PAD.t) / cH) * rng;
+      const userBoxes = bxs.filter(Boolean).map(b => {
+        const realX = Math.min(b.x, b.x + b.w);
+        const realW = Math.abs(b.w);
+        const realY = Math.min(b.y, b.y + b.h);
+        const realH = Math.abs(b.h);
+
+        const startIdx = Math.max(0, Math.round((realX - sx) / (cw + cg)));
+        const endIdx   = Math.min(ohlc.length - 1, Math.round((realX + realW - sx) / (cw + cg)));
+
+        const timeStart = ohlc[startIdx]?.time || ohlc[0].time;
+        const timeEnd   = ohlc[endIdx]?.time || ohlc[ohlc.length - 1].time;
+
+        const priceHigh = adjMax - (realY - PAD.t) / cH * adjRng;
+        const priceLow  = adjMax - (realY + realH - PAD.t) / cH * adjRng;
+
+        return { timeStart, timeEnd, priceHigh, priceLow };
+      });
 
       const payload = {
         box_id: box.box_id,
-        user_box: { timeStart, timeEnd, priceHigh, priceLow }
+        user_box: userBoxes.length === 1 ? userBoxes[0] : userBoxes
       };
+      
       const res = await fetch('http://localhost:8000/api/training/label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -545,7 +725,12 @@ const RefinementDashboard = () => {
           if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
           return next;
         });
-        setDrawBox(null); fetchStats(); fetchLessons();
+        drawBoxesRef.current = [];
+        setDrawBoxes([]);
+        if (dragCanvasRef.current) {
+          dragCanvasRef.current.getContext('2d').clearRect(0,0,dragCanvasRef.current.width,dragCanvasRef.current.height);
+        }
+        fetchStats(); fetchLessons();
       } else {
         const d = JSON.parse(await res.text());
         showToast('Save failed: ' + (d.detail || '?'), 'err');
@@ -570,14 +755,29 @@ const RefinementDashboard = () => {
           if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
           return next;
         });
-        setDrawBox(null); fetchStats(); fetchLessons();
+        setDrawBoxes([]); fetchStats(); fetchLessons();
       } else {
         showToast('Skip failed', 'err');
       }
     } catch (e) { showToast('Network error', 'err'); }
   };
 
-  const nav = d => { setIdx(i => Math.max(0, Math.min(boxes.length-1, i+d))); setDrawBox(null); };
+  const clearDrawing = useCallback(() => {
+    drawBoxesRef.current = [];
+    dragRef.current    = false;
+    modeRef.current    = 'NONE';
+    activeIdxRef.current = -1;
+    setDrawBoxes([]);
+    if (dragCanvasRef.current) {
+      const dc = dragCanvasRef.current.getContext('2d');
+      dc.clearRect(0, 0, dragCanvasRef.current.width, dragCanvasRef.current.height);
+    }
+  }, []);
+
+  const nav = d => {
+    setIdx(i => Math.max(0, Math.min(boxes.length-1, i+d)));
+    clearDrawing();
+  };
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -654,47 +854,23 @@ const RefinementDashboard = () => {
               {/* Canvas area */}
               <div className="relative bg-[#0B0E14] rounded-2xl border border-[#2A2E39] overflow-hidden shadow-2xl"
                 style={{ height: '500px' }}>
+                {/* Layer 1: OHLC chart */}
                 <canvas ref={canvasRef} width={900} height={500}
                   className="absolute inset-0 w-full h-full pointer-events-none" />
-                {/* Mouse overlay */}
+                {/* Layer 2: live drag box (canvas — no React re-renders) */}
+                <canvas ref={dragCanvasRef} width={900} height={500}
+                  className="absolute inset-0 w-full h-full pointer-events-none" />
+                {/* Layer 3: transparent mouse overlay */}
                 <div ref={overlayRef} onMouseDown={onMouseDown}
                   onMouseMove={e => {
                     const rect = overlayRef.current?.getBoundingClientRect();
                     if (rect) {
                       mouseXRef.current = (e.clientX - rect.left) * (canvasRef.current?.width / rect.width);
-                      // Update cursor based on zone
                       const W = canvasRef.current?.width || 900;
                       overlayRef.current.style.cursor = mouseXRef.current > W - PAD.r ? 'ns-resize' : 'crosshair';
                     }
                   }}
-                  className="absolute inset-0 cursor-crosshair">
-                  
-                  {/* User drawn box handles */}
-                  {drawBox && (() => {
-                    const lx = drawBox.w < 0 ? drawBox.x + drawBox.w : drawBox.x;
-                    const ly = drawBox.h < 0 ? drawBox.y + drawBox.h : drawBox.y;
-                    const lw = Math.abs(drawBox.w);
-                    const lh = Math.abs(drawBox.h);
-                    return (
-                      <div className="absolute border-2 border-[#2962FF] bg-[#2962FF15] pointer-events-none"
-                        style={{ left: lx, top: ly, width: lw, height: lh }}>
-                        {[
-                          { s:'nw', c: 'nwse-resize', st:{top:'-4px',left:'-4px'} },
-                          { s:'ne', c: 'nesw-resize', st:{top:'-4px',right:'-4px'} },
-                          { s:'sw', c: 'nesw-resize', st:{bottom:'-4px',left:'-4px'} },
-                          { s:'se', c: 'nwse-resize', st:{bottom:'-4px',right:'-4px'} },
-                          { s:'t',  c: 'ns-resize',   st:{top:'-4px',left:'50%',marginLeft:'-4px'} },
-                          { s:'b',  c: 'ns-resize',   st:{bottom:'-4px',left:'50%',marginLeft:'-4px'} },
-                          { s:'l',  c: 'ew-resize',   st:{left:'-4px',top:'50%',marginTop:'-4px'} },
-                          { s:'r',  c: 'ew-resize',   st:{right:'-4px',top:'50%',marginTop:'-4px'} },
-                        ].map(h => (
-                          <div key={h.s} className="absolute w-2.5 h-2.5 bg-white border border-[#2962FF] rounded-full pointer-events-auto shadow-lg"
-                            style={{ ...h.st, cursor: h.c }} />
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
+                  className="absolute inset-0 cursor-crosshair" />
               </div>
 
               {/* Zoom + Pan controls */}
@@ -741,10 +917,16 @@ const RefinementDashboard = () => {
                     className="px-5 h-12 bg-[#1E222D] hover:bg-[#2A2E39] text-[#2962FF] hover:text-white rounded-xl font-bold border border-[#2962FF30] transition-all uppercase tracking-widest text-[11px]">
                     Validate Original
                   </button>
-                  <button onClick={handleSave} disabled={!drawBox || saving}
+                  <button onClick={handleSave} disabled={drawBoxes.length === 0 || saving}
                     className={`flex-1 h-12 rounded-xl font-bold text-sm uppercase tracking-widest transition-all
-                      ${drawBox && !saving ? 'bg-[#26A69A] hover:bg-[#1E8A7E] text-white' : 'bg-[#1E222D] text-[#434651] cursor-not-allowed'}`}>
+                      ${drawBoxes.length > 0 && !saving ? 'bg-[#26A69A] hover:bg-[#1E8A7E] text-white' : 'bg-[#1E222D] text-[#434651] cursor-not-allowed'}`}>
                     {saving ? 'Saving…' : 'Confirm & Next'}
+                  </button>
+                  <button onClick={clearDrawing} disabled={drawBoxes.length === 0}
+                    title="Clear drawing (Esc)"
+                    className={`px-4 h-12 rounded-xl font-bold border transition-all uppercase tracking-widest text-[11px]
+                      ${drawBoxes.length > 0 ? 'bg-[#1E222D] border-[#F7C948] text-[#F7C948] hover:bg-[#F7C94815]' : 'bg-[#131722] border-[#2A2E39] text-[#434651] cursor-not-allowed'}`}>
+                    ✕ Clear
                   </button>
                   <button onClick={handleSkip}
                     className="px-5 h-12 bg-[#2D1E1E] hover:bg-[#3E2A2A] text-[#EF5350] hover:text-white rounded-xl font-bold border border-[#453636] transition-all uppercase tracking-widest text-[11px]">
@@ -756,33 +938,9 @@ const RefinementDashboard = () => {
 
             {/* Info Panel */}
             <div className="space-y-4">
-              <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
-                <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3 flex items-center justify-between">
-                  AI Insights (Nemotron)
-                  <span className="w-2 h-2 bg-[#00E676] rounded-full animate-pulse" />
-                </h3>
-                {lessons.length > 0 ? (
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
-                    {lessons.map((l, i) => {
-                      const isLong = l && l.length > 200;
-                      return (
-                        <div key={i} className="bg-[#1E222D50] p-3 rounded-lg border border-[#2A2E39] relative overflow-hidden group">
-                          <div className="absolute top-0 left-0 w-1 h-full bg-[#00E676] opacity-50 group-hover:opacity-100 transition-opacity" />
-                          <div className="text-[9px] text-[#00E676] font-bold uppercase mb-1">Observation {lessons.length - i}</div>
-                          <div className="text-[11px] text-[#D1D4DC] leading-relaxed font-light">
-                            {typeof l === 'string' ? l : JSON.stringify(l)}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-6 border-2 border-dashed border-[#2A2E39] rounded-xl">
-                    <div className="text-[#434651] text-[10px] uppercase font-bold mb-1">Learning...</div>
-                    <div className="text-[10px] text-[#787B86]">Insights appear after AI analysis</div>
-                  </div>
-                )}
-              </div>
+
+
+              <NNTrainingDashboard />
 
               <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
                 <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3">Box Details</h3>

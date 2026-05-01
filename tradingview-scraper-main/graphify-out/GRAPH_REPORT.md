@@ -1,12 +1,12 @@
-# Graph Report - .  (2026-04-28)
+# Graph Report - .  (2026-05-01)
 
 ## Corpus Check
 - 193 files · ~137,778 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1237 nodes · 1826 edges · 94 communities detected
-- Extraction: 68% EXTRACTED · 32% INFERRED · 0% AMBIGUOUS · INFERRED: 580 edges (avg confidence: 0.67)
+- 1259 nodes · 1861 edges · 94 communities detected
+- Extraction: 68% EXTRACTED · 32% INFERRED · 0% AMBIGUOUS · INFERRED: 587 edges (avg confidence: 0.67)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -106,9 +106,9 @@
 - [[_COMMUNITY_Community 93|Community 93]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Indicators` - 46 edges
+1. `Indicators` - 49 edges
 2. `FundamentalGraphs` - 42 edges
-3. `HistoricalFetcher` - 36 edges
+3. `HistoricalFetcher` - 39 edges
 4. `MarketMovers` - 32 edges
 5. `Minds` - 30 edges
 6. `Overview` - 30 edges
@@ -118,30 +118,30 @@
 10. `Streamer` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Test scraping indicators successfully.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators with an invalid exchange.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators returns empty response.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators with a valid success response.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
 - `market_movers_scraper()` --calls--> `MarketMovers`  [INFERRED]
   tests\test_market_movers.py → tradingview_scraper\symbols\market_movers.py
+- `A class to handle bulk historical data fetching from TradingView via WebSocket p` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Fetches historical OHLC data with pagination.          Args:             exch` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Sorts the hashed map chronologically and trims to the requested date if necessar` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Exports data to a specified format (JSON or CSV).          Args:             jso` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\stream\streamer.py → tradingview_scraper\symbols\exceptions.py
 
 ## Communities
 
 ### Community 0 - "Community 0"
-Cohesion: 0.03
-Nodes (83): consolidation_boxes(), Detect consolidation boxes.     df must have columns ['open','high','low','clos, CandleDB, CandleDB — SQLite persistent store for OHLCV candle data.  Location: Trading-P, Record the wall-clock time of the last successful TV fetch., Return candles sorted ASCENDING by timestamp.         If count is given, return, Return all candles with ts >= since_ts, sorted ascending.         Used by the d, Most recent candle Unix timestamp, or None if no data exists. (+75 more)
+Cohesion: 0.02
+Nodes (97): CandleDB, CandleDB — SQLite persistent store for OHLCV candle data.  Location: Trading-P, Record the wall-clock time of the last successful TV fetch., Return candles sorted ASCENDING by timestamp.         If count is given, return, Return all candles with ts >= since_ts, sorted ascending.         Used by the d, Most recent candle Unix timestamp, or None if no data exists., Oldest candle Unix timestamp, or None if no data exists., Number of stored candles for a particular series. (+89 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.03
-Nodes (61): Configuration file for the Sphinx documentation builder.  For the full list of b, Skip autodoc for __init__ method., skip(), Exception, Ideas, Module providing a function to scrape published user ideas about a symbol., Scrapes trading ideas (popular or recent) for a specified symbol and page from T, Extract trading ideas from TradingView for a specified symbol over a range of pa (+53 more)
+Cohesion: 0.04
+Nodes (51): DataCollector, Continuous WebSocket listener for multiple symbols.     Emits raw candle data i, Runs the streaming generator in a synchronous thread loop with auto-reconnect., DataNotFoundError, Custom exception for when data is not found., Module providing a two function which return python generator contains trades re, Handles keyboard interrupt signals to gracefully close the WebSocket connection., signal_handler() (+43 more)
 
 ### Community 2 - "Community 2"
-Cohesion: 0.04
-Nodes (52): DataCollector, Continuous WebSocket listener for multiple symbols.     Emits raw candle data i, Runs the streaming generator in a synchronous thread loop with auto-reconnect., DataNotFoundError, Custom exception for when data is not found., Module providing a two function which return python generator contains trades re, Handles keyboard interrupt signals to gracefully close the WebSocket connection., signal_handler() (+44 more)
+Cohesion: 0.03
+Nodes (56): Configuration file for the Sphinx documentation builder.  For the full list of b, Skip autodoc for __init__ method., skip(), Exception, Ideas, Module providing a function to scrape published user ideas about a symbol., Scrapes trading ideas (popular or recent) for a specified symbol and page from T, Extract trading ideas from TradingView for a specified symbol over a range of pa (+48 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
@@ -149,11 +149,11 @@ Nodes (46): FundamentalGraphs, Module providing a function to scrape fundamental
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
-Nodes (40): CalendarScraper, DividendEvent, EarningsEvent, Module providing a function to scrape dividend and earnings of a specific market, A class used to scrape dividend and earnings events from the TradingView event c, Scrapes dividends events from the TradingView event calendar.          Args:, Represents a dividend event for a financial asset.      Attributes:         full, Scrapes earnings events from the TradingView event calendar.          Args: (+32 more)
+Nodes (42): CalendarScraper, DividendEvent, EarningsEvent, Module providing a function to scrape dividend and earnings of a specific market, A class used to scrape dividend and earnings events from the TradingView event c, Scrapes dividends events from the TradingView event calendar.          Args:, Represents a dividend event for a financial asset.      Attributes:         full, Scrapes earnings events from the TradingView event calendar.          Args: (+34 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.06
-Nodes (35): Minds, Module providing a function to scrape Minds community discussions from TradingVi, Parse a single mind item.          Args:             item (Dict): Raw mind item, Get Minds discussions for a symbol.          Args:             symbol (str): The, A class to scrape Minds community discussions and insights from TradingView., Get all available Minds discussions for a symbol with pagination.          Args:, Export scraped data to file.          Args:             data (List[Dict]): The d, Validate and format symbol.          Args:             symbol (str): The symbol (+27 more)
+Nodes (34): Minds, Module providing a function to scrape Minds community discussions from TradingVi, Parse a single mind item.          Args:             item (Dict): Raw mind item, Get Minds discussions for a symbol.          Args:             symbol (str): The, A class to scrape Minds community discussions and insights from TradingView., Get all available Minds discussions for a symbol with pagination.          Args:, Validate and format symbol.          Args:             symbol (str): The symbol, Validate sort option.          Args:             sort (str): The sort option to (+26 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.06
@@ -161,7 +161,7 @@ Nodes (33): Overview, Module providing a function to scrape symbol overview data
 
 ### Community 7 - "Community 7"
 Cohesion: 0.04
-Nodes (39): detect_all_consolidations(), Consolidation detector (price action based), Detect consolidation zones.     A zone is active when (high - low) / close < ran, DataFetcher, DataFetcher — in-memory candle store for the multi-timeframe engine.  Optimizati, Add a closed candle.         Format: {timestamp, open, high, low, close, is_clos, Fast O(1) latest close price lookup., Returns a pandas DataFrame for the timeframe — validated before construction. (+31 more)
+Nodes (40): detect_all_consolidations(), Consolidation detector (price action based), Detect consolidation zones.     A zone is active when (high - low) / close < ran, DataFetcher, DataFetcher — in-memory candle store for the multi-timeframe engine.  Optimizati, Add a closed candle.         Format: {timestamp, open, high, low, close, is_clos, Fast O(1) latest close price lookup., Returns a pandas DataFrame for the timeframe — validated before construction. (+32 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.06
@@ -200,7 +200,7 @@ Cohesion: 0.11
 Nodes (18): detect_breakout(), Breakout detector — optimized.  Changes:   - Added ATR-based expansion check: br, Detects an aggressive breakout candle.      Rules (all must pass):       1. Clos, _build_path(), _calc_rr(), _find_historical_tp(), generate_scenarios(), _no_trade() (+10 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (9): Initialize the FundamentalGraphs scraper.          Args:             export_resu, Initialize the MarketMovers scraper.          Args:             export_result (b, Initialize the Markets scraper.          Args:             export_result (bool):, Initialize the Minds scraper.          Args:             export_result (bool): W, Initialize the Overview scraper.          Args:             export_result (bool), Initialize the Screener.          Args:             export_result (bool): Whethe, Initialize the SymbolMarkets scraper.          Args:             export_result (, generate_user_agent() (+1 more)
 
 ### Community 18 - "Community 18"
@@ -216,16 +216,16 @@ Cohesion: 0.16
 Nodes (4): classifySwings(), exportSwingsAsCsv(), loadSwingsFromMemory(), selectActiveSwings()
 
 ### Community 21 - "Community 21"
-Cohesion: 0.19
-Nodes (5): DataStorage, Append or update a candle based on timestamp., Fetch the last 'count' candles, optionally older than end_time., In-memory storage for raw and derived candles.     Thread-safe implementation f, Prepend a chunk of older candles to the cache (avoiding duplicates).
-
-### Community 22 - "Community 22"
 Cohesion: 0.18
 Nodes (11): display_and_select_indicator(), fetch_indicator_metadata(), fetch_tradingview_indicators(), prepare_indicator_metadata(), Module providing utility functions for validating exchange symbols and fetching, Display a list of indicators and prompt the user to select one.      This functi, Validate one or more exchange symbols.      This function checks whether the pro, Fetch metadata for a TradingView indicator based on its script ID and version. (+3 more)
 
-### Community 23 - "Community 23"
+### Community 22 - "Community 22"
 Cohesion: 0.18
 Nodes (0): 
+
+### Community 23 - "Community 23"
+Cohesion: 0.25
+Nodes (5): consolidation_boxes(), ConsolidationCNN, get_instance(), NNPredictor, Detect consolidation boxes.     df must have columns ['open','high','low','clos
 
 ### Community 24 - "Community 24"
 Cohesion: 0.36
@@ -612,17 +612,17 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `save_json_file()` connect `Community 4` to `Community 2`, `Community 5`?**
-  _High betweenness centrality (0.120) - this node is a cross-community bridge._
-- **Why does `save_csv_file()` connect `Community 4` to `Community 2`, `Community 5`?**
-  _High betweenness centrality (0.120) - this node is a cross-community bridge._
-- **Are the 35 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?**
-  _`Indicators` has 35 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Streamer` connect `Community 1` to `Community 4`?**
+  _High betweenness centrality (0.128) - this node is a cross-community bridge._
+- **Why does `save_json_file()` connect `Community 4` to `Community 14`?**
+  _High betweenness centrality (0.117) - this node is a cross-community bridge._
+- **Why does `save_csv_file()` connect `Community 4` to `Community 14`?**
+  _High betweenness centrality (0.117) - this node is a cross-community bridge._
+- **Are the 38 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?**
+  _`Indicators` has 38 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 26 inferred relationships involving `FundamentalGraphs` (e.g. with `TestFundamentalGraphs` and `Fixture to create an instance of FundamentalGraphs for testing.`) actually correct?**
   _`FundamentalGraphs` has 26 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 31 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API — optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars.      Stable for live`) actually correct?**
-  _`HistoricalFetcher` has 31 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 34 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API — optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars.`) actually correct?**
+  _`HistoricalFetcher` has 34 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 21 inferred relationships involving `MarketMovers` (e.g. with `TestMarketMovers` and `Fixture to create an instance of MarketMovers for testing.`) actually correct?**
   _`MarketMovers` has 21 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 21 inferred relationships involving `Minds` (e.g. with `TestMinds` and `Fixture to create an instance of Minds for testing.`) actually correct?**
-  _`Minds` has 21 INFERRED edges - model-reasoned connections that need verification._

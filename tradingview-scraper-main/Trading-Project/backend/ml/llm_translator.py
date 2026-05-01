@@ -75,7 +75,7 @@ def extract_llm_features(comment: str, label: str) -> list:
 
     prompt = _PROMPT_TEMPLATE.format(label=label, comment=comment.strip())
     payload = {
-        "model": "nvidia/Llama-3_1-Nemotron-Ultra-253B-v1",
+        "model": "meta/llama-3.3-70b-instruct",
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0.1,
         "max_tokens": 512

@@ -28,6 +28,16 @@ class TrainingDB:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS training_status (
+                    id INTEGER PRIMARY KEY,
+                    status TEXT,
+                    epoch INTEGER,
+                    loss REAL,
+                    val_loss REAL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             conn.commit()
 
     def upsert_box(self, box_data, ohlc_context):
@@ -135,6 +145,29 @@ class TrainingDB:
                 (json.dumps(user_box), box_id)
             )
             conn.commit()
+            cursor = conn.execute("SELECT COUNT(*) FROM review_queue WHERE status = 'LABELED'")
+            return cursor.fetchone()[0]
+
+    def update_training_progress(self, status, epoch=0, loss=0, val_loss=0):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO training_status (id, status, epoch, loss, val_loss, updated_at)
+                VALUES (1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(id) DO UPDATE SET
+                    status = excluded.status,
+                    epoch = excluded.epoch,
+                    loss = excluded.loss,
+                    val_loss = excluded.val_loss,
+                    updated_at = excluded.updated_at
+            """, (status, epoch, loss, val_loss))
+            conn.commit()
+
+    def get_training_status(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("SELECT * FROM training_status WHERE id = 1")
+            row = cursor.fetchone()
+            return dict(row) if row else {"status": "IDLE"}
 
     def skip_box(self, box_id):
         with sqlite3.connect(self.db_path) as conn:

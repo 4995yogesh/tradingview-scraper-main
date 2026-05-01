@@ -4,8 +4,6 @@ import {
 } from 'lucide-react';
 import { symbolInfo, timeframes } from '../../data/chartData';
 import LayoutSelector from './LayoutSelector';
-import MLStatusHUD from './MLStatusHUD';
-import MLTrainingMonitor from './MLTrainingMonitor';
 
 
 // TradingView-style shortcut map (same as ChartPage)
@@ -28,7 +26,6 @@ const ChartToolbar = ({
   const [showTimeframes, setShowTimeframes] = useState(false);
   const [showTfInput, setShowTfInput] = useState(false);
   const [tfInputVal, setTfInputVal] = useState('');
-  const [qualityStatus, setQualityStatus] = useState(null);
   const tfInputRef = useRef(null);
   const tfRef = useRef(null);
 
@@ -57,12 +54,7 @@ const ChartToolbar = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    fetch('http://localhost:8000/api/ml/quality/status')
-      .then(res => res.json())
-      .then(data => setQualityStatus(data))
-      .catch((err) => console.error("Quality status fetch failed:", err));
-  }, []);
+
 
   const commitTfInput = () => {
     const raw = tfInputVal.trim().toUpperCase();
@@ -192,20 +184,6 @@ const ChartToolbar = ({
           AI MODE
         </button>
         
-        {qualityStatus && (
-          <div className="flex items-center px-2 py-1 bg-[#2962FF10] border border-[#2962FF30] rounded-[4px] mr-2">
-            <span className="text-[10px] font-bold text-[#2962FF] uppercase tracking-tight">
-              USING: {qualityStatus.model_name}
-            </span>
-          </div>
-        )}
-
-        {/* ML Status HUD & Monitor */}
-        <div className="flex items-center gap-1">
-          <MLStatusHUD />
-          <MLTrainingMonitor />
-        </div>
-
         {/* Indicators button */}
         <div className="relative">
           <button
