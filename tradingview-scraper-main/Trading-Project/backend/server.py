@@ -1365,8 +1365,16 @@ async def get_all_boxes(limit: int = 200, status: str = None):
             valid_rows = []
             for r in rows:
                 try:
-                    ctx = json.loads(r["ohlc_context"])
-                    # Detect abnormal gaps/missing data represented as consecutive zero-height Dojis
+                    ctx_str = r["ohlc_context"]
+                    if not ctx_str or ctx_str == '[]':
+                        # Delete empty boxes immediately to purge them from the list
+                        conn.execute("DELETE FROM review_queue WHERE box_id=?", (r["box_id"],))
+                        continue
+                    
+                    ctx = json.loads(ctx_str)
+                    if not ctx or len(ctx) == 0:
+                        conn.execute("DELETE FROM review_queue WHERE box_id=?", (r["box_id"],))
+                        continue
                     doj_count = sum(1 for d in ctx if d['open'] == d['high'] == d['low'] == d['close'])
                     
                     # Detect extreme vertical price gaps (e.g. > 20 pips in EURUSD)
@@ -1540,6 +1548,40 @@ async def skip_training_sample(data: dict):
         return {"status": "ok"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/training/sync")
+async def sync_training_queue():
+    """
+    Force-sync all currently detected consolidations into the training DB.
+    Allows the user to fetch 'fresh' boxes from the live chart.
+    """
+    try:
+        from training_db import training_db
+        # 1. Get all current zones across all timeframes
+        res = get_consolidations_all()
+        if res.get("status") != "ok":
+            return {"status": "error", "message": "Failed to fetch live zones"}
+        
+        zones = res.get("zones", [])
+        synced_count = 0
+        
+        # 2. Upsert each zone into the DB
+        # Note: In a real scenario, we might need candle context too.
+        # But get_consolidations_all doesn't return full context.
+        # We rely on the fact that these zones will be sampled with context 
+        # when the chart is actually viewed or gap-filled.
+        # However, for an immediate 'Sync', we can just upsert the metadata.
+        for z in zones:
+            # training_db.upsert_box expects (zone_data, context_candles)
+            # We pass empty context for now; it will be filled by background sampling if missing.
+            training_db.upsert_box(z, [])
+            synced_count += 1
+            
+        return {"status": "ok", "synced": synced_count}
+    except Exception as e:
+        logger.error(f"Sync failed: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 if __name__ == "__main__":

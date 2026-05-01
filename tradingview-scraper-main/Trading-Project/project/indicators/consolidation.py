@@ -155,7 +155,17 @@ def consolidation_boxes(
 
         if active:
             if c > rangeTop or c < rangeBottom or isBlockedTime:
-                activeBox["end"]    = i - 1
+                # Logic: If breakout occurs (c outside) and preceding candle (i-1) 
+                # tested the boundary with a wick, terminate at i-1.
+                # Otherwise, include the breakout candle i in the box.
+                wick_test = False
+                if not isBlockedTime:
+                    # Define "wick at boundary" as touching or exceeding the rangeTop/Bottom 
+                    # with the wick while the close remains inside (which is true for i-1).
+                    if h1 >= rangeTop or l1 <= rangeBottom:
+                        wick_test = True
+                
+                activeBox["end"]    = i - 1 if (wick_test or isBlockedTime) else i
                 activeBox["top"]    = rangeTop
                 activeBox["bottom"] = rangeBottom
                 boxes.append(activeBox)

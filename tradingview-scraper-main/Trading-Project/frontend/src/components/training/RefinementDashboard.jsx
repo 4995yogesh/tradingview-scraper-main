@@ -14,6 +14,80 @@ function isWeekendCandle(timeStr) {
   } catch { return false; }
 }
 
+
+
+
+
+function detectImprovedBox(ohlc) {
+  if (!ohlc || ohlc.length < 10) return null;
+  
+  let n = ohlc.length;
+  let searchingSwings = true;
+  let anchorIndex = 0;
+  let gotSH = false, gotSL = false;
+  let shVal = -1, slVal = -1;
+  let firstSwingIdx = null;
+  let active = false;
+  let rangeTop = -1, rangeBottom = -1;
+  let activeBox = null;
+
+  for (let i = 2; i < n; i++) {
+    const h = ohlc[i].high, l = ohlc[i].low;
+    const c = ohlc[i].close;
+    const h1 = ohlc[i-1].high, l1 = ohlc[i-1].low;
+    const h2 = ohlc[i-2].high, l2 = ohlc[i-2].low;
+
+    const isSH = h1 > h2 && h1 >= h;
+    const isSL = l1 < l2 && l1 <= l;
+
+    if (active) {
+      const isBreakout = c > rangeTop || c < rangeBottom;
+      if (isBreakout) {
+        activeBox.end = i - 1;
+        return activeBox;
+      } else {
+        const age = i - activeBox.start + 1;
+        if (age <= 5) {
+          if (h > rangeTop) rangeTop = h;
+          if (l < rangeBottom) rangeBottom = l;
+        }
+        activeBox.end = i;
+      }
+    }
+
+    if (searchingSwings && !active && i > anchorIndex) {
+      const sbi = i - 1;
+      if (sbi > anchorIndex) {
+        if (!isSH && !isSL) continue;
+        if (!gotSH && isSH) { gotSH = true; shVal = h1; if (firstSwingIdx === null) firstSwingIdx = sbi; }
+        if (!gotSL && isSL) { gotSL = true; slVal = l1; if (firstSwingIdx === null) firstSwingIdx = sbi; }
+      }
+
+      if (gotSH && gotSL && firstSwingIdx !== null) {
+        let allInside = true;
+        let tH = shVal, tL = slVal;
+        let count = 0;
+        for (let j = firstSwingIdx; j <= i; j++) {
+          const age = j - firstSwingIdx + 1;
+          if (ohlc[j].close >= tL && ohlc[j].close <= tH) {
+            if (age <= 5) {
+              if (ohlc[j].high > tH) tH = ohlc[j].high;
+              if (ohlc[j].low < tL) tL = ohlc[j].low;
+            }
+            count++;
+          } else { allInside = false; break; }
+        }
+        if (allInside && count >= 6) {
+          rangeTop = tH; rangeBottom = tL;
+          active = true; searchingSwings = false;
+          activeBox = { start: firstSwingIdx, end: i, top: rangeTop, bottom: rangeBottom };
+        }
+      }
+    }
+  }
+  return activeBox;
+}
+
 function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
   if (!canvas || !ohlcRaw || ohlcRaw.length === 0) return;
 
@@ -87,15 +161,37 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
     ctx.fillText(price.toFixed(5), W - PAD.r + 4, y + 4);
   }
 
-  // Consolidation box — centred using relative box indices
-  if (meta && meta.priceHigh != null && meta.priceLow != null) {
-    const bx = sx + boxStartIdx * (cw + cg) + (cw / 2);
-    const bw = Math.max(1, (boxEndIdx - boxStartIdx + 1) * (cw + cg));
-    const by = toY(meta.priceHigh);
-    const bh = Math.max(2, toY(meta.priceLow) - by);
+
+  // ── Single Dashed Yellow Box System ──────────────────────────────────────
+  const imp = detectImprovedBox(ohlc);
+  let finalBox = null;
+
+  if (imp) {
+    // New Wick Logic found a pattern
+    finalBox = {
+      x1: sx + imp.start * (cw + cg) + (cw / 2),
+      x2: sx + imp.end * (cw + cg) + (cw / 2) + cw,
+      y1: toY(imp.top),
+      y2: toY(imp.bottom)
+    };
+  } else if (meta && meta.priceHigh != null && meta.priceLow != null) {
+    // Fallback to original machine detection
+    finalBox = {
+      x1: sx + boxStartIdx * (cw + cg) + (cw / 2),
+      x2: sx + boxEndIdx * (cw + cg) + (cw / 2) + cw,
+      y1: toY(meta.priceHigh),
+      y2: toY(meta.priceLow)
+    };
+  }
+
+  if (finalBox) {
+    const bx = Math.min(finalBox.x1, finalBox.x2);
+    const bw = Math.abs(finalBox.x2 - finalBox.x1);
+    const by = Math.min(finalBox.y1, finalBox.y2);
+    const bh = Math.abs(finalBox.y2 - finalBox.y1);
 
     ctx.save();
-    ctx.strokeStyle = '#F7C948'; ctx.lineWidth = 1.0;
+    ctx.strokeStyle = '#F7C948'; ctx.lineWidth = 1.2;
     ctx.setLineDash([5, 3]);
     ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = 'rgba(247,201,72,0.02)';
@@ -183,7 +279,7 @@ const SC = {
 const RefinementDashboard = () => {
   const [boxes,      setBoxes]      = useState([]);
   const [idx,        setIdx]        = useState(0);
-  const [filter,     setFilter]     = useState('PENDING');
+  const [filter,     setFilter]     = useState('');
   const [stats,      setStats]      = useState({ total: 0, pending: 0, labeled: 0 });
   const [drawBoxes,  setDrawBoxes]  = useState([]);   // committed array — set on mouseUp only
   const [loading,    setLoading]    = useState(true);
@@ -198,6 +294,7 @@ const RefinementDashboard = () => {
   });
   const [showAllInsights, setShowAllInsights] = useState(false);
   const [lastBox,    setLastBox]    = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const zoomRef               = useRef(1.0);
   const panYRef               = useRef(0);
   const priceZoomRef          = useRef(1.0);
@@ -233,13 +330,16 @@ const RefinementDashboard = () => {
   const fetchBoxes = useCallback(async () => {
     setLoading(true);
     try {
-      const qs  = filter ? `?limit=200&status=${filter}` : '?limit=200';
+      const qs  = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
       const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const txt  = await res.text();
       const data = JSON.parse(txt);
       if (data.status === 'ok') {
-        setBoxes(data.boxes || []);
+        const fetched = data.boxes || [];
+        // Shuffle to intermix timeframes randomly
+        const shuffled = [...fetched].sort(() => Math.random() - 0.5);
+        setBoxes(shuffled);
         setIdx(0);
         setDrawBoxes([]);
       } else {
@@ -267,6 +367,23 @@ const RefinementDashboard = () => {
     } catch (_) {}
   };
 
+  const handleSync = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/training/sync', { method: 'POST' });
+      const d = await res.json();
+      if (d.status === 'ok') {
+        showToast(`Synced ${d.synced} live boxes`, 'ok');
+        fetchBoxes();
+      } else {
+        showToast('Sync failed: ' + d.message, 'err');
+      }
+    } catch (e) {
+      showToast('Sync error: ' + e.message, 'err');
+    }
+    setLoading(false);
+  };
+
   // Mark all currently visible lessons as seen
   const markAllSeen = useCallback((lessonList) => {
     const hashes = (lessonList || []).map(l => l.hash).filter(Boolean);
@@ -285,9 +402,9 @@ const RefinementDashboard = () => {
     fetchLessons(); 
 
     const poll = async () => {
-      if (!active) return;
+      if (!active || saving) return;
       try {
-        const qs  = filter ? `?limit=200&status=${filter}` : '?limit=200';
+        const qs  = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
         const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
         if (!res.ok) return;
         const data = JSON.parse(await res.text());
@@ -316,6 +433,13 @@ const RefinementDashboard = () => {
     const iv = setInterval(poll, 5000);
     return () => { active = false; clearInterval(iv); };
   }, [fetchBoxes, filter]);
+
+  // Ensure idx is always in bounds when boxes list changes
+  useEffect(() => {
+    if (boxes.length > 0 && idx >= boxes.length) {
+      setIdx(boxes.length - 1);
+    }
+  }, [boxes.length, idx]);
 
   // sync magnetRef whenever magnet state changes
   useEffect(() => { magnetRef.current = magnet; }, [magnet]);
@@ -368,7 +492,7 @@ const RefinementDashboard = () => {
     } catch (e) {
       console.error('Render error', e);
     }
-  }, [box]);
+  }, [box, refreshKey]);
 
   useEffect(() => {
     zoomRef.current = zoom;
@@ -615,6 +739,19 @@ const RefinementDashboard = () => {
 
 
   // ── Save / Skip / Undo ───────────────────────────────────────────────────
+  const advanceToNext = (removedBox) => {
+    setLastBox(removedBox);
+    setBoxes(prev => prev.filter(b => b.box_id !== removedBox.box_id));
+    setRefreshKey(k => k + 1);
+    setDrawBoxes([]);
+    drawBoxesRef.current = [];
+    if (dragCanvasRef.current) {
+      dragCanvasRef.current.getContext('2d').clearRect(0,0,dragCanvasRef.current.width,dragCanvasRef.current.height);
+    }
+    fetchStats();
+    fetchLessons();
+  };
+
   const handleUndo = async () => {
     if (!lastBox) return;
     try {
@@ -653,19 +790,15 @@ const RefinementDashboard = () => {
       });
       if (res.ok) {
         showToast('Validated ✓');
-        setLastBox(box);
-        setBoxes(prev => {
-          const next = prev.filter(b => b.box_id !== box.box_id);
-          if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
-          return next;
-        });
-        setDrawBoxes([]); fetchStats(); fetchLessons();
+        advanceToNext(box);
       } else {
         showToast('Validation failed', 'err');
       }
     } catch (e) { showToast('Network error', 'err'); }
     setSaving(false);
   };
+
+
 
   const handleSave = async () => {
     const bxs = drawBoxes.length > 0 ? drawBoxes : drawBoxesRef.current;
@@ -685,7 +818,7 @@ const RefinementDashboard = () => {
       const sx   = PAD.l + Math.max(0, (cW - totW) / 2);
 
       const midP    = (maxP + minP) / 2 + panYRef.current;
-      const halfRng = (rng / 2) / priceZoomRef.current;
+      const halfRng = (rng / 2) * 1.2 / priceZoomRef.current; // Synchronized 1.2x buffer
       const adjMax  = midP + halfRng;
       const adjRng  = halfRng * 2;
 
@@ -719,18 +852,7 @@ const RefinementDashboard = () => {
       });
       if (res.ok) {
         showToast('Labeled ✓');
-        setLastBox(box);
-        setBoxes(prev => {
-          const next = prev.filter(b => b.box_id !== box.box_id);
-          if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
-          return next;
-        });
-        drawBoxesRef.current = [];
-        setDrawBoxes([]);
-        if (dragCanvasRef.current) {
-          dragCanvasRef.current.getContext('2d').clearRect(0,0,dragCanvasRef.current.width,dragCanvasRef.current.height);
-        }
-        fetchStats(); fetchLessons();
+        advanceToNext(box);
       } else {
         const d = JSON.parse(await res.text());
         showToast('Save failed: ' + (d.detail || '?'), 'err');
@@ -740,7 +862,8 @@ const RefinementDashboard = () => {
   };
 
   const handleSkip = async () => {
-    if (!box) return;
+    if (!box || saving) return;
+    setSaving(true);
     try {
       const res = await fetch('http://localhost:8000/api/training/label', {
         method: 'POST',
@@ -749,17 +872,12 @@ const RefinementDashboard = () => {
       });
       if (res.ok) {
         showToast('Skipped');
-        setLastBox(box);
-        setBoxes(prev => {
-          const next = prev.filter(b => b.box_id !== box.box_id);
-          if (idx >= next.length && next.length > 0) setIdx(next.length - 1);
-          return next;
-        });
-        setDrawBoxes([]); fetchStats(); fetchLessons();
+        advanceToNext(box);
       } else {
         showToast('Skip failed', 'err');
       }
     } catch (e) { showToast('Network error', 'err'); }
+    setSaving(false);
   };
 
   const clearDrawing = useCallback(() => {
@@ -803,18 +921,25 @@ const RefinementDashboard = () => {
 
           {/* Filter pills */}
           <div className="flex gap-2 flex-wrap">
-            {[['ALL',''],['PENDING','PENDING'],['LABELED','LABELED'],['SKIPPED','SKIPPED'],['NEEDS SHOT','PENDING_SCREENSHOT']].map(([lbl, val]) => (
+            {[['ALL',''],['LABELED','LABELED'],['SKIPPED','SKIPPED'],['NEEDS SHOT','PENDING_SCREENSHOT']].map(([lbl, val]) => (
               <button key={lbl} onClick={() => setFilter(val)}
                 className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all
                   ${filter===val ? 'border-[#2962FF] text-[#2962FF] bg-[#2962FF15]' : 'border-[#2A2E39] text-[#787B86] hover:text-white'}`}>
                 {lbl}
               </button>
             ))}
+            
+            <div className="w-[1px] h-6 bg-[#2A2E39] mx-1 self-center" />
+            
+            <button onClick={handleSync}
+              className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-[#2962FF30] text-[#2962FF] hover:bg-[#2962FF10] transition-all flex items-center gap-2">
+              Sync Live
+            </button>
           </div>
 
           {/* Stats */}
           <div className="flex gap-3">
-            {[['Labeled', stats.labeled||0, '#26A69A'], ['Pending', stats.pending||0, '#2962FF']].map(([l,v,c]) => (
+            {[['Labeled', stats.labeled||0, '#26A69A']].map(([l,v,c]) => (
               <div key={l} className="bg-[#131722] px-4 py-2 rounded-xl border border-[#2A2E39] text-center">
                 <div className="text-[10px] text-[#787B86] uppercase tracking-widest">{l}</div>
                 <div className="text-xl font-bold" style={{ color: c }}>{v}</div>
@@ -852,9 +977,17 @@ const RefinementDashboard = () => {
               </div>
 
               {/* Canvas area */}
-              <div className="relative bg-[#0B0E14] rounded-2xl border border-[#2A2E39] overflow-hidden shadow-2xl"
+              <div key={box?.box_id || 'none'} className="relative bg-[#0B0E14] rounded-2xl border border-[#2A2E39] overflow-hidden shadow-2xl"
                 style={{ height: '500px' }}>
                 {/* Layer 1: OHLC chart */}
+                {(!ohlcRef.current || ohlcRef.current.length === 0) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#0B0E14] z-10">
+                    <div className="text-center">
+                      <p className="text-[#787B86] text-sm mb-2">No candle data available for this box</p>
+                      <p className="text-[#434651] text-xs">Try skipping or syncing live data again</p>
+                    </div>
+                  </div>
+                )}
                 <canvas ref={canvasRef} width={900} height={500}
                   className="absolute inset-0 w-full h-full pointer-events-none" />
                 {/* Layer 2: live drag box (canvas — no React re-renders) */}
@@ -944,15 +1077,24 @@ const RefinementDashboard = () => {
 
               <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
                 <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3">Box Details</h3>
-                {[
-                  ['ID',      box.box_id],
-                  ['Symbol',  box.symbol],
-                  ['TF',      (box.timeframe||'').toUpperCase()],
-                  ['High',    box.price_high?.toFixed(5)],
-                  ['Low',     box.price_low?.toFixed(5)],
-                  ['Status',  box.status],
-                  ['Created', (box.created_at||'').slice(0,16)],
-                ].map(([l,v]) => (
+                {(() => {
+                  let metaRaw = {};
+                  try { metaRaw = typeof box.original_meta === 'string' ? JSON.parse(box.original_meta) : (box.original_meta || {}); } catch(e){}
+                  const startT = box.time_start_ms || box.timeStart || metaRaw.timeStart;
+                  const endT = box.time_end_ms || box.timeEnd || metaRaw.timeEnd;
+                  const fmt = t => t ? (new Date(t).toISOString().replace('T', ' ').slice(0,16)) : 'N/A';
+                  return [
+                    ['ID',      box.box_id],
+                    ['Symbol',  box.symbol],
+                    ['TF',      (box.timeframe||'').toUpperCase()],
+                    ['Start',   fmt(startT)],
+                    ['End',     fmt(endT)],
+                    ['High',    box.price_high?.toFixed(5)],
+                    ['Low',     box.price_low?.toFixed(5)],
+                    ['Status',  box.status],
+                    ['Created', (box.created_at||'').slice(0,16)],
+                  ];
+                })().map(([l,v]) => (
                   <div key={l} className="mb-2">
                     <div className="text-[10px] text-[#434651] uppercase">{l}</div>
                     <div className="text-sm font-mono text-white truncate" title={v}>{v}</div>
@@ -980,6 +1122,7 @@ const RefinementDashboard = () => {
                   <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#EF5350]"/><span>Bear candle</span></div>
                 </div>
               </div>
+
             </div>
           </div>
         )}
