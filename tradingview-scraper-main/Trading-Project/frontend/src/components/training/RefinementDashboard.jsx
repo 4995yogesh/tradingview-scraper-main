@@ -3,8 +3,9 @@ import Navbar from '../Navbar';
 import NNTrainingDashboard from './NNTrainingDashboard';
 
 // ── Canvas Chart Renderer constants ──────────────────────────────────────────
-const CW = 10, CG = 2;
-const PAD = { t: 24, b: 24, l: 8, r: 72 };
+const CW = 12;
+const CG = 4;
+const PAD = { t: 40, b: 60, l: 50, r: 80 };
 
 function isWeekendCandle(timeStr) {
   try {
@@ -88,7 +89,7 @@ function detectImprovedBox(ohlc) {
   return activeBox;
 }
 
-function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
+function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, heatmap = [], ml2Result = null) {
   if (!canvas || !ohlcRaw || ohlcRaw.length === 0) return;
 
   // Filter ghost candles and weekends
@@ -132,8 +133,8 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
     finalEnd   = findIdx(tsEnd);
   }
 
-  // ── 2. Apply 5+5 Context Windowing ───────────────────────────────────────
-  const CONTEXT = 5;
+  // ── 2. Apply 15+15 Context Windowing ──────────────────────────────────────
+  const CONTEXT = 15;
   const winStart = Math.max(0, finalStart - CONTEXT);
   const winEnd   = Math.min(allFiltered.length - 1, finalEnd + CONTEXT);
   const ohlc     = allFiltered.slice(winStart, winEnd + 1);
@@ -201,73 +202,73 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
     ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = 'rgba(247,201,72,0.02)';
     ctx.fillRect(bx, by, bw, bh);
-    
-    // Draw NN prediction if available
-    if (meta && meta.nn_box) {
-      const { nn_box } = meta;
-      
-      const tsStart = typeof nn_box.timeStart === 'number' ? nn_box.timeStart : new Date(nn_box.timeStart).getTime() / 1000;
-      const tsEnd   = typeof nn_box.timeEnd   === 'number' ? nn_box.timeEnd   : new Date(nn_box.timeEnd).getTime() / 1000;
-      
-      const times = allFiltered.map(c => typeof c.time === 'number' ? c.time : new Date(c.time).getTime() / 1000);
-      const findIdx = ts => {
-        let best = 0, bestDiff = Infinity;
-        times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
-        return best;
-      };
-      
-      const nnStartRel = findIdx(tsStart) - winStart;
-      const nnEndRel   = findIdx(tsEnd) - winStart;
-
-      const nnBox = {
-        x1: sx + nnStartRel * (cw + cg) + (cw / 2),
-        x2: sx + nnEndRel * (cw + cg) + (cw / 2) + cw,
-        y1: toY(nn_box.priceHigh),
-        y2: toY(nn_box.priceLow)
-      };
-
-      const checkVisibility = (box, W, H) => {
-        const bx = Math.min(box.x1, box.x2);
-        const bw = Math.abs(box.x2 - box.x1);
-        const by = Math.min(box.y1, box.y2);
-        const bh = Math.abs(box.y2 - box.y1);
-        return !(bx + bw < 0 || bx > W || by + bh < 0 || by > H);
-      };
-
-      const bx = Math.min(nnBox.x1, nnBox.x2);
-      const bw = Math.abs(nnBox.x2 - nnBox.x1);
-      const by = Math.min(nnBox.y1, nnBox.y2);
-      const bh = Math.abs(nnBox.y2 - nnBox.y1);
-
-      if (checkVisibility(nnBox, W, H)) {
-        ctx.save();
-        ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 2.0;
-        ctx.setLineDash([]);
-        ctx.strokeRect(bx, by, bw, bh);
-        ctx.fillStyle = 'rgba(255, 51, 51, 0.15)';
-        ctx.fillRect(bx, by, bw, bh);
-
-        ctx.fillStyle = '#FF3333';
-        ctx.font = '11px Inter, sans-serif';
-        ctx.textAlign = 'right';
-        const labelStr = `NN Conf: ${Math.round((nn_box.confidence || 0) * 100)}% | H: ${nn_box.priceHigh.toFixed(4)} L: ${nn_box.priceLow.toFixed(4)}`;
-        ctx.fillText(labelStr, bx + bw - 2, by - 6);
-        ctx.restore();
-      } else {
-        ctx.save();
-        ctx.fillStyle = '#FF3333';
-        ctx.font = 'bold 12px Inter, sans-serif';
-        ctx.textAlign = 'left';
-        ctx.fillText(`Red NN Box is OFF-SCREEN (H: ${nn_box.priceHigh.toFixed(4)} L: ${nn_box.priceLow.toFixed(4)})`, 10, 20);
-        ctx.restore();
-      }
-    }
-    
     ctx.restore();
   }
 
+  // ── ML2 Heatmap Rendering ────────────────────────────────────────────────
+  if (heatmap && heatmap.length > 0) {
+    const hH = 20; 
+    const hY = H - PAD.b + 15; // Positioned in the 60px bottom padding zone
+    
+    // Auto-normalize heatmap values to highlight relative peaks
+    const hMin = Math.min(...heatmap);
+    const hMax = Math.max(...heatmap);
+    const hRange = (hMax - hMin) || 0.1;
 
-  // Candles — sequential index across windowed slice
+    // Container
+    ctx.fillStyle = '#0B0E14';
+    ctx.fillRect(sx - 4, hY - 4, ohlc.length * (cw + cg) + 8, hH + 8);
+    ctx.strokeStyle = '#363A45';
+    ctx.strokeRect(sx - 4, hY - 4, ohlc.length * (cw + cg) + 8, hH + 8);
+
+    // Heatmap bar (Relative color mapping)
+    heatmap.slice(0, ohlc.length).forEach((val, i) => {
+      const hX = sx + i * (cw + cg);
+      // Normalized value for color mapping
+      const nVal = (val - hMin) / hRange;
+      
+      let r, g, b;
+      if (nVal < 0.5) {
+        r = Math.floor(50 + nVal * 410); g = Math.floor(nVal * 100); b = 0;
+      } else {
+        r = 255; g = Math.floor((nVal - 0.5) * 510); b = Math.floor((nVal - 0.7) * 850);
+      }
+      ctx.fillStyle = `rgb(${r}, ${Math.max(0, g)}, ${Math.max(0, b)})`;
+      ctx.fillRect(hX, hY, cw + cg, hH);
+    });
+    
+    ctx.fillStyle = '#D1D4DC';
+    ctx.font = 'bold 10px Inter, sans-serif';
+    ctx.fillText(`NEURAL SEGMENTATION (REL: ${hMax.toFixed(2)})`, sx, hY - 10);
+  }
+
+  // ── ML2 Refinement Box ───────────────────────────────────────────────────
+  if (ml2Result && ml2Result.confidence > 0.3) {
+    const times = allFiltered.map(c => new Date(c.time).getTime());
+    const tsStart = new Date(ml2Result.timeStart).getTime();
+    const tsEnd = new Date(ml2Result.timeEnd).getTime();
+    const findIdx = ts => {
+      let best = 0, bestDiff = Infinity;
+      times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
+      return best;
+    };
+    const sIdx = findIdx(tsStart) - winStart;
+    const eIdx = findIdx(tsEnd) - winStart;
+
+    const mx1 = sx + sIdx * (cw + cg) + (cw / 2);
+    const mx2 = sx + eIdx * (cw + cg) + (cw / 2) + cw;
+    const my1 = toY(ml2Result.priceHigh);
+    const my2 = toY(ml2Result.priceLow);
+
+    ctx.save();
+    ctx.strokeStyle = '#26A69A'; ctx.lineWidth = 2;
+    ctx.strokeRect(Math.min(mx1, mx2), Math.min(my1, my2), Math.abs(mx2 - mx1), Math.abs(my2 - my1));
+    ctx.fillStyle = '#26A69A'; ctx.font = 'bold 10px monospace';
+    ctx.fillText(`ML2: ${Math.round(ml2Result.confidence*100)}%`, Math.min(mx1, mx2), Math.min(my1, my2) - 5);
+    ctx.restore();
+  }
+
+  // Candles
   ohlc.forEach((c, i) => {
     const x   = sx + i * (cw + cg);
     const ok  = c.close >= c.open;
@@ -363,6 +364,11 @@ const RefinementDashboard = () => {
   const [showAllInsights, setShowAllInsights] = useState(false);
   const [lastBox,    setLastBox]    = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  
+  // ML2 States
+  const [heatmap,    setHeatmap]    = useState([]);
+  const [ml2Result,  setMl2Result]  = useState(null);
+
   const zoomRef               = useRef(1.0);
   const panYRef               = useRef(0);
   const priceZoomRef          = useRef(1.0);
@@ -385,6 +391,7 @@ const RefinementDashboard = () => {
   const overlayRef    = useRef(null);
   const dragCanvasRef = useRef(null);
   const filteredOhlcRef = useRef(null);
+  const box = boxes[idx] || null;
 
   // ── Coordinate Conversion Helpers ─────────────────────────────────────────
   const getChartCoords = useCallback((mx, my) => {
@@ -441,9 +448,6 @@ const RefinementDashboard = () => {
     return { pxX, pxY };
   }, []);
 
-
-  const box = boxes[idx] || null;
-
   const showToast = (msg, type = 'ok') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2800);
@@ -460,7 +464,6 @@ const RefinementDashboard = () => {
       const data = JSON.parse(txt);
       if (data.status === 'ok') {
         const fetched = data.boxes || [];
-        // Shuffle to intermix timeframes randomly
         const shuffled = [...fetched].sort(() => Math.random() - 0.5);
         setBoxes(shuffled);
         setIdx(0);
@@ -524,7 +527,6 @@ const RefinementDashboard = () => {
     setLoading(false);
   };
 
-  // Mark all currently visible lessons as seen
   const markAllSeen = useCallback((lessonList) => {
     const hashes = (lessonList || []).map(l => l.hash).filter(Boolean);
     if (!hashes.length) return;
@@ -551,14 +553,10 @@ const RefinementDashboard = () => {
         if (data.status === 'ok') {
           const newBoxes = data.boxes || [];
           setBoxes(prev => {
-            // Full reconcile: keep local boxes only if they still exist in the server's fresh list
             const serverIds = new Set(newBoxes.map(b => b.box_id));
             const synced = prev.filter(b => serverIds.has(b.box_id));
-            
-            // Add any truly new boxes from server
             const localIds = new Set(synced.map(b => b.box_id));
             const novel = newBoxes.filter(b => !localIds.has(b.box_id));
-            
             if (novel.length > 0 || synced.length !== prev.length) {
               return [...synced, ...novel];
             }
@@ -574,24 +572,53 @@ const RefinementDashboard = () => {
     return () => { active = false; clearInterval(iv); };
   }, [fetchBoxes, filter]);
 
-  // Ensure idx is always in bounds when boxes list changes
   useEffect(() => {
     if (boxes.length > 0 && idx >= boxes.length) {
       setIdx(boxes.length - 1);
     }
   }, [boxes.length, idx]);
 
-  // sync magnetRef whenever magnet state changes
   useEffect(() => { magnetRef.current = magnet; }, [magnet]);
 
   const paintDragCanvasRef = useRef(null);
+
+  // ── Fetch Heatmap and ML2 Prediction ─────────────────────────────────────
+  useEffect(() => {
+    if (!box) return;
+    console.log("Fetching ML2 prediction for box:", box.box_id);
+    const getPrediction = async () => {
+      try {
+        const ohlc = typeof box.ohlc_context === 'string' 
+          ? JSON.parse(box.ohlc_context) 
+          : (box.ohlc_context || []);
+        
+        const body = JSON.stringify(ohlc);
+        console.log("Sending prediction request, payload length:", body.length);
+        const res = await fetch('http://localhost:8000/api/ml/predict_v2', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: body
+        });
+        if (!res.ok) throw new Error('Prediction failed');
+        const data = await res.json();
+        console.log("ML2 Prediction data received:", data);
+        setHeatmap(data.heatmap || []);
+        setMl2Result(data);
+      } catch (e) {
+        console.error("ML2 Prediction error:", e);
+        setHeatmap([]);
+        setMl2Result(null);
+      }
+    };
+    getPrediction();
+  }, [box]);
 
   // ── Draw chart on box or zoom change ─────────────────────────────────────
   const redraw = useCallback((z, py, pz) => {
     if (!canvasRef.current || !ohlcRef.current) return;
     const pY = py !== undefined ? py : panYRef.current;
     const pZ = pz !== undefined ? pz : priceZoomRef.current;
-    const filtered = renderChart(canvasRef.current, ohlcRef.current, metaRef.current, z, pY, pZ);
+    const filtered = renderChart(canvasRef.current, ohlcRef.current, metaRef.current, z, pY, pZ, heatmap, ml2Result);
     if (filtered) {
       filteredOhlcRef.current = filtered;
       if (paintDragCanvasRef.current) {
@@ -599,7 +626,7 @@ const RefinementDashboard = () => {
         rafRef.current = requestAnimationFrame(paintDragCanvasRef.current);
       }
     }
-  }, []);
+  }, [heatmap, ml2Result]);
 
   useEffect(() => {
     if (!box || !canvasRef.current) return;
@@ -629,7 +656,7 @@ const RefinementDashboard = () => {
       panYRef.current      = 0;
       priceZoomRef.current = 1.0;
       try {
-        const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0);
+        const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0, heatmap, ml2Result);
         if (filtered) {
           filteredOhlcRef.current = filtered;
           // Precompute price range for O(1) magnet snapping
@@ -1084,7 +1111,7 @@ const RefinementDashboard = () => {
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-white">Refine Studio</h1>
-            <p className="text-xs text-[#787B86]">Canvas OHLC · 5+5 buffer · All DB boxes accessible</p>
+            <p className="text-xs text-[#787B86]">Canvas OHLC · 15+15 buffer · All DB boxes accessible</p>
           </div>
 
           {/* Filter pills */}

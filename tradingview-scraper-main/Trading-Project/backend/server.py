@@ -1034,11 +1034,11 @@ def get_consolidations_all():
                     zones.append(zone_data)
 
                     # Auto-Sampler (5m, 15m, 1h only)
-                    # Guard: only sample when ≥5 candles exist after box end (right-side context requirement)
-                    if tf in ["5m", "15m", "1h"] and (ei + 5) <= (df_len - 1):
+                    # Guard: only sample when ≥15 candles exist after box end (right-side context requirement)
+                    if tf in ["5m", "15m", "1h"] and (ei + 15) <= (df_len - 1):
                         try:
-                            ctx_s = max(0, si - 25)
-                            ctx_e = min(df_len - 1, ei + 25)
+                            ctx_s = max(0, si - 15)
+                            ctx_e = min(df_len - 1, ei + 15)
                             # Ensure time is converted to string for JSON persistence
                             ctx_df = df.iloc[ctx_s:ctx_e+1].copy()
                             ctx_df['time'] = ctx_df.index.strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -1644,7 +1644,7 @@ async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
                     ctx_idx = 0
                     for i, c in enumerate(raw_candles):
                         if c['time'] >= start_t:
-                            ctx_idx = max(0, i - 25)
+                            ctx_idx = max(0, i - 15)
                             break
                     ohlc_slice = [c for c in raw_candles[ctx_idx:] if start_t <= c['time'] <= end_t]
                     if ohlc_slice:

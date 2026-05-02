@@ -9,9 +9,9 @@ Mount in server.py:
 import hashlib
 import logging
 import threading
-from typing import Optional
+from typing import Optional, List, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, validator
 
 from ml import db as ml_db
@@ -20,9 +20,28 @@ from ml import trainer
 from ml.features import extract_features, FEATURE_VERSION
 from ml import llm_translator
 
-logger = logging.getLogger(__name__)
+from ml2.inference import predict as ml2_predict
 
 router = APIRouter(prefix="/api/ml", tags=["ml"])
+
+
+
+@router.post("/predict_v2")
+async def predict_v2(request: Request):
+    """Runs the full 4-stage ML2 pipeline: Segment -> Extract -> Refine -> Score."""
+    try:
+        ohlc = await request.json()
+        print(f"ML2: Received prediction request, len={len(ohlc)}")
+        if len(ohlc) > 0:
+            print(f"ML2: First candle keys: {list(ohlc[0].keys())}")
+        
+        result = ml2_predict(ohlc)
+        if not result:
+            raise HTTPException(status_code=500, detail="ML2 Prediction failed")
+        return result
+    except Exception as e:
+        print(f"ML2: Prediction endpoint error: {e}")
+        raise HTTPException(status_code=422, detail=str(e))
 
 
 # ── Request / response models ─────────────────────────────────────────────────
