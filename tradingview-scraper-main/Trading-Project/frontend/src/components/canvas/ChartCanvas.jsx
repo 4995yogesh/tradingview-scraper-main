@@ -4,6 +4,7 @@ import {
   drawGrid,
   drawCandles,
   drawConsolidations,
+  drawNNBoxes,
   drawScenarios,
   drawNowLine,
   drawCrosshair,
@@ -23,6 +24,7 @@ export default function ChartCanvas({
   candles = [],
   scenarios = {},
   consolidations = [],
+  nnZones = [],
   activeTimeframes = ['4H', '1H', '15m', '5m', '1m'],
 }) {
   const containerRef = useRef(null);
@@ -49,11 +51,13 @@ export default function ChartCanvas({
   const candlesRef     = useRef(candles);
   const scenariosRef   = useRef(scenarios);
   const consolidRef    = useRef(consolidations);
+  const nnZonesRef     = useRef(nnZones);
   const activeRef      = useRef(activeTimeframes);
 
   useEffect(() => { candlesRef.current   = candles;          dirtyRef.current = true; }, [candles]);
   useEffect(() => { scenariosRef.current = scenarios;        dirtyRef.current = true; }, [scenarios]);
   useEffect(() => { consolidRef.current  = consolidations;   dirtyRef.current = true; }, [consolidations]);
+  useEffect(() => { nnZonesRef.current   = nnZones;          dirtyRef.current = true; }, [nnZones]);
   useEffect(() => { activeRef.current    = activeTimeframes; dirtyRef.current = true; }, [activeTimeframes]);
 
   // ── Render loop ─────────────────────────────────────────────────────────────
@@ -85,6 +89,7 @@ export default function ChartCanvas({
     drawGrid(ctx, vp);
     drawCandles(ctx, candlesRef.current, vp);
     drawConsolidations(ctx, consolidRef.current, vp, activeRef.current);
+    drawNNBoxes(ctx, nnZonesRef.current, vp);
     drawScenarios(ctx, scenariosRef.current, vp, activeRef.current, TF_CONFIG);
     drawNowLine(ctx, vp);
     drawCrosshair(ctx, mouseRef.current.x, mouseRef.current.y, vp);

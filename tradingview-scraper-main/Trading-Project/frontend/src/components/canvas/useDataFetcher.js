@@ -123,6 +123,7 @@ export function useDataFetcher() {
   const [scenarios,      setScenarios]      = useState({});
   const [candles,        setCandles]        = useState([]);
   const [consolidations, setConsolidations] = useState([]);
+  const [nnZones,        setNnZones]        = useState([]);
   const [error,          setError]          = useState(null);
   const [lastUpdated,    setLastUpdated]    = useState(null);
 
@@ -184,5 +185,18 @@ export function useDataFetcher() {
     };
   }, [fetchData]);
 
-  return { scenarios, candles, consolidations, error, lastUpdated };
+  useEffect(() => {
+    if (USE_MOCK) return;
+    const fetchNnZones = () => {
+      fetch(`${API_URL}/api/nn/refined_zones?symbol=EURUSD&timeframe=5m`)
+        .then(res => res.json())
+        .then(data => setNnZones(data))
+        .catch(err => console.error('[useDataFetcher] nnZones error:', err));
+    };
+    fetchNnZones();
+    const id = setInterval(fetchNnZones, 10000);
+    return () => clearInterval(id);
+  }, []);
+
+  return { scenarios, candles, consolidations, nnZones, error, lastUpdated };
 }

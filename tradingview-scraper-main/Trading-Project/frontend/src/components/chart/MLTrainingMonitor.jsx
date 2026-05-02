@@ -147,7 +147,7 @@ export default function MLTrainingMonitor() {
 
   const fetchProgress = async () => {
     try {
-      const res = await fetch(`${API}/training_progress`);
+      const res = await fetch('http://localhost:8000/api/training/training_progress_nn');
       if (res.ok) setData(await res.json());
     } catch (e) { }
   };
@@ -270,8 +270,9 @@ export default function MLTrainingMonitor() {
             <div className="flex-1 h-[200px] overflow-y-auto p-3 bg-[#0A0E17] text-[#A0A3AB] font-mono leading-relaxed space-y-1">
               {data?.logs?.length === 0 && <div className="italic text-[#4A4E59]">No logs available...</div>}
               {data?.logs?.map((msg, idx) => {
-                const isErr = msg.toLowerCase().includes('failed') || msg.toLowerCase().includes('error');
-                const isWarn = msg.toLowerCase().includes('warning') || msg.toLowerCase().includes('abort');
+                const lower = msg.toLowerCase();
+                const isErr = (lower.includes('failed') || lower.includes('error')) && !lower.includes('error analysis');
+                const isWarn = lower.includes('warning') || lower.includes('abort');
                 let color = 'text-[#D1D4DC]';
                 if (isErr) color = 'text-[#EF5350] font-semibold';
                 else if (isWarn) color = 'text-[#FFA726]';

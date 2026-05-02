@@ -124,6 +124,37 @@ export function drawConsolidations(ctx, consolidations, viewport, activeTimefram
   ctx.setLineDash([]);
 }
 
+// ── NN-refined consolidation zones ────────────────────────────────────────────
+export function drawNNBoxes(ctx, consolidations, viewport) {
+  consolidations.forEach(zone => {
+    if (!zone.nn_box) return;
+
+    // Original zone — yellow dashed outline
+    const s = worldToCanvas(zone.timeStart * 1000, zone.priceHigh, viewport);
+    const e = worldToCanvas(zone.timeEnd   * 1000, zone.priceLow,  viewport);
+    ctx.strokeStyle = hexAlpha('#F5C518', 0.6);
+    ctx.lineWidth   = 1;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(s.x, e.y, e.x - s.x, s.y - e.y);
+    ctx.setLineDash([]);
+
+    // NN box — solid blue fill + outline
+    const ns = worldToCanvas(zone.nn_box.timeStart * 1000, zone.nn_box.priceHigh, viewport);
+    const ne = worldToCanvas(zone.nn_box.timeEnd   * 1000, zone.nn_box.priceLow,  viewport);
+    ctx.fillStyle   = hexAlpha('#4A90D9', 0.12);
+    ctx.fillRect(ns.x, ne.y, ne.x - ns.x, ns.y - ne.y);
+    ctx.strokeStyle = '#4A90D9';
+    ctx.lineWidth   = 1.5;
+    ctx.strokeRect(ns.x, ne.y, ne.x - ns.x, ns.y - ne.y);
+
+    // Confidence label
+    ctx.font      = '10px Inter, sans-serif';
+    ctx.fillStyle = '#4A90D9';
+    ctx.textAlign = 'right';
+    ctx.fillText(`NN: ${Math.round((zone.nn_box.confidence || 0) * 100)}%`, ne.x - 2, ne.y - 4);
+  });
+}
+
 // ── Scenarios ─────────────────────────────────────────────────────────────────
 export function drawScenarios(ctx, scenarios, viewport, activeTimeframes, tfConfig) {
   const tfOrder = ['4H', '1H', '15m', '5m', '1m'];

@@ -100,11 +100,14 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
 
   if (allFiltered.length === 0) return;
 
-  // ── Find box boundaries in filtered array ─────────────────────────────────
-  const CONTEXT = 5; // candles to show either side of box
-  let startIdx = 0, endIdx = allFiltered.length - 1;
+  // ── 1. Find the "True" Box indices in the full filtered array ──────────
+  const impFull = detectImprovedBox(allFiltered);
+  let finalStart = 0, finalEnd = allFiltered.length - 1;
 
-  if (meta && meta.timeStart != null && meta.timeEnd != null) {
+  if (impFull) {
+    finalStart = impFull.start;
+    finalEnd   = impFull.end;
+  } else if (meta && meta.timeStart != null && meta.timeEnd != null) {
     const times   = allFiltered.map(c => new Date(c.time).getTime());
     const tsStart = typeof meta.timeStart === 'number' ? meta.timeStart : new Date(meta.timeStart).getTime();
     const tsEnd   = typeof meta.timeEnd   === 'number' ? meta.timeEnd   : new Date(meta.timeEnd).getTime();
@@ -113,18 +116,19 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
       times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
       return best;
     };
-    startIdx = findIdx(tsStart);
-    endIdx   = findIdx(tsEnd);
+    finalStart = findIdx(tsStart);
+    finalEnd   = findIdx(tsEnd);
   }
 
-  // Crop to [boxStart - CONTEXT .. boxEnd + CONTEXT]
-  const winStart = Math.max(0, startIdx - CONTEXT);
-  const winEnd   = Math.min(allFiltered.length - 1, endIdx + CONTEXT);
+  // ── 2. Apply 5+5 Context Windowing ───────────────────────────────────────
+  const CONTEXT = 5;
+  const winStart = Math.max(0, finalStart - CONTEXT);
+  const winEnd   = Math.min(allFiltered.length - 1, finalEnd + CONTEXT);
   const ohlc     = allFiltered.slice(winStart, winEnd + 1);
 
-  // Box indices now relative to the cropped window
-  const boxStartIdx = startIdx - winStart;
-  const boxEndIdx   = endIdx   - winStart;
+  // Re-map indices to the new cropped window
+  const relStart = finalStart - winStart;
+  const relEnd   = finalEnd   - winStart;
 
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
@@ -141,7 +145,6 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
   const rng   = maxP - minP || 0.0001;
   const cH    = H - PAD.t - PAD.b;
   const cW    = W - PAD.l - PAD.r;
-  // Vertical price zoom: shrink/expand visible range around midpoint
   const midP    = (maxP + minP) / 2 + panY;
   const halfRng = (rng / 2) / priceZoom;
   const adjMax  = midP + halfRng;
@@ -163,24 +166,14 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
 
 
   // ── Single Dashed Yellow Box System ──────────────────────────────────────
-  const imp = detectImprovedBox(ohlc);
   let finalBox = null;
 
-  if (imp) {
-    // New Wick Logic found a pattern
+  if (meta || impFull) {
     finalBox = {
-      x1: sx + imp.start * (cw + cg) + (cw / 2),
-      x2: sx + imp.end * (cw + cg) + (cw / 2) + cw,
-      y1: toY(imp.top),
-      y2: toY(imp.bottom)
-    };
-  } else if (meta && meta.priceHigh != null && meta.priceLow != null) {
-    // Fallback to original machine detection
-    finalBox = {
-      x1: sx + boxStartIdx * (cw + cg) + (cw / 2),
-      x2: sx + boxEndIdx * (cw + cg) + (cw / 2) + cw,
-      y1: toY(meta.priceHigh),
-      y2: toY(meta.priceLow)
+      x1: sx + relStart * (cw + cg) + (cw / 2),
+      x2: sx + relEnd * (cw + cg) + (cw / 2) + cw,
+      y1: toY(impFull ? impFull.top : meta.priceHigh),
+      y2: toY(impFull ? impFull.bottom : meta.priceLow)
     };
   }
 
@@ -196,8 +189,51 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
     ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = 'rgba(247,201,72,0.02)';
     ctx.fillRect(bx, by, bw, bh);
+    
+    // Draw NN prediction if available
+    if (meta && meta.nn_box) {
+      const { nn_box } = meta;
+      
+      const tsStart = typeof nn_box.timeStart === 'number' ? nn_box.timeStart : new Date(nn_box.timeStart).getTime() / 1000;
+      const tsEnd   = typeof nn_box.timeEnd   === 'number' ? nn_box.timeEnd   : new Date(nn_box.timeEnd).getTime() / 1000;
+      
+      const times = allFiltered.map(c => typeof c.time === 'number' ? c.time : new Date(c.time).getTime() / 1000);
+      const findIdx = ts => {
+        let best = 0, bestDiff = Infinity;
+        times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
+        return best;
+      };
+      
+      const nnStartRel = findIdx(tsStart) - winStart;
+      const nnEndRel   = findIdx(tsEnd) - winStart;
+      
+      const nx1 = sx + nnStartRel * (cw + cg) + (cw / 2);
+      const nx2 = sx + nnEndRel * (cw + cg) + (cw / 2) + cw;
+      const ny1 = Math.max(0, Math.min(H, toY(nn_box.priceHigh)));
+      const ny2 = Math.max(0, Math.min(H, toY(nn_box.priceLow)));
+      
+      const nbx = Math.max(0, Math.min(W, Math.min(nx1, nx2)));
+      const nbw = Math.min(W - nbx, Math.abs(nx2 - nx1));
+      const nby = Math.max(0, Math.min(H, Math.min(ny1, ny2)));
+      const nbh = Math.min(H - nby, Math.abs(ny2 - ny1));
+
+      ctx.strokeStyle = '#4A90D9';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([]);
+      ctx.strokeRect(nbx, nby, nbw, nbh);
+      ctx.fillStyle = 'rgba(74, 144, 217, 0.12)';
+      ctx.fillRect(nbx, nby, nbw, nbh);
+      
+      // Confidence label
+      ctx.font = '10px Inter, sans-serif';
+      ctx.fillStyle = '#4A90D9';
+      ctx.textAlign = 'right';
+      ctx.fillText(`NN: ${Math.round((nn_box.confidence || 0) * 100)}%`, nbx + nbw - 2, nby - 4);
+    }
+    
     ctx.restore();
   }
+
 
   // Candles — sequential index across windowed slice
   ohlc.forEach((c, i) => {
@@ -318,6 +354,61 @@ const RefinementDashboard = () => {
   const dragCanvasRef = useRef(null);
   const filteredOhlcRef = useRef(null);
 
+  // ── Coordinate Conversion Helpers ─────────────────────────────────────────
+  const getChartCoords = useCallback((mx, my) => {
+    const W = canvasRef.current?.width || 900;
+    const H = canvasRef.current?.height || 500;
+    const ohlc = filteredOhlcRef.current || [];
+    const zoom = zoomRef.current;
+    const pz = priceZoomRef.current;
+    const py = panYRef.current;
+
+    const cw = Math.max(2, Math.round(CW * zoom));
+    const cg = Math.max(1, Math.round(CG * zoom));
+    const cW = W - PAD.l - PAD.r;
+    const cH = H - PAD.t - PAD.b;
+    const totW = ohlc.length * (cw + cg);
+    const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+
+    const { maxP, minP, rng } = priceRangeRef.current;
+    const midP = (maxP + minP) / 2 + py;
+    const halfRng = (rng / 2) / pz;
+    const adjMax = midP + halfRng;
+    const adjRng = halfRng * 2;
+
+    const idx = Math.round((mx - sx) / (cw + cg));
+    const price = adjMax - (my - PAD.t) / cH * adjRng;
+
+    return { idx, price };
+  }, []);
+
+  const getPixelCoords = useCallback((idx, price) => {
+    const W = canvasRef.current?.width || 900;
+    const H = canvasRef.current?.height || 500;
+    const ohlc = filteredOhlcRef.current || [];
+    const zoom = zoomRef.current;
+    const pz = priceZoomRef.current;
+    const py = panYRef.current;
+
+    const cw = Math.max(2, Math.round(CW * zoom));
+    const cg = Math.max(1, Math.round(CG * zoom));
+    const cW = W - PAD.l - PAD.r;
+    const cH = H - PAD.t - PAD.b;
+    const totW = ohlc.length * (cw + cg);
+    const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+
+    const { maxP, minP, rng } = priceRangeRef.current;
+    const midP = (maxP + minP) / 2 + py;
+    const halfRng = (rng / 2) / pz;
+    const adjMax = midP + halfRng;
+    const adjRng = halfRng * 2;
+
+    const pxX = sx + idx * (cw + cg) + (cw / 2);
+    const pxY = PAD.t + ((adjMax - price) / adjRng) * cH;
+
+    return { pxX, pxY };
+  }, []);
+
 
   const box = boxes[idx] || null;
 
@@ -384,6 +475,23 @@ const RefinementDashboard = () => {
     setLoading(false);
   };
 
+  const handleTrain = async () => {
+    if (!stats || (stats.labeled || 0) < 500) return;
+    setLoading(true);
+    try {
+      const res = await fetch('http://localhost:8000/api/training/retrain_nn', { method: 'POST' });
+      const d = await res.clone().json();
+      if (d.status === 'triggered' || d.status === 'already_running') {
+        showToast('NN Training started', 'ok');
+      } else {
+        showToast('Training failed', 'err');
+      }
+    } catch (e) {
+      showToast('Training error: ' + e.message, 'err');
+    }
+    setLoading(false);
+  };
+
   // Mark all currently visible lessons as seen
   const markAllSeen = useCallback((lessonList) => {
     const hashes = (lessonList || []).map(l => l.hash).filter(Boolean);
@@ -444,13 +552,21 @@ const RefinementDashboard = () => {
   // sync magnetRef whenever magnet state changes
   useEffect(() => { magnetRef.current = magnet; }, [magnet]);
 
+  const paintDragCanvasRef = useRef(null);
+
   // ── Draw chart on box or zoom change ─────────────────────────────────────
   const redraw = useCallback((z, py, pz) => {
     if (!canvasRef.current || !ohlcRef.current) return;
     const pY = py !== undefined ? py : panYRef.current;
     const pZ = pz !== undefined ? pz : priceZoomRef.current;
     const filtered = renderChart(canvasRef.current, ohlcRef.current, metaRef.current, z, pY, pZ);
-    if (filtered) filteredOhlcRef.current = filtered;
+    if (filtered) {
+      filteredOhlcRef.current = filtered;
+      if (paintDragCanvasRef.current) {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(paintDragCanvasRef.current);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -550,28 +666,36 @@ const RefinementDashboard = () => {
     const bxs = drawBoxesRef.current;
     if (!bxs.length) return;
     const activeIdx = activeIdxRef.current;
+
     bxs.forEach((b, i) => {
       if (!b) return;
       const isActive = i === activeIdx;
-      const lx = b.w < 0 ? b.x + b.w : b.x;
-      const ly = b.h < 0 ? b.y + b.h : b.y;
-      const lw = Math.abs(b.w);
-      const lh = Math.abs(b.h);
+
+      // Convert chart coords to pixels for rendering
+      const p1 = getPixelCoords(b.i1, b.p1);
+      const p2 = getPixelCoords(b.i2, b.p2);
+
+      const lx = Math.min(p1.pxX, p2.pxX);
+      const ly = Math.min(p1.pxY, p2.pxY);
+      const lw = Math.abs(p2.pxX - p1.pxX);
+      const lh = Math.abs(p2.pxY - p1.pxY);
+
       ctx.fillStyle = isActive ? 'rgba(41,98,255,0.10)' : 'rgba(41,98,255,0.04)';
       ctx.fillRect(lx, ly, lw, lh);
       ctx.strokeStyle = isActive ? '#2962FF' : '#2962FF88';
       ctx.lineWidth = isActive ? 1.5 : 1;
       ctx.strokeRect(lx + 0.5, ly + 0.5, lw - 1, lh - 1);
-      // Box number label
+      
       ctx.fillStyle = isActive ? '#2962FF' : '#2962FF88';
       ctx.font = 'bold 10px monospace';
       ctx.fillText(`#${i + 1}`, lx + 4, ly + 12);
-      // Handles only for active box
+
       if (isActive) {
         const hs = 5;
         const handles = [
-          [lx, ly],[lx+lw, ly],[lx, ly+lh],[lx+lw, ly+lh],
-          [lx+lw/2, ly],[lx+lw/2, ly+lh],[lx, ly+lh/2],[lx+lw, ly+lh/2],
+          [p1.pxX, p1.pxY], [p2.pxX, p1.pxY], [p1.pxX, p2.pxY], [p2.pxX, p2.pxY],
+          [(p1.pxX + p2.pxX) / 2, p1.pxY], [(p1.pxX + p2.pxX) / 2, p2.pxY],
+          [p1.pxX, (p1.pxY + p2.pxY) / 2], [p2.pxX, (p1.pxY + p2.pxY) / 2],
         ];
         ctx.fillStyle = '#ffffff';
         ctx.strokeStyle = '#2962FF';
@@ -583,7 +707,8 @@ const RefinementDashboard = () => {
         }
       }
     });
-  }, []);
+  }, [getPixelCoords]);
+  paintDragCanvasRef.current = paintDragCanvas;
 
 
   // ── Snap mouse to candle grid (O(1) with precomputed range) ──────────────
@@ -632,11 +757,15 @@ const RefinementDashboard = () => {
     const hs = 10;
     const bxs = drawBoxesRef.current;
 
-    // Hit-test in reverse so last-drawn (topmost) wins
     for (let i = bxs.length - 1; i >= 0; i--) {
       const b = bxs[i];
       if (!b) continue;
-      const { x, y, w, h } = b;
+      
+      const p1 = getPixelCoords(b.i1, b.p1);
+      const p2 = getPixelCoords(b.i2, b.p2);
+      const { pxX: x1, pxY: y1 } = p1;
+      const { pxX: x2, pxY: y2 } = p2;
+
       const checkHandle = (hx, hy, mode) => {
         if (Math.abs(mx - hx) < hs && Math.abs(my - hy) < hs) {
           activeIdxRef.current = i;
@@ -646,35 +775,36 @@ const RefinementDashboard = () => {
         }
         return false;
       };
-      if (checkHandle(x,       y,       'TL')) return;
-      if (checkHandle(x+w,     y,       'TR')) return;
-      if (checkHandle(x,       y+h,     'BL')) return;
-      if (checkHandle(x+w,     y+h,     'BR')) return;
-      if (checkHandle(x+w/2,   y,       'T'))  return;
-      if (checkHandle(x+w/2,   y+h,     'B'))  return;
-      if (checkHandle(x,       y+h/2,   'L'))  return;
-      if (checkHandle(x+w,     y+h/2,   'R'))  return;
-      // Inside box → MOVE
-      const mnX=Math.min(x,x+w), mxX=Math.max(x,x+w);
-      const mnY=Math.min(y,y+h), mxY=Math.max(y,y+h);
+
+      if (checkHandle(x1, y1, 'TL')) return;
+      if (checkHandle(x2, y1, 'TR')) return;
+      if (checkHandle(x1, y2, 'BL')) return;
+      if (checkHandle(x2, y2, 'BR')) return;
+      if (checkHandle((x1+x2)/2, y1, 'T')) return;
+      if (checkHandle((x1+x2)/2, y2, 'B')) return;
+      if (checkHandle(x1, (y1+y2)/2, 'L')) return;
+      if (checkHandle(x2, (y1+y2)/2, 'R')) return;
+
+      const mnX=Math.min(x1,x2), mxX=Math.max(x1,x2);
+      const mnY=Math.min(y1,y2), mxY=Math.max(y1,y2);
       if (mx>mnX && mx<mxX && my>mnY && my<mxY) {
         activeIdxRef.current = i;
         modeRef.current = 'MOVE';
-        offRef.current = { x: mx - x, y: my - y };
+        offRef.current = { x: mx, y: my, i1: b.i1, p1: b.p1, i2: b.i2, p2: b.p2 };
         dragRef.current = true;
         paintDragCanvas();
         return;
       }
     }
 
-    // Empty space → start new box
-    const newBox = { x: mx, y: my, w: 0, h: 0 };
+    const { idx, price } = getChartCoords(mx, my);
+    const newBox = { i1: idx, p1: price, i2: idx, p2: price };
     drawBoxesRef.current = [...bxs, newBox];
     activeIdxRef.current = drawBoxesRef.current.length - 1;
     modeRef.current = 'DRAW';
     dragRef.current = true;
     paintDragCanvas();
-  }, [paintDragCanvas]);
+  }, [getPixelCoords, getChartCoords, paintDragCanvas]);
 
 
   useEffect(() => {
@@ -690,26 +820,33 @@ const RefinementDashboard = () => {
       const my = (e.clientY - rect.top)  * ratioY;
 
       const { smx, smy } = snapToCandle(mx, my, W, H);
+      const { idx: sIdx, price: sPrice } = getChartCoords(smx, smy);
+      const { idx: uIdx, price: uPrice } = getChartCoords(mx, my);
+
       const ai = activeIdxRef.current;
       const bxs = drawBoxesRef.current;
       if (ai < 0 || ai >= bxs.length) return;
       const b = bxs[ai];
       if (!b) return;
 
-      const { x, y, w, h } = b;
       const off = offRef.current;
       let updated;
       switch (modeRef.current) {
-        case 'DRAW': updated = { ...b, w: smx-x,       h: smy-y        }; break;
-        case 'MOVE': updated = { ...b, x: mx-off.x,    y: my-off.y     }; break;
-        case 'TL':   updated = { ...b, x: smx, y: smy, w: w+(x-smx), h: h+(y-smy) }; break;
-        case 'TR':   updated = { ...b, y: smy,          w: smx-x,     h: h+(y-smy) }; break;
-        case 'BL':   updated = { ...b, x: smx,          w: w+(x-smx), h: smy-y     }; break;
-        case 'BR':   updated = { ...b, w: smx-x,        h: smy-y      }; break;
-        case 'T':    updated = { ...b, y: smy,           h: h+(y-smy)  }; break;
-        case 'B':    updated = { ...b, h: smy-y          }; break;
-        case 'L':    updated = { ...b, x: smx,           w: w+(x-smx)  }; break;
-        case 'R':    updated = { ...b, w: smx-x          }; break;
+        case 'DRAW': updated = { ...b, i2: sIdx, p2: sPrice }; break;
+        case 'MOVE': {
+          const dIdx = uIdx - getChartCoords(off.x, off.y).idx;
+          const dPrice = uPrice - getChartCoords(off.x, off.y).price;
+          updated = { ...b, i1: off.i1 + dIdx, i2: off.i2 + dIdx, p1: off.p1 + dPrice, p2: off.p2 + dPrice };
+          break;
+        }
+        case 'TL': updated = { ...b, i1: sIdx, p1: sPrice }; break;
+        case 'TR': updated = { ...b, i2: sIdx, p1: sPrice }; break;
+        case 'BL': updated = { ...b, i1: sIdx, p2: sPrice }; break;
+        case 'BR': updated = { ...b, i2: sIdx, p2: sPrice }; break;
+        case 'T':  updated = { ...b, p1: sPrice }; break;
+        case 'B':  updated = { ...b, p2: sPrice }; break;
+        case 'L':  updated = { ...b, i1: sIdx }; break;
+        case 'R':  updated = { ...b, i2: sIdx }; break;
         default: return;
       }
       const next = [...bxs];
@@ -725,7 +862,6 @@ const RefinementDashboard = () => {
       if (!dragRef.current) return;
       dragRef.current = false;
       modeRef.current = 'NONE';
-      // Commit full array → React state (single re-render)
       setDrawBoxes([...drawBoxesRef.current]);
     };
 
@@ -735,7 +871,7 @@ const RefinementDashboard = () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [snapToCandle, paintDragCanvas]);
+  }, [snapToCandle, getChartCoords, paintDragCanvas]);
 
 
   // ── Save / Skip / Undo ───────────────────────────────────────────────────
@@ -823,19 +959,14 @@ const RefinementDashboard = () => {
       const adjRng  = halfRng * 2;
 
       const userBoxes = bxs.filter(Boolean).map(b => {
-        const realX = Math.min(b.x, b.x + b.w);
-        const realW = Math.abs(b.w);
-        const realY = Math.min(b.y, b.y + b.h);
-        const realH = Math.abs(b.h);
-
-        const startIdx = Math.max(0, Math.round((realX - sx) / (cw + cg)));
-        const endIdx   = Math.min(ohlc.length - 1, Math.round((realX + realW - sx) / (cw + cg)));
+        const startIdx = Math.max(0, Math.min(ohlc.length - 1, Math.min(b.i1, b.i2)));
+        const endIdx   = Math.min(ohlc.length - 1, Math.max(b.i1, b.i2));
 
         const timeStart = ohlc[startIdx]?.time || ohlc[0].time;
         const timeEnd   = ohlc[endIdx]?.time || ohlc[ohlc.length - 1].time;
 
-        const priceHigh = adjMax - (realY - PAD.t) / cH * adjRng;
-        const priceLow  = adjMax - (realY + realH - PAD.t) / cH * adjRng;
+        const priceHigh = Math.max(b.p1, b.p2);
+        const priceLow  = Math.min(b.p1, b.p2);
 
         return { timeStart, timeEnd, priceHigh, priceLow };
       });
@@ -934,6 +1065,12 @@ const RefinementDashboard = () => {
             <button onClick={handleSync}
               className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-[#2962FF30] text-[#2962FF] hover:bg-[#2962FF10] transition-all flex items-center gap-2">
               Sync Live
+            </button>
+
+            <button onClick={handleTrain}
+              disabled={(stats.labeled || 0) < 500}
+              className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${(stats.labeled || 0) >= 500 ? 'border-[#00E67630] text-[#00E676] hover:bg-[#00E67610]' : 'border-[#363A45] text-[#787B86] opacity-50 cursor-not-allowed'}`}>
+              Train Model
             </button>
           </div>
 

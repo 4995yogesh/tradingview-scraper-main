@@ -3267,21 +3267,35 @@
       "label": "get_nn_status()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1532"
+      "source_location": "L1530"
     },
     {
       "id": "server_skip_training_sample",
       "label": "skip_training_sample()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1541"
+      "source_location": "L1539"
+    },
+    {
+      "id": "server_manual_retrain_nn",
+      "label": "manual_retrain_nn()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1552"
+    },
+    {
+      "id": "server_get_nn_training_progress",
+      "label": "get_nn_training_progress()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1562"
     },
     {
       "id": "server_sync_training_queue",
       "label": "sync_training_queue()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1554"
+      "source_location": "L1572"
     },
     {
       "id": "server_rationale_1",
@@ -3487,11 +3501,25 @@
       "source_location": "L1347"
     },
     {
-      "id": "server_rationale_1555",
+      "id": "server_rationale_1553",
+      "label": "Trigger the PyTorch CNN training manually.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1553"
+    },
+    {
+      "id": "server_rationale_1563",
+      "label": "Return the real-time logs and loss of the CNN trainer.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1563"
+    },
+    {
+      "id": "server_rationale_1573",
       "label": "Force-sync all currently detected consolidations into the training DB.     Allo",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1555"
+      "source_location": "L1573"
     },
     {
       "id": "trading_project_frontend_craco_config_js",
@@ -14218,7 +14246,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1532",
+      "source_location": "L1530",
       "weight": 1.0
     },
     {
@@ -14227,7 +14255,25 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1541",
+      "source_location": "L1539",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_manual_retrain_nn",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1552",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_nn_training_progress",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1562",
       "weight": 1.0
     },
     {
@@ -14236,7 +14282,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1554",
+      "source_location": "L1572",
       "weight": 1.0
     },
     {
@@ -14245,7 +14291,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1588",
+      "source_location": "L1606",
       "weight": 1.0
     },
     {
@@ -14434,7 +14480,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1562",
+      "source_location": "L1580",
       "weight": 1.0
     },
     {
@@ -14699,12 +14745,30 @@
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1555",
+      "source": "server_rationale_1553",
+      "target": "server_manual_retrain_nn",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1553",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_1563",
+      "target": "server_get_nn_training_progress",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1563",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_1573",
       "target": "server_sync_training_queue",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1555",
+      "source_location": "L1573",
       "weight": 1.0
     },
     {
@@ -27614,7 +27678,25 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1555",
+      "source": "server_rationale_1553",
+      "target": "technicals_indicators",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L55",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1563",
+      "target": "technicals_indicators",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L55",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1573",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27884,7 +27966,25 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1555",
+      "source": "server_rationale_1553",
+      "target": "historical_historicalfetcher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L56",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1563",
+      "target": "historical_historicalfetcher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L56",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1573",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",

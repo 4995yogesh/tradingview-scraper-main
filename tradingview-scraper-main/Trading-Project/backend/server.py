@@ -1384,6 +1384,14 @@ async def get_all_boxes(limit: int = 200, status: str = None):
                     if doj_count > 3 or max_gap > 0.00200:
                         continue # Skip corrupted/abnormal box
                         
+                    from ml.nn_scorer import predict_box, is_nn_ready, load_nn_model
+                    if not is_nn_ready():
+                        load_nn_model()
+                    
+                    if is_nn_ready():
+                        # The CNN expects at least 50 candles context, but predict_box pads if needed.
+                        r['nn_box'] = predict_box(ctx)
+                        
                     valid_rows.append(r)
                 except Exception:
                     valid_rows.append(r) # fallback if parse fails
@@ -1519,10 +1527,8 @@ async def submit_training_label(data: dict):
 
         # Trigger NN Training if threshold reached (500, 1000, 1500...)
         if count >= 500 and count % 500 == 0:
-            import subprocess
-            def run_train():
-                subprocess.run(["python", "ml/train_nn.py"], cwd=os.path.dirname(os.path.abspath(__file__)))
-            threading.Thread(target=run_train, daemon=True).start()
+            from ml.train_nn import train_async
+            train_async(force=True)
         
         return {"status": "ok", "count": count}
     except Exception as e:
@@ -1548,6 +1554,26 @@ async def skip_training_sample(data: dict):
         return {"status": "ok"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/training/retrain_nn")
+async def manual_retrain_nn():
+    """Trigger the PyTorch CNN training manually."""
+    try:
+        from ml.train_nn import train_async
+        train_async(force=True)
+        return {"status": "triggered"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/training/training_progress_nn")
+async def get_nn_training_progress():
+    """Return the real-time logs and loss of the CNN trainer."""
+    try:
+        from ml.train_nn import TRAINING_STATE
+        return TRAINING_STATE
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
 
 
 @app.post("/api/training/sync")
@@ -1582,6 +1608,55 @@ async def sync_training_queue():
     except Exception as e:
         logger.error(f"Sync failed: {e}")
         return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/nn/refined_zones")
+async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
+    """Return consolidation zones enriched with NN-predicted refined box coordinates."""
+    try:
+        import pandas as pd
+        from ml.nn_scorer import predict_box, is_nn_ready, load_nn_model
+        from indicators.consolidation import consolidation_boxes
+
+        # Load model if not yet loaded
+        if not is_nn_ready():
+            load_nn_model()
+
+        raw_candles = storage.get("OANDA", symbol, timeframe) or []
+        if not raw_candles:
+            return []
+
+        zones_with_nn = []
+        try:
+            df = pd.DataFrame(raw_candles)[['time', 'open', 'high', 'low', 'close']]
+            raw_zones = consolidation_boxes(df)[-20:]
+        except Exception as e:
+            logger.warning(f"[nn_zones] consolidation_boxes failed: {e}")
+            return []
+
+        for zone in raw_zones:
+            nn_box = None
+            if is_nn_ready():
+                try:
+                    start_t = zone.get('timeStart', 0) - 3600
+                    end_t   = zone.get('timeEnd', 0) + 3600
+                    # find context start index (25 candles before zone start)
+                    ctx_idx = 0
+                    for i, c in enumerate(raw_candles):
+                        if c['time'] >= start_t:
+                            ctx_idx = max(0, i - 25)
+                            break
+                    ohlc_slice = [c for c in raw_candles[ctx_idx:] if start_t <= c['time'] <= end_t]
+                    if ohlc_slice:
+                        nn_box = predict_box(ohlc_slice)
+                except Exception as e:
+                    logger.debug(f"[nn_zones] predict_box failed for {zone.get('box_id')}: {e}")
+            zones_with_nn.append({**zone, 'nn_box': nn_box})
+
+        return zones_with_nn
+    except Exception as e:
+        logger.error(f"[nn_zones] endpoint failed: {e}")
+        return []
 
 
 if __name__ == "__main__":
