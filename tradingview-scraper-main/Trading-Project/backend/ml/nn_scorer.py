@@ -18,14 +18,21 @@ class ConsolidationCNN(nn.Module):
             nn.Conv1d(4, 32, kernel_size=3, padding=1),
             nn.BatchNorm1d(32), nn.ReLU(),
             nn.Conv1d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm1d(64), nn.ReLU(),
-            nn.AdaptiveAvgPool1d(1)
+            nn.BatchNorm1d(64), nn.ReLU()
         )
-        self.fc = nn.Linear(64, 4)
+        self.fc = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 50, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, 4)
+        )
     def forward(self, x):
         x = x.transpose(1, 2)  # (N, 4, seq_len)
-        x = self.conv(x)        # (N, 64, 1)
-        x = x.squeeze(-1)       # (N, 64)
+        x = self.conv(x)        # (N, 64, seq_len)
         return self.fc(x)       # (N, 4)
 
 def load_nn_model() -> None:

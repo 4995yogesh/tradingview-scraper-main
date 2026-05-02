@@ -72,55 +72,48 @@ def train(force=False):
                 
                 ohlc = json.loads(ohlc_json)
                 user_box = json.loads(user_box_json)
-                
-                if len(ohlc) < 5:  # Need at least 5 candles
-                    continue
-                
-                # Take last sequence_length candles; if shorter, pad with first candle
-                if len(ohlc) >= sequence_length:
-                    ohlc = ohlc[-sequence_length:]
-                else:
-                    pad = [ohlc[0]] * (sequence_length - len(ohlc))
-                    ohlc = pad + ohlc
+                if not ohlc or len(ohlc) < 5: continue
 
-                # Feature matrix (100, 4)
-                feat = np.array([[float(c['open']), float(c['high']), float(c['low']), float(c['close'])] for c in ohlc])
-                
-                # Min-Max normalization
-                window_min = np.min(feat)  # Global min of the OHLC block
-                window_max = np.max(feat)  # Global max of the OHLC block
-                window_range = max(1e-9, window_max - window_min)
-                
-                feat = (feat - window_min) / window_range  # Normalize
-                
-                # Targets
-                if isinstance(user_box, list):
-                    box = user_box[0] if user_box else None
-                else:
-                    box = user_box
-                
-                if not box or 'timeStart' not in box or 'priceHigh' not in box:
-                    continue
-                
-                # Find indices — handle ISO strings ("2026-04-22T16:42:00Z") or numeric unix ts
-                from datetime import datetime, timezone
-                def _to_unix(t):
+                # Determine box to train on (labeled preferred)
+                box = user_box[0] if isinstance(user_box, list) and user_box else user_box
+                if not box or 'timeStart' not in box or 'priceHigh' not in box: continue
+
+                # Helper for time conversion
+                def _t_u(t):
                     if isinstance(t, str):
-                        try:
-                            return datetime.fromisoformat(t.replace('Z', '+00:00')).timestamp()
-                        except Exception:
-                            return 0.0
+                        try: return datetime.fromisoformat(t.replace('Z', '+00:00')).timestamp()
+                        except: return 0.0
                     v = float(t)
                     return v / 1000 if v > 2e12 else v
 
-                times = [_to_unix(c['time']) for c in ohlc]
+                b_start = _t_u(box['timeStart'])
+                b_end   = _t_u(box['timeEnd'])
+
+                # Find the index of box end in full context
+                all_ts = [_t_u(c['time']) for c in ohlc]
+                end_idx_in_all = np.argmin([abs(t - b_end) for t in all_ts])
                 
-                # Normalize box time formats (ms vs s or ISO)
-                b_start = _to_unix(box['timeStart'])
-                b_end   = _to_unix(box['timeEnd'])
+                # Crop 50 candles ending ~5 candles after box end
+                crop_end = min(len(ohlc), end_idx_in_all + 6)
+                crop_start = max(0, crop_end - sequence_length)
+                ohlc_window = ohlc[crop_start:crop_end]
+
+                if len(ohlc_window) < sequence_length:
+                    ohlc_window = [ohlc_window[0]] * (sequence_length - len(ohlc_window)) + ohlc_window
+
+                # Feature matrix (50, 4)
+                feat = np.array([[float(c['open']), float(c['high']), float(c['low']), float(c['close'])] for c in ohlc_window])
                 
-                s_idx = np.argmin([abs(t - b_start) for t in times])
-                e_idx = np.argmin([abs(t - b_end) for t in times])
+                # Min-Max normalization
+                window_min = np.min(feat)
+                window_max = np.max(feat)
+                window_range = max(1e-9, window_max - window_min)
+                feat = (feat - window_min) / window_range 
+
+                # Targets relative to window
+                win_ts = [_t_u(c['time']) for c in ohlc_window]
+                s_idx = np.argmin([abs(t - b_start) for t in win_ts])
+                e_idx = np.argmin([abs(t - b_end) for t in win_ts])
                 
                 y_high = (float(box['priceHigh']) - window_min) / window_range
                 y_low  = (float(box['priceLow']) - window_min) / window_range
@@ -128,7 +121,7 @@ def train(force=False):
                 X.append(feat)
                 y.append([s_idx/float(sequence_length), e_idx/float(sequence_length), y_high, y_low])
             except Exception as e:
-                _log_msg(f"Skipping box {bid} due to error: {e}")
+                _log_msg(f"Skipping box {bid}: {e}")
                 continue
 
         if not X:
@@ -149,16 +142,23 @@ def train(force=False):
                     nn.ReLU(),
                     nn.Conv1d(32, 64, kernel_size=3, padding=1),
                     nn.BatchNorm1d(64),
-                    nn.ReLU(),
-                    nn.AdaptiveAvgPool1d(1)
+                    nn.ReLU()
                 )
-                self.fc = nn.Linear(64, 4)
+                self.fc = nn.Sequential(
+                    nn.Flatten(),
+                    nn.Linear(64 * 50, 128),
+                    nn.ReLU(),
+                    nn.Dropout(0.2),
+                    nn.Linear(128, 64),
+                    nn.ReLU(),
+                    nn.Dropout(0.2),
+                    nn.Linear(64, 4)
+                )
 
             def forward(self, x):
                 x = x.transpose(1, 2) # (N, 4, seq_len)
-                x = self.conv(x)      # (N, 64, 1)
-                x = x.squeeze(-1)     # (N, 64)
-                return self.fc(x)
+                x = self.conv(x)      # (N, 64, seq_len)
+                return self.fc(x)     # (N, 4)
 
         model = ConsolidationCNN()
         criterion = nn.MSELoss()
@@ -167,7 +167,7 @@ def train(force=False):
         X_t = torch.from_numpy(X)
         y_t = torch.from_numpy(y)
 
-        epochs = 100
+        epochs = 500
         TRAINING_STATE["max_iterations"] = epochs
         _log_msg(f"Starting training for {epochs} epochs...")
 
