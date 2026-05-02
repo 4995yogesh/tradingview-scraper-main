@@ -52,19 +52,25 @@ def predict_box(ohlc_candles: list) -> dict | None:
             
         candles = [{k: v for k, v in candle.items() if k in ['open', 'high', 'low', 'close']} for candle in candles]
         candles = np.array([[candle['open'], candle['high'], candle['low'], candle['close']] for candle in candles])
-        first_close = candles[0, 3]
-        if abs(first_close) < 1e-9: first_close = 1.0
-        candles = (candles - first_close) / first_close
+        
+        window_min = np.min(candles)
+        window_max = np.max(candles)
+        window_range = max(1e-9, window_max - window_min)
+        
+        candles = (candles - window_min) / window_range
         candles = np.expand_dims(candles, axis=0)
+        
         with torch.no_grad():
             input_tensor = torch.tensor(candles, dtype=torch.float32)
             output = _nn_model(input_tensor)
             output = output.numpy()[0]
+            
         start_idx_norm, end_idx_norm, price_high_norm, price_low_norm = output
         start_idx = max(0, min(int(round(start_idx_norm * sequence_length)), len(ohlc_candles) - 1))
         end_idx = max(0, min(int(round(end_idx_norm * sequence_length)), len(ohlc_candles) - 1))
-        price_high = float((price_high_norm * first_close) + first_close)
-        price_low = float((price_low_norm * first_close) + first_close)
+        
+        price_high = float((price_high_norm * window_range) + window_min)
+        price_low = float((price_low_norm * window_range) + window_min)
         confidence = float(1 / (1 + abs(price_high - price_low)))
         confidence = max(0.0, min(1.0, confidence))
         time_start = _to_unix(ohlc_candles[start_idx]['time'])

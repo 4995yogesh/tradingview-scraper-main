@@ -1347,7 +1347,7 @@ async def get_all_boxes(limit: int = 200, status: str = None):
     """Returns ALL boxes regardless of status, with full ohlc_context for canvas rendering."""
     import sqlite3
     try:
-        with sqlite3.connect("training_set.db") as conn:
+        with sqlite3.connect("training_set.db", timeout=30.0) as conn:
             conn.row_factory = sqlite3.Row
             if status:
                 cursor = conn.execute(
@@ -1447,7 +1447,7 @@ async def undo_training_label(data: dict):
 async def get_training_stats():
     import sqlite3
     try:
-        with sqlite3.connect("training_set.db") as conn:
+        with sqlite3.connect("training_set.db", timeout=30.0) as conn:
             conn.row_factory = sqlite3.Row
             res = conn.execute("""
                 SELECT 
@@ -1464,7 +1464,7 @@ async def get_training_stats():
 async def get_training_lessons():
     import sqlite3, hashlib
     try:
-        with sqlite3.connect("training_set.db") as conn:
+        with sqlite3.connect("training_set.db", timeout=30.0) as conn:
             conn.row_factory = sqlite3.Row
             cursor = conn.execute("""
                 SELECT box_id, gemini_analysis, created_at FROM review_queue

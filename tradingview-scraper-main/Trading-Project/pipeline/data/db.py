@@ -46,7 +46,7 @@ class CandleDB:
         """Return (or create) a thread-local SQLite connection."""
         conn = getattr(self._local, "conn", None)
         if conn is None:
-            conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
+            conn = sqlite3.connect(str(self.db_path), check_same_thread=False, timeout=30.0)
             conn.row_factory = sqlite3.Row
             # Performance tuning
             conn.execute("PRAGMA journal_mode=WAL")

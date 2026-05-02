@@ -98,7 +98,19 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
     return true;
   });
 
-  if (allFiltered.length === 0) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0B0E14';
+  ctx.fillRect(0, 0, W, H);
+
+  if (allFiltered.length === 0) {
+    ctx.fillStyle = '#787B86';
+    ctx.font = '14px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No candles in this context window', W / 2, H / 2);
+    return;
+  }
 
   // ── 1. Find the "True" Box indices in the full filtered array ──────────
   const impFull = detectImprovedBox(allFiltered);
@@ -130,27 +142,27 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
   const relStart = finalStart - winStart;
   const relEnd   = finalEnd   - winStart;
 
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(0, 0, W, H);
-
   const cw   = Math.max(2, Math.round(CW * zoom));
   const cg   = Math.max(1, Math.round(CG * zoom));
-  const highs = ohlc.map(c => c.high);
-  const lows  = ohlc.map(c => c.low);
-  const maxP  = Math.max(...highs);
-  const minP  = Math.min(...lows);
-  const rng   = maxP - minP || 0.0001;
+  
+  const highs = ohlc.map(c => c.high).filter(isFinite);
+  const lows  = ohlc.map(c => c.low).filter(isFinite);
+  
+  const maxP  = highs.length > 0 ? Math.max(...highs) : 1.0;
+  const minP  = lows.length > 0 ? Math.min(...lows) : 0.0;
+  const rng   = Math.max(0.0001, maxP - minP);
+  
   const cH    = H - PAD.t - PAD.b;
   const cW    = W - PAD.l - PAD.r;
-  const midP    = (maxP + minP) / 2 + panY;
+  const midP  = (maxP + minP) / 2 + panY;
   const halfRng = (rng / 2) / priceZoom;
   const adjMax  = midP + halfRng;
-  const adjMin  = midP - halfRng;
-  const adjRng  = adjMax - adjMin;
-  const toY   = p => PAD.t + ((adjMax - p) / adjRng) * cH;
+  const adjRng  = halfRng * 2;
+
+  const toY   = p => {
+    if (!isFinite(p)) return PAD.t + cH / 2;
+    return PAD.t + ((adjMax - p) / adjRng) * cH;
+  };
   const totW  = ohlc.length * (cw + cg);
   const sx    = PAD.l + Math.max(0, (cW - totW) / 2);
 
@@ -206,29 +218,49 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1) {
       
       const nnStartRel = findIdx(tsStart) - winStart;
       const nnEndRel   = findIdx(tsEnd) - winStart;
-      
-      const nx1 = sx + nnStartRel * (cw + cg) + (cw / 2);
-      const nx2 = sx + nnEndRel * (cw + cg) + (cw / 2) + cw;
-      const ny1 = Math.max(0, Math.min(H, toY(nn_box.priceHigh)));
-      const ny2 = Math.max(0, Math.min(H, toY(nn_box.priceLow)));
-      
-      const nbx = Math.max(0, Math.min(W, Math.min(nx1, nx2)));
-      const nbw = Math.min(W - nbx, Math.abs(nx2 - nx1));
-      const nby = Math.max(0, Math.min(H, Math.min(ny1, ny2)));
-      const nbh = Math.min(H - nby, Math.abs(ny2 - ny1));
 
-      ctx.strokeStyle = '#4A90D9';
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([]);
-      ctx.strokeRect(nbx, nby, nbw, nbh);
-      ctx.fillStyle = 'rgba(74, 144, 217, 0.12)';
-      ctx.fillRect(nbx, nby, nbw, nbh);
-      
-      // Confidence label
-      ctx.font = '10px Inter, sans-serif';
-      ctx.fillStyle = '#4A90D9';
-      ctx.textAlign = 'right';
-      ctx.fillText(`NN: ${Math.round((nn_box.confidence || 0) * 100)}%`, nbx + nbw - 2, nby - 4);
+      const nnBox = {
+        x1: sx + nnStartRel * (cw + cg) + (cw / 2),
+        x2: sx + nnEndRel * (cw + cg) + (cw / 2) + cw,
+        y1: toY(nn_box.priceHigh),
+        y2: toY(nn_box.priceLow)
+      };
+
+      const checkVisibility = (box, W, H) => {
+        const bx = Math.min(box.x1, box.x2);
+        const bw = Math.abs(box.x2 - box.x1);
+        const by = Math.min(box.y1, box.y2);
+        const bh = Math.abs(box.y2 - box.y1);
+        return !(bx + bw < 0 || bx > W || by + bh < 0 || by > H);
+      };
+
+      const bx = Math.min(nnBox.x1, nnBox.x2);
+      const bw = Math.abs(nnBox.x2 - nnBox.x1);
+      const by = Math.min(nnBox.y1, nnBox.y2);
+      const bh = Math.abs(nnBox.y2 - nnBox.y1);
+
+      if (checkVisibility(nnBox, W, H)) {
+        ctx.save();
+        ctx.strokeStyle = '#FF3333'; ctx.lineWidth = 2.0;
+        ctx.setLineDash([]);
+        ctx.strokeRect(bx, by, bw, bh);
+        ctx.fillStyle = 'rgba(255, 51, 51, 0.15)';
+        ctx.fillRect(bx, by, bw, bh);
+
+        ctx.fillStyle = '#FF3333';
+        ctx.font = '11px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        const labelStr = `NN Conf: ${Math.round((nn_box.confidence || 0) * 100)}% | H: ${nn_box.priceHigh.toFixed(4)} L: ${nn_box.priceLow.toFixed(4)}`;
+        ctx.fillText(labelStr, bx + bw - 2, by - 6);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.fillStyle = '#FF3333';
+        ctx.font = 'bold 12px Inter, sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Red NN Box is OFF-SCREEN (H: ${nn_box.priceHigh.toFixed(4)} L: ${nn_box.priceLow.toFixed(4)})`, 10, 20);
+        ctx.restore();
+      }
     }
     
     ctx.restore();
@@ -590,20 +622,25 @@ const RefinementDashboard = () => {
         timeEnd:    raw.timeEnd    ?? null,
         priceHigh:  raw.priceHigh  ?? box.price_high,
         priceLow:   raw.priceLow   ?? box.price_low,
+        nn_box:     box.nn_box     ?? null,
       };
       ohlcRef.current      = ohlc;
       metaRef.current      = meta;
       panYRef.current      = 0;
       priceZoomRef.current = 1.0;
-      const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0);
-      if (filtered) {
-        filteredOhlcRef.current = filtered;
-        // Precompute price range for O(1) magnet snapping
-        const highs = filtered.map(c => c.high);
-        const lows  = filtered.map(c => c.low);
-        const maxP  = Math.max(...highs);
-        const minP  = Math.min(...lows);
-        priceRangeRef.current = { maxP, minP, rng: maxP - minP || 0.0001 };
+      try {
+        const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0);
+        if (filtered) {
+          filteredOhlcRef.current = filtered;
+          // Precompute price range for O(1) magnet snapping
+          const highs = filtered.map(c => c.high);
+          const lows  = filtered.map(c => c.low);
+          const maxP  = Math.max(...highs);
+          const minP  = Math.min(...lows);
+          priceRangeRef.current = { maxP, minP, rng: maxP - minP || 0.0001 };
+        }
+      } catch (err) {
+        console.error("CRITICAL RENDER ERROR:", err);
       }
     } catch (e) {
       console.error('Render error', e);

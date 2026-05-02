@@ -12,6 +12,7 @@ import logging
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from training_db import TrainingDB
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # ── Training Real-Time State (Matches trainer.py for UI compatibility) ────────
@@ -84,9 +85,13 @@ def train(force=False):
 
                 # Feature matrix (100, 4)
                 feat = np.array([[float(c['open']), float(c['high']), float(c['low']), float(c['close'])] for c in ohlc])
-                first_close = feat[0, 3]
-                if abs(first_close) < 1e-9: first_close = 1.0
-                feat = (feat - first_close) / first_close # Normalize
+                
+                # Min-Max normalization
+                window_min = np.min(feat)  # Global min of the OHLC block
+                window_max = np.max(feat)  # Global max of the OHLC block
+                window_range = max(1e-9, window_max - window_min)
+                
+                feat = (feat - window_min) / window_range  # Normalize
                 
                 # Targets
                 if isinstance(user_box, list):
@@ -117,8 +122,8 @@ def train(force=False):
                 s_idx = np.argmin([abs(t - b_start) for t in times])
                 e_idx = np.argmin([abs(t - b_end) for t in times])
                 
-                y_high = (float(box['priceHigh']) - first_close) / first_close
-                y_low  = (float(box['priceLow']) - first_close) / first_close
+                y_high = (float(box['priceHigh']) - window_min) / window_range
+                y_low  = (float(box['priceLow']) - window_min) / window_range
                 
                 X.append(feat)
                 y.append([s_idx/float(sequence_length), e_idx/float(sequence_length), y_high, y_low])
