@@ -6,7 +6,7 @@ class RefinementModel(nn.Module):
     def __init__(self):
         super(RefinementModel, self).__init__()
         self.cnn_encoder = nn.Sequential(
-            nn.Conv1d(21, 64, kernel_size=3, padding=1),
+            nn.Conv1d(12, 64, kernel_size=3, padding=1),
             nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.Conv1d(64, 128, kernel_size=3, padding=1),

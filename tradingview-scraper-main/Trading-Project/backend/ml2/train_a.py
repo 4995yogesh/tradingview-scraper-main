@@ -25,7 +25,7 @@ if __name__ == '__main__':
     
     os.makedirs(os.path.join(backend_dir, 'data', 'models'), exist_ok=True)
     
-    for epoch in range(200):
+    for epoch in range(30):
         epoch_loss = 0.0
         for batch in dataloader:
             features = batch['features']

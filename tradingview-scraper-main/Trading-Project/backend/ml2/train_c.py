@@ -41,7 +41,7 @@ def train_c():
 
     print(f"Training Model C on {len(dataset)} positive samples...")
 
-    for epoch in range(100):
+    for epoch in range(30):
         total_loss = 0.0
         for batch in dataloader:
             features = batch['features'].to(device)

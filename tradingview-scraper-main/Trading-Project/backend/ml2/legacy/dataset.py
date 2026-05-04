@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from feature_engine_v2_1 import build_features
+from features import compute_features, normalize_features
 
 def to_unix(t):
     if isinstance(t, str):
@@ -44,12 +44,13 @@ class ConsolidationDataset(Dataset):
             if len(candles) < 5:
                 continue
             
-            feats = build_features(np.array([[c['open'], c['high'], c['low'], c['close']] for c in candles])).cpu().numpy()
+            feats = compute_features(candles)
+            feats = normalize_features(feats)
             
             if len(feats) >= 50:
                 feats = feats[-50:]
             else:
-                pad = np.zeros((50-len(feats), 21))
+                pad = np.zeros((50-len(feats), 12))
                 feats = np.vstack([pad, feats])
             
             if len(candles) >= 50:

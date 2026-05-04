@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from features import compute_features, normalize_features
+from feature_engine_v2_1 import build_features
 from model_a import SegmentationModel
 from model_b import extract_box
 from model_c import RefinementModel
@@ -49,7 +49,12 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
         else:
             ohlc_candles = ohlc_candles[-50:]
 
-        features = normalize_features(compute_features(ohlc_candles))
+        # Build 21-channel features using the v2.1 engine
+        raw_ohlc = np.array([[c['open'], c['high'], c['low'], c['close']] for c in ohlc_candles], dtype=np.float32)
+        features_tensor = build_features(raw_ohlc)
+        features = features_tensor.cpu().numpy() # [50, 21]
+        print(f"ML2 Debug: Features built, shape={features.shape}")
+        
         heatmap = None
         initial_box = None
         refined_box = None
@@ -58,6 +63,7 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
         if model_a:
             from model_a import predict_heatmap
             heatmap = predict_heatmap(model_a, features)
+            print(f"ML2 Debug: Heatmap generated, min={heatmap.min():.4f}, max={heatmap.max():.4f}, mean={heatmap.mean():.4f}")
 
         if heatmap is not None:
             initial_box_dict = extract_box(heatmap, ohlc_candles)

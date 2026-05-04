@@ -5,7 +5,7 @@ import numpy as np
 class SegmentationModel(nn.Module):
     def __init__(self):
         super(SegmentationModel, self).__init__()
-        self.conv1 = nn.Conv1d(21, 64, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv1d(12, 64, kernel_size=3, padding=1)
         self.bn1 = nn.BatchNorm1d(64)
         self.relu = nn.ReLU()
         self.conv2 = nn.Conv1d(64, 128, kernel_size=3, padding=1)

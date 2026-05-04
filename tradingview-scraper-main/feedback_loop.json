@@ -1,0 +1,17 @@
+[
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "task_type": "unknown",
+    "status": "success"
+  },
+  {
+    "model": "meta/llama-3.1-8b-instruct",
+    "task_type": "unknown",
+    "status": "success"
+  },
+  {
+    "task_type": "general_query",
+    "model_used": "meta/llama-3.1-8b-instruct",
+    "success_score": 1.0
+  }
+]

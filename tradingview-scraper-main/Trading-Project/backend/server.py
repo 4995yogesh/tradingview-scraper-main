@@ -1384,14 +1384,6 @@ async def get_all_boxes(limit: int = 200, status: str = None):
                     if doj_count > 3 or max_gap > 0.00200:
                         continue # Skip corrupted/abnormal box
                         
-                    from ml.nn_scorer import predict_box, is_nn_ready, load_nn_model
-                    if not is_nn_ready():
-                        load_nn_model()
-                    
-                    if is_nn_ready():
-                        # The CNN expects at least 50 candles context, but predict_box pads if needed.
-                        r['nn_box'] = predict_box(ctx)
-                        
                     valid_rows.append(r)
                 except Exception:
                     valid_rows.append(r) # fallback if parse fails

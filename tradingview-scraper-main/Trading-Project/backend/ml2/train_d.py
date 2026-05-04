@@ -29,7 +29,7 @@ def train_d():
 
     print(f"Training Model D on {len(dataset)} samples...")
 
-    for epoch in range(50):
+    for epoch in range(30):
         total_loss = 0.0
         for batch in dataloader:
             features = batch['features'].to(device)
