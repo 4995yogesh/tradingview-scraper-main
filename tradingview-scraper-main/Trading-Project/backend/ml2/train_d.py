@@ -1,14 +1,12 @@
 import os
 import sys
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-# Ensure local imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from model_d import QualityScorer
+from model_d import QualityScorer, train_step
 from dataset import ConsolidationDataset
 
 def train_d():
@@ -22,26 +20,24 @@ def train_d():
         print("Not enough samples for training Model D.")
         return
 
-    dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
+    # Point 1: Class Balanced Sampler
+    sampler = dataset.get_sampler()
+    dataloader = DataLoader(dataset, batch_size=16, sampler=sampler)
+    
     model = QualityScorer().to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.MSELoss()
 
-    print(f"Training Model D on {len(dataset)} samples...")
+    labels = [s['is_consolidation'] for s in dataset.samples]
+    print(f"Training Model D (Dual Head) | Neg={labels.count(0)}, Pos={labels.count(1)}")
 
     for epoch in range(30):
         total_loss = 0.0
         for batch in dataloader:
-            features = batch['features'].to(device)
-            box = batch['box_coords'].to(device)
-            target = batch['quality_score'].to(device)
-
-            optimizer.zero_grad()
-            output = model(features, box)
-            loss = criterion(output, target.float().view_as(output))
-            loss.backward()
-            optimizer.step()
-            total_loss += loss.item()
+            # Batch items are sent to device inside train_step or here
+            # For simplicity, we ensure tensors are on device
+            batch_dev = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+            loss = train_step(model, batch_dev, optimizer)
+            total_loss += loss
 
         if (epoch + 1) % 10 == 0:
             print(f"Epoch {epoch+1}, Loss: {total_loss/len(dataloader)}")

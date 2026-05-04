@@ -3183,119 +3183,126 @@
       "label": "get_swings_all()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1156"
+      "source_location": "L1165"
     },
     {
       "id": "server_get_features",
       "label": "get_features()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1270"
+      "source_location": "L1279"
     },
     {
       "id": "server_get_indicators",
       "label": "get_indicators()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1281"
+      "source_location": "L1290"
     },
     {
       "id": "server_get_watchlist",
       "label": "get_watchlist()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1299"
+      "source_location": "L1308"
     },
     {
       "id": "server_get_all_boxes",
       "label": "get_all_boxes()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1346"
+      "source_location": "L1355"
     },
     {
       "id": "server_get_training_pending",
       "label": "get_training_pending()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1396"
+      "source_location": "L1405"
     },
     {
       "id": "server_get_needs_screenshot",
       "label": "get_needs_screenshot()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1405"
+      "source_location": "L1414"
     },
     {
       "id": "server_upload_screenshot",
       "label": "upload_screenshot()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1414"
+      "source_location": "L1423"
     },
     {
       "id": "server_undo_training_label",
       "label": "undo_training_label()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1427"
+      "source_location": "L1436"
     },
     {
       "id": "server_get_training_stats",
       "label": "get_training_stats()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1439"
+      "source_location": "L1448"
     },
     {
       "id": "server_get_training_lessons",
       "label": "get_training_lessons()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1456"
+      "source_location": "L1465"
     },
     {
       "id": "server_submit_training_label",
       "label": "submit_training_label()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1497"
+      "source_location": "L1506"
     },
     {
       "id": "server_get_nn_status",
       "label": "get_nn_status()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1530"
+      "source_location": "L1539"
     },
     {
       "id": "server_skip_training_sample",
       "label": "skip_training_sample()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1539"
+      "source_location": "L1548"
     },
     {
       "id": "server_manual_retrain_nn",
       "label": "manual_retrain_nn()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1552"
+      "source_location": "L1561"
     },
     {
       "id": "server_get_nn_training_progress",
       "label": "get_nn_training_progress()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1562"
+      "source_location": "L1571"
     },
     {
       "id": "server_sync_training_queue",
       "label": "sync_training_queue()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1572"
+      "source_location": "L1581"
+    },
+    {
+      "id": "server_get_nn_refined_zones",
+      "label": "get_nn_refined_zones()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1615"
     },
     {
       "id": "server_rationale_1",
@@ -3480,46 +3487,53 @@
       "source_location": "L980"
     },
     {
-      "id": "server_rationale_1157",
+      "id": "server_rationale_1166",
       "label": "3-bar pivot swing highs/lows with server-side 3+3 active unmitigated selection.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1157"
+      "source_location": "L1166"
     },
     {
-      "id": "server_rationale_1300",
+      "id": "server_rationale_1309",
       "label": "Async watchlist \u2014 runs blocking Indicators.scrape() in a thread pool     so it",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1300"
+      "source_location": "L1309"
     },
     {
-      "id": "server_rationale_1347",
+      "id": "server_rationale_1356",
       "label": "Returns ALL boxes regardless of status, with full ohlc_context for canvas render",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1347"
+      "source_location": "L1356"
     },
     {
-      "id": "server_rationale_1553",
+      "id": "server_rationale_1562",
       "label": "Trigger the PyTorch CNN training manually.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1553"
+      "source_location": "L1562"
     },
     {
-      "id": "server_rationale_1563",
+      "id": "server_rationale_1572",
       "label": "Return the real-time logs and loss of the CNN trainer.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1563"
+      "source_location": "L1572"
     },
     {
-      "id": "server_rationale_1573",
+      "id": "server_rationale_1582",
       "label": "Force-sync all currently detected consolidations into the training DB.     Allo",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1573"
+      "source_location": "L1582"
+    },
+    {
+      "id": "server_rationale_1616",
+      "label": "Return consolidation zones enriched with NN-predicted refined box coordinates.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1616"
     },
     {
       "id": "trading_project_frontend_craco_config_js",
@@ -3876,7 +3890,7 @@
       "label": "ChartCanvas()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\ChartCanvas.jsx",
-      "source_location": "L22"
+      "source_location": "L23"
     },
     {
       "id": "trading_project_frontend_src_components_canvas_decisioncluster_jsx",
@@ -3970,39 +3984,46 @@
       "source_location": "L100"
     },
     {
+      "id": "renderers_drawnnboxes",
+      "label": "drawNNBoxes()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
+      "source_location": "L128"
+    },
+    {
       "id": "renderers_drawscenarios",
       "label": "drawScenarios()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L128"
+      "source_location": "L159"
     },
     {
       "id": "renderers_drawnowline",
       "label": "drawNowLine()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L248"
+      "source_location": "L279"
     },
     {
       "id": "renderers_drawcrosshair",
       "label": "drawCrosshair()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L264"
+      "source_location": "L295"
     },
     {
       "id": "renderers_gettimestep",
       "label": "getTimeStep()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L282"
+      "source_location": "L313"
     },
     {
       "id": "renderers_getpricestep",
       "label": "getPriceStep()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L291"
+      "source_location": "L322"
     },
     {
       "id": "trading_project_frontend_src_components_canvas_usedatafetcher_js",
@@ -14138,7 +14159,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1156",
+      "source_location": "L1165",
       "weight": 1.0
     },
     {
@@ -14147,7 +14168,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1270",
+      "source_location": "L1279",
       "weight": 1.0
     },
     {
@@ -14156,7 +14177,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1281",
+      "source_location": "L1290",
       "weight": 1.0
     },
     {
@@ -14165,7 +14186,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1299",
+      "source_location": "L1308",
       "weight": 1.0
     },
     {
@@ -14174,7 +14195,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1346",
+      "source_location": "L1355",
       "weight": 1.0
     },
     {
@@ -14183,7 +14204,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1396",
+      "source_location": "L1405",
       "weight": 1.0
     },
     {
@@ -14192,7 +14213,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1405",
+      "source_location": "L1414",
       "weight": 1.0
     },
     {
@@ -14201,7 +14222,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1414",
+      "source_location": "L1423",
       "weight": 1.0
     },
     {
@@ -14210,7 +14231,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1427",
+      "source_location": "L1436",
       "weight": 1.0
     },
     {
@@ -14219,7 +14240,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1439",
+      "source_location": "L1448",
       "weight": 1.0
     },
     {
@@ -14228,7 +14249,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1456",
+      "source_location": "L1465",
       "weight": 1.0
     },
     {
@@ -14237,7 +14258,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1497",
+      "source_location": "L1506",
       "weight": 1.0
     },
     {
@@ -14246,7 +14267,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1530",
+      "source_location": "L1539",
       "weight": 1.0
     },
     {
@@ -14255,7 +14276,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1539",
+      "source_location": "L1548",
       "weight": 1.0
     },
     {
@@ -14264,7 +14285,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1552",
+      "source_location": "L1561",
       "weight": 1.0
     },
     {
@@ -14273,7 +14294,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1562",
+      "source_location": "L1571",
       "weight": 1.0
     },
     {
@@ -14282,7 +14303,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1572",
+      "source_location": "L1581",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_nn_refined_zones",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1615",
       "weight": 1.0
     },
     {
@@ -14291,7 +14321,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1606",
+      "source_location": "L1664",
       "weight": 1.0
     },
     {
@@ -14435,7 +14465,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1099",
+      "source_location": "L1108",
       "weight": 1.0
     },
     {
@@ -14444,7 +14474,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1100",
+      "source_location": "L1109",
       "weight": 1.0
     },
     {
@@ -14453,7 +14483,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1151",
+      "source_location": "L1160",
       "weight": 1.0
     },
     {
@@ -14462,7 +14492,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1163",
+      "source_location": "L1172",
       "weight": 1.0
     },
     {
@@ -14471,7 +14501,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1265",
+      "source_location": "L1274",
       "weight": 1.0
     },
     {
@@ -14480,7 +14510,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1580",
+      "source_location": "L1589",
       "weight": 1.0
     },
     {
@@ -14718,57 +14748,66 @@
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1157",
+      "source": "server_rationale_1166",
       "target": "server_get_swings_all",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1157",
+      "source_location": "L1166",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1300",
+      "source": "server_rationale_1309",
       "target": "server_get_watchlist",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1300",
+      "source_location": "L1309",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1347",
+      "source": "server_rationale_1356",
       "target": "server_get_all_boxes",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1347",
+      "source_location": "L1356",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1553",
+      "source": "server_rationale_1562",
       "target": "server_manual_retrain_nn",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1553",
+      "source_location": "L1562",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1563",
+      "source": "server_rationale_1572",
       "target": "server_get_nn_training_progress",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1563",
+      "source_location": "L1572",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1573",
+      "source": "server_rationale_1582",
       "target": "server_sync_training_queue",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1573",
+      "source_location": "L1582",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_1616",
+      "target": "server_get_nn_refined_zones",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1616",
       "weight": 1.0
     },
     {
@@ -15398,7 +15437,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\ChartCanvas.jsx",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -15610,7 +15649,7 @@
     },
     {
       "source": "trading_project_frontend_src_components_canvas_renderers_js",
-      "target": "renderers_drawscenarios",
+      "target": "renderers_drawnnboxes",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
@@ -15619,11 +15658,20 @@
     },
     {
       "source": "trading_project_frontend_src_components_canvas_renderers_js",
+      "target": "renderers_drawscenarios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
+      "source_location": "L159",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_canvas_renderers_js",
       "target": "renderers_drawnowline",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L248",
+      "source_location": "L279",
       "weight": 1.0
     },
     {
@@ -15632,7 +15680,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L264",
+      "source_location": "L295",
       "weight": 1.0
     },
     {
@@ -15641,7 +15689,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L282",
+      "source_location": "L313",
       "weight": 1.0
     },
     {
@@ -15650,7 +15698,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L291",
+      "source_location": "L322",
       "weight": 1.0
     },
     {
@@ -27651,7 +27699,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1157",
+      "source": "server_rationale_1166",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27660,7 +27708,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1300",
+      "source": "server_rationale_1309",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27669,7 +27717,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1347",
+      "source": "server_rationale_1356",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27678,7 +27726,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1553",
+      "source": "server_rationale_1562",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27687,7 +27735,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1563",
+      "source": "server_rationale_1572",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27696,7 +27744,16 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1573",
+      "source": "server_rationale_1582",
+      "target": "technicals_indicators",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L55",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1616",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27939,7 +27996,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1157",
+      "source": "server_rationale_1166",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27948,7 +28005,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1300",
+      "source": "server_rationale_1309",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27957,7 +28014,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1347",
+      "source": "server_rationale_1356",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27966,7 +28023,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1553",
+      "source": "server_rationale_1562",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27975,7 +28032,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1563",
+      "source": "server_rationale_1572",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27984,7 +28041,16 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1573",
+      "source": "server_rationale_1582",
+      "target": "historical_historicalfetcher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L56",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1616",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -30366,7 +30432,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1290",
+      "source_location": "L1299",
       "weight": 1.0
     },
     {
@@ -30376,7 +30442,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1290",
+      "source_location": "L1299",
       "weight": 1.0
     },
     {
@@ -30386,7 +30452,17 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1518",
+      "source_location": "L1527",
+      "weight": 1.0
+    },
+    {
+      "source": "server_get_nn_refined_zones",
+      "target": "consolidation_consolidation_boxes",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1633",
       "weight": 1.0
     },
     {
@@ -30456,7 +30532,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L149",
+      "source_location": "L180",
       "weight": 1.0
     },
     {
@@ -30466,7 +30542,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L157",
+      "source_location": "L188",
       "weight": 1.0
     },
     {
@@ -30476,7 +30552,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L250",
+      "source_location": "L281",
       "weight": 1.0
     },
     {
@@ -30486,7 +30562,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L253",
+      "source_location": "L284",
       "weight": 1.0
     },
     {
@@ -30496,7 +30572,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L267",
+      "source_location": "L298",
       "weight": 1.0
     },
     {

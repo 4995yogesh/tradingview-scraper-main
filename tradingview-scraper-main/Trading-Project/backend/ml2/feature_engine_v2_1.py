@@ -31,9 +31,12 @@ def build_features(ohlc: np.ndarray) -> torch.Tensor:
     atr = torch.nn.functional.conv1d(
         tr.view(1, 1, -1), atr_kernel, padding=13
     ).view(-1)[:n]
+    
     # Handle padding edges — robust to n < 14
     if n > 13:
-        atr[:13] = atr[13]
+        # Correct ATR warmup: no leakage, using cumulative mean
+        warmup = torch.cumsum(tr[:13], dim=0) / torch.arange(1, 14, device=device)
+        atr[:13] = warmup
     else:
         # Fallback for very small windows
         atr[:] = torch.mean(tr) if n > 0 else eps
@@ -56,7 +59,8 @@ def build_features(ohlc: np.ndarray) -> torch.Tensor:
         (highs - lows).view(1, 1, -1), r_kernel, padding=13
     ).view(-1)[:n]
     if n > 13:
-        sma_range[:13] = sma_range[13]
+        warmup_range = torch.cumsum((highs - lows)[:13], dim=0) / torch.arange(1, 14, device=device)
+        sma_range[:13] = warmup_range
     else:
         sma_range[:] = torch.mean(highs - lows)
     vol_ratio = (highs - lows) / (sma_range + eps)
@@ -76,13 +80,15 @@ def build_features(ohlc: np.ndarray) -> torch.Tensor:
         l_unfold = lows.unfold(0, 10, 1)
         r_high_vals = torch.max(h_unfold, dim=1).values
         r_low_vals  = torch.min(l_unfold, dim=1).values
-        # Padding to match length
-        r_high = torch.cat([torch.full((9,), r_high_vals[0], device=device), r_high_vals])
-        r_low  = torch.cat([torch.full((9,), r_low_vals[0], device=device), r_low_vals])
+        # Correct prefix logic: using cummax/cummin for the first 9 candles to avoid future leakage
+        prefix_h = torch.cummax(highs[:9], dim=0).values
+        prefix_l = torch.cummin(lows[:9], dim=0).values
+        r_high = torch.cat([prefix_h, r_high_vals])
+        r_low  = torch.cat([prefix_l, r_low_vals])
     else:
-        # Fallback for n < 10
-        r_high = torch.full((n,), torch.max(highs), device=device)
-        r_low  = torch.full((n,), torch.min(lows), device=device)
+        # Fallback for n < 10 (fully prefix-based)
+        r_high = torch.cummax(highs, dim=0).values
+        r_low  = torch.cummin(lows, dim=0).values
     
     # Normalize by ATR (as they are price levels)
     r_high_norm = r_high / atr
@@ -123,9 +129,11 @@ def build_features(ohlc: np.ndarray) -> torch.Tensor:
     impulse = torch.zeros_like(closes)
     impulse[10:] = torch.abs(closes[10:] - closes[:-10]) / (atr[10:] + eps)
 
-    # ── Channel 20: Boundary Touch Density ────────────────────────────────────
-    touch_top = (torch.abs(highs - r_high) < (0.1 * atr)).float()
-    touch_bot = (torch.abs(lows - r_low) < (0.1 * atr)).float()
+    # Channel 20: Boundary Touch Density
+    # Calibrated threshold: 10% of ATR or 20% of Range Width
+    threshold = torch.min(0.1 * atr, 0.2 * r_width + eps)
+    touch_top = (torch.abs(highs - r_high) < threshold).float()
+    touch_bot = (torch.abs(lows - r_low) < threshold).float()
     touch_sum = touch_top + touch_bot
     
     if n >= 10:
@@ -136,12 +144,12 @@ def build_features(ohlc: np.ndarray) -> torch.Tensor:
         t_density = torch.full((n,), torch.mean(touch_sum), device=device)
 
     # ── Channel 21: False Breakout Flag ───────────────────────────────────────
-    # high[t] > rolling_high[t-1] AND close[t] <= rolling_high[t]
+    # high[t] > rolling_high[t-1] AND close[t] <= rolling_high[t-1]
     rh_prev = torch.cat([r_high[0:1], r_high[:-1]])
     rl_prev = torch.cat([r_low[0:1], r_low[:-1]])
     
-    fake_h = (highs > rh_prev) & (closes <= r_high)
-    fake_l = (lows < rl_prev) & (closes >= r_low)
+    fake_h = (highs > rh_prev) & (closes <= rh_prev)
+    fake_l = (lows < rl_prev) & (closes >= rl_prev)
     false_breakout = (fake_h | fake_l).float()
 
     # ── Assembly ──────────────────────────────────────────────────────────────

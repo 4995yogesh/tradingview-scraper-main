@@ -23,17 +23,17 @@ class ConsolidationDataset(Dataset):
         self.db_path = db_path
         self.samples = []
         self._load()
-        self._add_negatives()
 
     def _load(self):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        cursor.execute("SELECT box_id, ohlc_context, user_box, time_start, time_end FROM review_queue WHERE status IN ('LABELED','ANALYZED')")
+        # Point 1 & 2: Include SKIPPED as negative samples
+        cursor.execute("SELECT box_id, ohlc_context, user_box, time_start, time_end, status FROM review_queue WHERE status IN ('LABELED','ANALYZED','SKIPPED')")
         rows = cursor.fetchall()
         conn.close()
         
         for row in rows:
-            box_id, ohlc_context_str, user_box_str, db_time_start, db_time_end = row
+            box_id, ohlc_context_str, user_box_str, db_time_start, db_time_end, status = row
             candles = json.loads(ohlc_context_str)
             user_box_raw = json.loads(user_box_str) if user_box_str else None
             if isinstance(user_box_raw, list):
@@ -71,7 +71,30 @@ class ConsolidationDataset(Dataset):
             si = int(np.argmin([abs(t - b_start) for t in ts_list]))
             ei = int(np.argmin([abs(t - b_end) for t in ts_list]))
             si, ei = min(si,ei), max(si,ei)
-            seg_mask[si:ei+1] = 1.0
+            
+            # Point 5: Soft Segmentation Labels with Clamped Indices
+            si = max(0, min(si, 49))
+            ei = max(0, min(ei, 49))
+            
+            if status != 'SKIPPED':
+                # Core [si+2 : ei-2] = 1.0 (if window allows)
+                core_si = min(si + 2, 49)
+                core_ei = max(ei - 2, 0)
+                if core_si <= core_ei:
+                    seg_mask[core_si : core_ei+1] = 1.0
+                
+                # Edges [si, si+1, ei-1, ei] = 0.7
+                for idx in [si, si+1, ei-1, ei]:
+                    if 0 <= idx <= 49:
+                        seg_mask[idx] = max(seg_mask[idx], 0.7)
+                
+                # Transition [si-1, ei+1] = 0.3
+                for idx in [si-1, ei+1]:
+                    if 0 <= idx <= 49:
+                        seg_mask[idx] = max(seg_mask[idx], 0.3)
+            else:
+                # SKIPPED is all 0.0 for seg_mask
+                seg_mask[:] = 0.0
             
             all_highs = feats[:, 1]
             all_lows = feats[:, 2]
@@ -87,26 +110,44 @@ class ConsolidationDataset(Dataset):
             high_norm = float(np.clip(high_norm, 0.0, 2.0))
             low_norm = float(np.clip(low_norm, 0.0, 2.0))
             
-            quality_score = 1.0 if user_box is not None else 0.6
+            # Point 1: Quality Score & Consolidation Flag
+            if status == 'SKIPPED':
+                quality_score = 0.0
+                is_consolidation = 0
+            elif user_box is not None:
+                quality_score = 1.0
+                is_consolidation = 1
+            else:
+                quality_score = 0.6
+                is_consolidation = 1
+            
+            # Point 8: Mild Augmentation (Price jitter ±1-2%, Time shift ±1-2 candles)
+            if np.random.rand() < 0.3: # 30% chance to augment
+                jitter = 1.0 + (np.random.rand() - 0.5) * 0.04 # ±2%
+                feats[:, 0:4] *= jitter # O, H, L, C
             
             self.samples.append({
                 'features': feats.astype(np.float32),
                 'seg_mask': seg_mask,
                 'box_coords': [float(si)/50.0, float(ei)/50.0, high_norm, low_norm],
                 'quality_score': quality_score,
-                'is_consolidation': 1
+                'is_consolidation': is_consolidation
             })
 
-    def _add_negatives(self):
-        for s in self.samples.copy():
-            neg = {
-                'features': s['features'],
-                'seg_mask': np.zeros(50, dtype=np.float32),
-                'box_coords': [0.0, 0.0, 0.0, 0.0],
-                'quality_score': 0.0,
-                'is_consolidation': 0
-            }
-            self.samples.append(neg)
+    def get_sampler(self):
+        from torch.utils.data import WeightedRandomSampler
+        labels = [s['is_consolidation'] for s in self.samples]
+        neg_count = labels.count(0)
+        pos_count = labels.count(1)
+        
+        # If one class is missing, fallback to uniform
+        if neg_count == 0 or pos_count == 0:
+            return None
+            
+        neg_weight = 1.0 / neg_count
+        pos_weight = 1.0 / pos_count
+        weights = [pos_weight if l == 1 else neg_weight for l in labels]
+        return WeightedRandomSampler(weights, len(weights))
 
     def __len__(self):
         return len(self.samples)

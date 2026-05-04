@@ -68,14 +68,14 @@
       "server_manual_retrain_nn",
       "server_parse_end_time",
       "server_periodic_refresh_loop",
-      "server_rationale_1157",
-      "server_rationale_1300",
+      "server_rationale_1166",
+      "server_rationale_1309",
       "server_rationale_133",
-      "server_rationale_1347",
+      "server_rationale_1356",
       "server_rationale_148",
-      "server_rationale_1553",
-      "server_rationale_1563",
-      "server_rationale_1573",
+      "server_rationale_1562",
+      "server_rationale_1572",
+      "server_rationale_1582",
       "server_rationale_160",
       "server_rationale_170",
       "server_rationale_251",
@@ -92,14 +92,12 @@
       "server_rationale_682",
       "server_rationale_80",
       "server_rationale_824",
-      "server_rationale_831",
       "server_rationale_843",
       "server_rationale_855",
       "server_rationale_860",
       "server_rationale_91",
       "server_rationale_963",
       "server_rationale_980",
-      "server_repair_gaps",
       "server_resample_candles",
       "server_run_all_gap_fills",
       "server_seed_storage",
@@ -112,24 +110,42 @@
       "server_undo_training_label",
       "server_upload_screenshot",
       "technicals_indicators",
+      "technicals_indicators_edit_indicators_by_specified_timeframe",
       "technicals_indicators_init",
       "technicals_indicators_load_exchanges",
       "technicals_indicators_load_file",
       "technicals_indicators_load_indicators",
       "technicals_indicators_load_timeframes",
+      "technicals_indicators_revise_response",
+      "technicals_indicators_validate_timeframe",
       "technicals_rationale_1",
+      "technicals_rationale_129",
       "technicals_rationale_153",
       "technicals_rationale_172",
       "technicals_rationale_181",
       "technicals_rationale_190",
+      "technicals_rationale_28",
+      "technicals_rationale_42",
       "test_indicators_rationale_18",
+      "test_indicators_rationale_22",
+      "test_indicators_rationale_52",
+      "test_indicators_rationale_66",
+      "test_indicators_rationale_81",
+      "test_indicators_testindicators",
       "test_indicators_testindicators_setup_method",
+      "test_indicators_testindicators_test_scrape_indicators_empty_response",
+      "test_indicators_testindicators_test_scrape_indicators_invalid_exchange",
+      "test_indicators_testindicators_test_scrape_indicators_success",
+      "test_indicators_testindicators_test_scrape_indicators_valid_response",
+      "tests_test_indicators_py",
       "trading_project_backend_server_py",
       "trading_project_pipeline_data_db_py",
       "tradingview_scraper_examples_fetch_history_example_py",
       "tradingview_scraper_symbols_historical_py",
       "tradingview_scraper_symbols_init_py",
-      "tradingview_scraper_symbols_technicals_py"
+      "tradingview_scraper_symbols_technicals_py",
+      "trial_main",
+      "trial_py"
     ],
     "1": [
       "collector_datacollector",
@@ -300,7 +316,16 @@
       "tradingview_scraper_symbols_fundamental_graphs_py"
     ],
     "3": [
+      "conf_rationale_1",
+      "conf_rationale_45",
+      "conf_setup",
+      "conf_skip",
+      "docs_conf_py",
       "exception",
+      "ideas_ideas",
+      "ideas_ideas_scrape_ideas",
+      "ideas_rationale_1",
+      "ideas_rationale_101",
       "server_get_indicators",
       "symbol_markets_rationale_1",
       "symbol_markets_rationale_107",
@@ -309,26 +334,23 @@
       "symbol_markets_symbolmarkets",
       "symbol_markets_symbolmarkets_build_payload",
       "symbol_markets_symbolmarkets_scrape",
-      "technicals_indicators_edit_indicators_by_specified_timeframe",
-      "technicals_indicators_revise_response",
       "technicals_indicators_scrape",
-      "technicals_indicators_validate_timeframe",
-      "technicals_rationale_129",
-      "technicals_rationale_28",
-      "technicals_rationale_42",
       "technicals_rationale_70",
+      "test_ideas_ideas_scraper",
+      "test_ideas_rationale_105",
+      "test_ideas_rationale_123",
+      "test_ideas_rationale_16",
+      "test_ideas_rationale_21",
+      "test_ideas_rationale_59",
+      "test_ideas_rationale_80",
+      "test_ideas_rationale_86",
       "test_ideas_test_scrape_invalid_sort",
       "test_ideas_test_scrape_no_ideas",
       "test_ideas_test_scrape_recent_ideas_success",
-      "test_indicators_rationale_22",
-      "test_indicators_rationale_52",
-      "test_indicators_rationale_66",
-      "test_indicators_rationale_81",
-      "test_indicators_testindicators",
-      "test_indicators_testindicators_test_scrape_indicators_empty_response",
-      "test_indicators_testindicators_test_scrape_indicators_invalid_exchange",
-      "test_indicators_testindicators_test_scrape_indicators_success",
-      "test_indicators_testindicators_test_scrape_indicators_valid_response",
+      "test_ideas_testideas",
+      "test_ideas_testideas_test_scrape_popular_sorting_option",
+      "test_ideas_testideas_test_scrape_recent_sorting_option",
+      "test_ideas_testideas_test_threading_avoids_rate_limiting",
       "test_market_movers_market_movers_scraper",
       "test_market_movers_test_scrape_http_error",
       "test_market_movers_test_scrape_request_exception",
@@ -365,12 +387,10 @@
       "test_symbol_markets_testsymbolmarkets_test_scrape_with_custom_columns",
       "test_symbol_markets_testsymbolmarkets_test_supported_scanners",
       "tests_test_ideas_py",
-      "tests_test_indicators_py",
       "tests_test_market_movers_py",
       "tests_test_symbol_markets_py",
-      "tradingview_scraper_symbols_symbol_markets_py",
-      "trial_main",
-      "trial_py"
+      "tradingview_scraper_symbols_ideas_py",
+      "tradingview_scraper_symbols_symbol_markets_py"
     ],
     "4": [
       "minds_minds",
@@ -489,64 +509,6 @@
       "tradingview_scraper_symbols_overview_py"
     ],
     "6": [
-      "consolidation_detect_all_consolidations",
-      "consolidation_rationale_1",
-      "consolidation_rationale_8",
-      "fetcher_datafetcher",
-      "fetcher_datafetcher_add_candle",
-      "fetcher_datafetcher_get_dataframe",
-      "fetcher_datafetcher_get_latest_price",
-      "fetcher_datafetcher_init",
-      "fetcher_rationale_1",
-      "fetcher_rationale_26",
-      "fetcher_rationale_52",
-      "fetcher_rationale_59",
-      "filters_is_valid_event",
-      "filters_is_valid_time",
-      "filters_is_valid_timeframe",
-      "filters_rationale_11",
-      "filters_rationale_15",
-      "filters_rationale_5",
-      "main_engine_lifespan",
-      "main_fetch_from_api",
-      "main_live_feed_loop",
-      "main_rationale_1",
-      "main_rationale_112",
-      "main_rationale_42",
-      "main_run_engine_cycle",
-      "manager_alertmanager",
-      "manager_alertmanager_init",
-      "manager_alertmanager_process_scenarios",
-      "manager_alertmanager_track",
-      "manager_rationale_1",
-      "manager_rationale_28",
-      "manager_rationale_42",
-      "mtf_confirm_mtf",
-      "mtf_rationale_1",
-      "mtf_rationale_23",
-      "server_get_candles",
-      "server_get_consolidations",
-      "server_get_scenarios",
-      "server_health",
-      "server_rationale_1",
-      "server_rationale_107",
-      "server_rationale_34",
-      "server_rationale_61",
-      "server_rationale_67",
-      "server_rationale_85",
-      "server_update_engine_output",
-      "telegram_rationale_10",
-      "telegram_send_alert",
-      "trading_project_project_alerts_filters_py",
-      "trading_project_project_alerts_manager_py",
-      "trading_project_project_alerts_telegram_py",
-      "trading_project_project_api_server_py",
-      "trading_project_project_confirmation_mtf_py",
-      "trading_project_project_data_fetcher_py",
-      "trading_project_project_main_py",
-      "trading_project_project_strategy_consolidation_py"
-    ],
-    "7": [
       "market_movers_marketmovers",
       "market_movers_marketmovers_build_scanner_payload",
       "market_movers_marketmovers_get_filter_conditions",
@@ -601,61 +563,7 @@
       "test_market_movers_testmarketmovers_test_validate_market_valid",
       "tradingview_scraper_symbols_market_movers_py"
     ],
-    "8": [
-      "conf_rationale_1",
-      "conf_rationale_45",
-      "conf_setup",
-      "conf_skip",
-      "docs_conf_py",
-      "fundamental_graphs_fundamentalgraphs_export",
-      "fundamental_graphs_rationale_466",
-      "ideas_ideas",
-      "ideas_ideas_export",
-      "ideas_ideas_scrape",
-      "ideas_ideas_scrape_ideas",
-      "ideas_rationale_1",
-      "ideas_rationale_101",
-      "ideas_rationale_28",
-      "market_movers_marketmovers_export",
-      "market_movers_rationale_402",
-      "markets_markets_export",
-      "markets_rationale_298",
-      "minds_minds_export",
-      "minds_rationale_374",
-      "overview_overview_export",
-      "overview_rationale_346",
-      "screener_rationale_351",
-      "screener_screener_export",
-      "streamer_rationale_353",
-      "streamer_streamer_export",
-      "symbol_markets_rationale_230",
-      "symbol_markets_symbolmarkets_export",
-      "technicals_indicators_export",
-      "technicals_rationale_141",
-      "test_ideas_ideas_scraper",
-      "test_ideas_rationale_105",
-      "test_ideas_rationale_123",
-      "test_ideas_rationale_16",
-      "test_ideas_rationale_21",
-      "test_ideas_rationale_59",
-      "test_ideas_rationale_80",
-      "test_ideas_rationale_86",
-      "test_ideas_testideas",
-      "test_ideas_testideas_test_scrape_popular_sorting_option",
-      "test_ideas_testideas_test_scrape_recent_sorting_option",
-      "test_ideas_testideas_test_threading_avoids_rate_limiting",
-      "tradingview_scraper_symbols_ideas_py",
-      "tradingview_scraper_symbols_utils_py",
-      "utils_ensure_export_directory",
-      "utils_generate_export_filepath",
-      "utils_rationale_108",
-      "utils_rationale_11",
-      "utils_rationale_31",
-      "utils_rationale_61",
-      "utils_save_csv_file",
-      "utils_save_json_file"
-    ],
-    "9": [
+    "7": [
       "markets_markets",
       "markets_markets_build_payload",
       "markets_markets_get_top_stocks",
@@ -709,7 +617,7 @@
       "tests_test_markets_py",
       "tradingview_scraper_symbols_markets_py"
     ],
-    "10": [
+    "8": [
       "screener_rationale_1",
       "screener_rationale_123",
       "screener_rationale_139",
@@ -763,7 +671,61 @@
       "tests_test_screener_py",
       "tradingview_scraper_symbols_screener_py"
     ],
-    "11": [
+    "9": [
+      "consolidation_detect_all_consolidations",
+      "consolidation_rationale_1",
+      "consolidation_rationale_8",
+      "fetcher_datafetcher",
+      "fetcher_datafetcher_add_candle",
+      "fetcher_datafetcher_get_dataframe",
+      "fetcher_datafetcher_get_latest_price",
+      "fetcher_datafetcher_init",
+      "fetcher_rationale_1",
+      "fetcher_rationale_26",
+      "fetcher_rationale_52",
+      "fetcher_rationale_59",
+      "main_engine_lifespan",
+      "main_fetch_from_api",
+      "main_live_feed_loop",
+      "main_rationale_1",
+      "main_rationale_112",
+      "main_rationale_42",
+      "main_run_engine_cycle",
+      "mtf_confirm_mtf",
+      "mtf_rationale_1",
+      "mtf_rationale_23",
+      "server_get_candles",
+      "server_get_consolidations",
+      "server_get_scenarios",
+      "server_health",
+      "server_rationale_1",
+      "server_rationale_107",
+      "server_rationale_34",
+      "server_rationale_61",
+      "server_rationale_67",
+      "server_rationale_85",
+      "server_update_engine_output",
+      "storage_datastorage",
+      "storage_datastorage_append_candle",
+      "storage_datastorage_ensure_paths",
+      "storage_datastorage_get_candles",
+      "storage_datastorage_get_features",
+      "storage_datastorage_init",
+      "storage_datastorage_on_new_feature",
+      "storage_datastorage_on_validated_candle",
+      "storage_datastorage_prepend_candles",
+      "storage_rationale_44",
+      "storage_rationale_76",
+      "storage_rationale_8",
+      "storage_rationale_88",
+      "trading_project_pipeline_data_storage_py",
+      "trading_project_project_api_server_py",
+      "trading_project_project_confirmation_mtf_py",
+      "trading_project_project_data_fetcher_py",
+      "trading_project_project_main_py",
+      "trading_project_project_strategy_consolidation_py"
+    ],
+    "10": [
       "alert_dialog_alertdialogfooter",
       "alert_dialog_alertdialogheader",
       "badge_badge",
@@ -812,7 +774,7 @@
       "trading_project_frontend_src_lib_utils_js",
       "utils_cn"
     ],
-    "12": [
+    "11": [
       "collector_datacollector_start",
       "collector_datacollector_stop",
       "config_config",
@@ -849,11 +811,13 @@
       "launcher_rationale_69",
       "launcher_rationale_87",
       "server_lifespan",
+      "server_rationale_831",
+      "server_repair_gaps",
       "test_frontend_py",
       "test_frontend_run",
       "trading_project_pipeline_config_py"
     ],
-    "13": [
+    "12": [
       "cal_calendarscraper",
       "cal_calendarscraper_export",
       "cal_calendarscraper_scrape_dividends",
@@ -893,7 +857,7 @@
       "utils_rationale_175",
       "utils_validate_string_array"
     ],
-    "14": [
+    "13": [
       "price_rationale_104",
       "price_rationale_118",
       "price_rationale_131",
@@ -931,7 +895,7 @@
       "test_realtime_price_testrealtimedata",
       "tests_test_realtime_price_py"
     ],
-    "15": [
+    "14": [
       "news_newsscraper",
       "news_newsscraper_export",
       "news_newsscraper_init",
@@ -967,6 +931,38 @@
       "test_news_testnews_test_scrape_news_content",
       "tests_test_news_py",
       "tradingview_scraper_symbols_news_py"
+    ],
+    "15": [
+      "fundamental_graphs_fundamentalgraphs_export",
+      "fundamental_graphs_rationale_466",
+      "ideas_ideas_export",
+      "ideas_ideas_scrape",
+      "ideas_rationale_28",
+      "market_movers_marketmovers_export",
+      "market_movers_rationale_402",
+      "markets_markets_export",
+      "markets_rationale_298",
+      "minds_minds_export",
+      "minds_rationale_374",
+      "overview_overview_export",
+      "overview_rationale_346",
+      "screener_rationale_351",
+      "screener_screener_export",
+      "streamer_rationale_353",
+      "streamer_streamer_export",
+      "symbol_markets_rationale_230",
+      "symbol_markets_symbolmarkets_export",
+      "technicals_indicators_export",
+      "technicals_rationale_141",
+      "tradingview_scraper_symbols_utils_py",
+      "utils_ensure_export_directory",
+      "utils_generate_export_filepath",
+      "utils_rationale_108",
+      "utils_rationale_11",
+      "utils_rationale_31",
+      "utils_rationale_61",
+      "utils_save_csv_file",
+      "utils_save_json_file"
     ],
     "16": [
       "aggregator_dataaggregator",
@@ -1024,6 +1020,26 @@
       "trading_project_project_strategy_rejection_py"
     ],
     "18": [
+      "filters_is_valid_event",
+      "filters_is_valid_time",
+      "filters_is_valid_timeframe",
+      "filters_rationale_11",
+      "filters_rationale_15",
+      "filters_rationale_5",
+      "manager_alertmanager",
+      "manager_alertmanager_init",
+      "manager_alertmanager_process_scenarios",
+      "manager_alertmanager_track",
+      "manager_rationale_1",
+      "manager_rationale_28",
+      "manager_rationale_42",
+      "telegram_rationale_10",
+      "telegram_send_alert",
+      "trading_project_project_alerts_filters_py",
+      "trading_project_project_alerts_manager_py",
+      "trading_project_project_alerts_telegram_py"
+    ],
+    "19": [
       "cal_calendarscraper_init",
       "fundamental_graphs_fundamentalgraphs_init",
       "fundamental_graphs_rationale_137",
@@ -1043,7 +1059,24 @@
       "utils_generate_user_agent",
       "utils_rationale_155"
     ],
-    "19": [
+    "20": [
+      "canvasutils_buildviewport",
+      "canvasutils_canvastoworld",
+      "canvasutils_hexalpha",
+      "canvasutils_worldtocanvas",
+      "renderers_drawcandles",
+      "renderers_drawconsolidations",
+      "renderers_drawcrosshair",
+      "renderers_drawgrid",
+      "renderers_drawnnboxes",
+      "renderers_drawnowline",
+      "renderers_drawscenarios",
+      "renderers_getpricestep",
+      "renderers_gettimestep",
+      "trading_project_frontend_src_components_canvas_canvasutils_js",
+      "trading_project_frontend_src_components_canvas_renderers_js"
+    ],
+    "21": [
       "chartpage_chartpage",
       "chartpage_getconsolidationsettings",
       "chartpage_getswingsettings",
@@ -1060,23 +1093,7 @@
       "usechartmemory_usechartmemory",
       "usechartmemory_writestorage"
     ],
-    "20": [
-      "canvasutils_buildviewport",
-      "canvasutils_canvastoworld",
-      "canvasutils_hexalpha",
-      "canvasutils_worldtocanvas",
-      "renderers_drawcandles",
-      "renderers_drawconsolidations",
-      "renderers_drawcrosshair",
-      "renderers_drawgrid",
-      "renderers_drawnowline",
-      "renderers_drawscenarios",
-      "renderers_getpricestep",
-      "renderers_gettimestep",
-      "trading_project_frontend_src_components_canvas_canvasutils_js",
-      "trading_project_frontend_src_components_canvas_renderers_js"
-    ],
-    "21": [
+    "22": [
       "swinglevels_aggregatecandles",
       "swinglevels_classifyswings",
       "swinglevels_clearswingsfrommemory",
@@ -1092,23 +1109,22 @@
       "swinglevels_updatemitigationstate",
       "trading_project_frontend_src_lib_swinglevels_js"
     ],
-    "22": [
-      "storage_datastorage",
-      "storage_datastorage_append_candle",
-      "storage_datastorage_ensure_paths",
-      "storage_datastorage_get_candles",
-      "storage_datastorage_get_features",
-      "storage_datastorage_init",
-      "storage_datastorage_on_new_feature",
-      "storage_datastorage_on_validated_candle",
-      "storage_datastorage_prepend_candles",
-      "storage_rationale_44",
-      "storage_rationale_76",
-      "storage_rationale_8",
-      "storage_rationale_88",
-      "trading_project_pipeline_data_storage_py"
-    ],
     "23": [
+      "consolidation_consolidation_boxes",
+      "consolidation_consolidationcnn",
+      "consolidation_consolidationcnn_forward",
+      "consolidation_consolidationcnn_init",
+      "consolidation_get_instance",
+      "consolidation_nnpredictor",
+      "consolidation_nnpredictor_load_model",
+      "consolidation_nnpredictor_predict",
+      "consolidation_rationale_95",
+      "server_get_nn_refined_zones",
+      "server_rationale_1616",
+      "trading_project_project_indicators_consolidation_py",
+      "trading_project_project_indicators_init_py"
+    ],
+    "24": [
       "tradingview_scraper_symbols_stream_utils_py",
       "utils_display_and_select_indicator",
       "utils_fetch_indicator_metadata",
@@ -1122,7 +1138,7 @@
       "utils_rationale_89",
       "utils_validate_symbols"
     ],
-    "24": [
+    "25": [
       "marketoverview_brokerstab",
       "marketoverview_cryptotab",
       "marketoverview_economytab",
@@ -1134,19 +1150,6 @@
       "marketoverview_minisparkline",
       "marketoverview_usstockstab",
       "trading_project_frontend_src_components_marketoverview_jsx"
-    ],
-    "25": [
-      "consolidation_consolidation_boxes",
-      "consolidation_consolidationcnn",
-      "consolidation_consolidationcnn_forward",
-      "consolidation_consolidationcnn_init",
-      "consolidation_get_instance",
-      "consolidation_nnpredictor",
-      "consolidation_nnpredictor_load_model",
-      "consolidation_nnpredictor_predict",
-      "consolidation_rationale_95",
-      "trading_project_project_indicators_consolidation_py",
-      "trading_project_project_indicators_init_py"
     ],
     "26": [
       "chartwidget_assertstrictorder",
@@ -1465,26 +1468,26 @@
     "3": 0.04,
     "4": 0.06,
     "5": 0.06,
-    "6": 0.04,
+    "6": 0.06,
     "7": 0.06,
-    "8": 0.05,
-    "9": 0.06,
-    "10": 0.06,
-    "11": 0.05,
+    "8": 0.06,
+    "9": 0.04,
+    "10": 0.05,
+    "11": 0.08,
     "12": 0.09,
     "13": 0.09,
     "14": 0.09,
-    "15": 0.09,
+    "15": 0.1,
     "16": 0.08,
     "17": 0.11,
-    "18": 0.11,
-    "19": 0.15,
-    "20": 0.26,
-    "21": 0.16,
-    "22": 0.19,
-    "23": 0.18,
+    "18": 0.13,
+    "19": 0.11,
+    "20": 0.24,
+    "21": 0.15,
+    "22": 0.16,
+    "23": 0.21,
     "24": 0.18,
-    "25": 0.25,
+    "25": 0.18,
     "26": 0.36,
     "27": 0.33,
     "28": 0.46,
@@ -1560,16 +1563,16 @@
     {
       "id": "technicals_indicators",
       "label": "Indicators",
-      "degree": 52
-    },
-    {
-      "id": "fundamental_graphs_fundamentalgraphs",
-      "label": "FundamentalGraphs",
-      "degree": 42
+      "degree": 53
     },
     {
       "id": "historical_historicalfetcher",
       "label": "HistoricalFetcher",
+      "degree": 43
+    },
+    {
+      "id": "fundamental_graphs_fundamentalgraphs",
+      "label": "FundamentalGraphs",
       "degree": 42
     },
     {
@@ -1610,50 +1613,6 @@
   ],
   "surprises": [
     {
-      "source": "Test scraping indicators successfully.",
-      "target": "Indicators",
-      "source_files": [
-        "tests\\test_indicators.py",
-        "tradingview_scraper\\symbols\\technicals.py"
-      ],
-      "confidence": "INFERRED",
-      "relation": "uses",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `Test scraping indicators successfully.` unexpectedly reaches hub `Indicators`"
-    },
-    {
-      "source": "Test scraping indicators with an invalid exchange.",
-      "target": "Indicators",
-      "source_files": [
-        "tests\\test_indicators.py",
-        "tradingview_scraper\\symbols\\technicals.py"
-      ],
-      "confidence": "INFERRED",
-      "relation": "uses",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `Test scraping indicators with an invalid exchange.` unexpectedly reaches hub `Indicators`"
-    },
-    {
-      "source": "Test scraping indicators returns empty response.",
-      "target": "Indicators",
-      "source_files": [
-        "tests\\test_indicators.py",
-        "tradingview_scraper\\symbols\\technicals.py"
-      ],
-      "confidence": "INFERRED",
-      "relation": "uses",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `Test scraping indicators returns empty response.` unexpectedly reaches hub `Indicators`"
-    },
-    {
-      "source": "Test scraping indicators with a valid success response.",
-      "target": "Indicators",
-      "source_files": [
-        "tests\\test_indicators.py",
-        "tradingview_scraper\\symbols\\technicals.py"
-      ],
-      "confidence": "INFERRED",
-      "relation": "uses",
-      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `Test scraping indicators with a valid success response.` unexpectedly reaches hub `Indicators`"
-    },
-    {
       "source": "market_movers_scraper()",
       "target": "MarketMovers",
       "source_files": [
@@ -1663,38 +1622,82 @@
       "confidence": "INFERRED",
       "relation": "calls",
       "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `market_movers_scraper()` unexpectedly reaches hub `MarketMovers`"
+    },
+    {
+      "source": "A class to handle bulk historical data fetching from TradingView via WebSocket p",
+      "target": "DataNotFoundError",
+      "source_files": [
+        "tradingview_scraper\\symbols\\historical.py",
+        "tradingview_scraper\\symbols\\exceptions.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `A class to handle bulk historical data fetching from TradingView via WebSocket p` unexpectedly reaches hub `DataNotFoundError`"
+    },
+    {
+      "source": "Fetches historical OHLC data with pagination.          Args:             exch",
+      "target": "DataNotFoundError",
+      "source_files": [
+        "tradingview_scraper\\symbols\\historical.py",
+        "tradingview_scraper\\symbols\\exceptions.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `Fetches historical OHLC data with pagination.          Args:             exch` unexpectedly reaches hub `DataNotFoundError`"
+    },
+    {
+      "source": "Sorts the hashed map chronologically and trims to the requested date if necessar",
+      "target": "DataNotFoundError",
+      "source_files": [
+        "tradingview_scraper\\symbols\\historical.py",
+        "tradingview_scraper\\symbols\\exceptions.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `Sorts the hashed map chronologically and trims to the requested date if necessar` unexpectedly reaches hub `DataNotFoundError`"
+    },
+    {
+      "source": "Exports data to a specified format (JSON or CSV).          Args:             jso",
+      "target": "DataNotFoundError",
+      "source_files": [
+        "tradingview_scraper\\symbols\\stream\\streamer.py",
+        "tradingview_scraper\\symbols\\exceptions.py"
+      ],
+      "confidence": "INFERRED",
+      "relation": "uses",
+      "why": "inferred connection - not explicitly stated in source; connects across different repos/directories; bridges separate communities; peripheral node `Exports data to a specified format (JSON or CSV).          Args:             jso` unexpectedly reaches hub `DataNotFoundError`"
     }
   ],
   "questions": [
     {
       "type": "bridge_node",
-      "question": "Why does `save_json_file()` connect `Community 8` to `Community 13`, `Community 15`?",
-      "why": "High betweenness centrality (0.124) - this node is a cross-community bridge."
+      "question": "Why does `save_json_file()` connect `Community 15` to `Community 12`, `Community 14`?",
+      "why": "High betweenness centrality (0.134) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `save_csv_file()` connect `Community 8` to `Community 13`, `Community 15`?",
-      "why": "High betweenness centrality (0.124) - this node is a cross-community bridge."
+      "question": "Why does `save_csv_file()` connect `Community 15` to `Community 12`, `Community 14`?",
+      "why": "High betweenness centrality (0.134) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `Indicators` connect `Community 0` to `Community 8`, `Community 3`, `Community 6`?",
-      "why": "High betweenness centrality (0.123) - this node is a cross-community bridge."
+      "question": "Why does `Indicators` connect `Community 0` to `Community 3`, `Community 9`, `Community 11`, `Community 15`, `Community 23`?",
+      "why": "High betweenness centrality (0.124) - this node is a cross-community bridge."
     },
     {
       "type": "verify_inferred",
-      "question": "Are the 41 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?",
-      "why": "`Indicators` has 41 INFERRED edges - model-reasoned connections that need verification."
+      "question": "Are the 42 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?",
+      "why": "`Indicators` has 42 INFERRED edges - model-reasoned connections that need verification."
+    },
+    {
+      "type": "verify_inferred",
+      "question": "Are the 38 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API \u2014 optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) \u2192 first 16 hex chars.`) actually correct?",
+      "why": "`HistoricalFetcher` has 38 INFERRED edges - model-reasoned connections that need verification."
     },
     {
       "type": "verify_inferred",
       "question": "Are the 26 inferred relationships involving `FundamentalGraphs` (e.g. with `TestFundamentalGraphs` and `Fixture to create an instance of FundamentalGraphs for testing.`) actually correct?",
       "why": "`FundamentalGraphs` has 26 INFERRED edges - model-reasoned connections that need verification."
-    },
-    {
-      "type": "verify_inferred",
-      "question": "Are the 37 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API \u2014 optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) \u2192 first 16 hex chars.`) actually correct?",
-      "why": "`HistoricalFetcher` has 37 INFERRED edges - model-reasoned connections that need verification."
     },
     {
       "type": "verify_inferred",

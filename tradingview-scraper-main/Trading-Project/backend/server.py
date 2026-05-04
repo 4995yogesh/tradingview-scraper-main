@@ -1033,12 +1033,21 @@ def get_consolidations_all():
                     zone_data["box_id"] = zid
                     zones.append(zone_data)
 
+                    # ── Midnight Filter (IST: 00:00 - 05:59) ─────────────────
+                    from datetime import datetime, timezone, timedelta
+                    ist = timezone(timedelta(hours=5, minutes=30))
+                    dt_ist = datetime.fromtimestamp(ts_start / 1000, tz=timezone.utc).astimezone(ist)
+                    
+                    is_midnight = 0 <= dt_ist.hour < 6
+                    if is_midnight:
+                        continue 
+
                     # Auto-Sampler (5m, 15m, 1h only)
                     # Guard: only sample when ≥15 candles exist after box end (right-side context requirement)
                     if tf in ["5m", "15m", "1h"] and (ei + 15) <= (df_len - 1):
                         try:
-                            ctx_s = max(0, si - 15)
-                            ctx_e = min(df_len - 1, ei + 15)
+                            ctx_s = max(0, si - 25)
+                            ctx_e = min(df_len - 1, ei + 25)
                             # Ensure time is converted to string for JSON persistence
                             ctx_df = df.iloc[ctx_s:ctx_e+1].copy()
                             ctx_df['time'] = ctx_df.index.strftime('%Y-%m-%dT%H:%M:%SZ')

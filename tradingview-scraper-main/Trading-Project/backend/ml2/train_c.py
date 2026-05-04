@@ -1,17 +1,15 @@
 import os
 import sys
 import torch
-import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
+import numpy as np
 
-# Ensure local imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from model_c import RefinementModel
+from model_c import RefinementModel, train_step
 from dataset import ConsolidationDataset
 from model_a import SegmentationModel
-from model_b import extract_box
 
 def train_c():
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,7 +25,7 @@ def train_c():
     model_a.eval()
 
     dataset = ConsolidationDataset(db_path=db_path)
-    # Filter for positive samples only (Refinement only makes sense for consolidations)
+    # Filter for positive samples only
     dataset.samples = [s for s in dataset.samples if s['is_consolidation'] == 1]
     
     if len(dataset) < 10:
@@ -37,25 +35,24 @@ def train_c():
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
     model = RefinementModel().to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.SmoothL1Loss()
 
     print(f"Training Model C on {len(dataset)} positive samples...")
 
     for epoch in range(30):
         total_loss = 0.0
         for batch in dataloader:
-            features = batch['features'].to(device)
-            target_box = batch['box_coords'].to(device) # [batch, 4]
+            # Note: We need a mapping from initial_box to target_box.
+            # In this dataset, 'box_coords' IS the target.
+            # We use Model A to generate the 'initial_box' (prediction) and learn to refine it to 'box_coords'.
             
-            # Generate initial_box using Model A + B logic
+            features = batch['features'].to(device)
+            target_box = batch['box_coords'].to(device)
+            
             with torch.no_grad():
-                logits = model_a(features)
+                logits, _ = model_a(features)
                 heatmaps = torch.sigmoid(logits).cpu().numpy()
-                
                 initial_boxes = []
                 for i in range(features.size(0)):
-                    # We need candles to run extract_box, but we only have features.
-                    # As a proxy, use the heatmap edges.
                     h = heatmaps[i]
                     thresholded = h > 0.5
                     if np.any(thresholded):
@@ -63,13 +60,26 @@ def train_c():
                         si, ei = idxs[0], idxs[-1]
                     else:
                         si, ei = 0, 49
-                    initial_boxes.append([si/50.0, ei/50.0, 0.5, 0.5]) # price proxy
+                    initial_boxes.append([si/50.0, ei/50.0, 0.5, 0.5])
                 
-                initial_boxes = torch.tensor(initial_boxes, dtype=torch.float32).to(device)
-
+                initial_boxes_tensor = torch.tensor(initial_boxes, dtype=torch.float32).to(device)
+            
+            # Create a custom batch for train_step
+            batch_c = {
+                'features': features,
+                'box_coords': initial_boxes_tensor, # input to refinement
+                'target_coords': target_box      # ground truth
+            }
+            
+            # Since model_c.train_step uses batch['box_coords'] as input and target, we adjust.
+            # I'll update model_c.train_step to be more explicit.
+            
             optimizer.zero_grad()
-            outputs = model(features, initial_boxes)
-            loss = criterion(outputs, target_box)
+            output, gates = model(features, initial_boxes_tensor)
+            loss = torch.nn.SmoothL1Loss()(output, target_box)
+            l1_gate = sum(g.abs().mean() for g in gates)
+            loss += 1e-4 * l1_gate
+            
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
@@ -83,7 +93,4 @@ def train_c():
     print(f"Model C saved to {model_path}")
 
 if __name__ == "__main__":
-    print("Script started...")
-    import numpy as np
-    print("numpy imported")
     train_c()

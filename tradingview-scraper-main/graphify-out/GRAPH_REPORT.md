@@ -1,12 +1,12 @@
-# Graph Report - .  (2026-05-02)
+# Graph Report - .  (2026-05-04)
 
 ## Corpus Check
 - 193 files · ~137,778 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1265 nodes · 1874 edges · 96 communities detected
-- Extraction: 68% EXTRACTED · 32% INFERRED · 0% AMBIGUOUS · INFERRED: 593 edges (avg confidence: 0.67)
+- 1268 nodes · 1880 edges · 96 communities detected
+- Extraction: 68% EXTRACTED · 32% INFERRED · 0% AMBIGUOUS · INFERRED: 596 edges (avg confidence: 0.67)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -108,9 +108,9 @@
 - [[_COMMUNITY_Community 95|Community 95]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Indicators` - 52 edges
-2. `FundamentalGraphs` - 42 edges
-3. `HistoricalFetcher` - 42 edges
+1. `Indicators` - 53 edges
+2. `HistoricalFetcher` - 43 edges
+3. `FundamentalGraphs` - 42 edges
 4. `MarketMovers` - 32 edges
 5. `Minds` - 30 edges
 6. `Overview` - 30 edges
@@ -120,22 +120,22 @@
 10. `Streamer` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Test scraping indicators successfully.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators with an invalid exchange.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators returns empty response.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators with a valid success response.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
 - `market_movers_scraper()` --calls--> `MarketMovers`  [INFERRED]
   tests\test_market_movers.py → tradingview_scraper\symbols\market_movers.py
+- `A class to handle bulk historical data fetching from TradingView via WebSocket p` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Fetches historical OHLC data with pagination.          Args:             exch` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Sorts the hashed map chronologically and trims to the requested date if necessar` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Exports data to a specified format (JSON or CSV).          Args:             jso` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\stream\streamer.py → tradingview_scraper\symbols\exceptions.py
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (93): CandleDB, CandleDB — SQLite persistent store for OHLCV candle data.  Location: Trading-P, Record the wall-clock time of the last successful TV fetch., Return candles sorted ASCENDING by timestamp.         If count is given, return, Return all candles with ts >= since_ts, sorted ascending.         Used by the d, Most recent candle Unix timestamp, or None if no data exists., Oldest candle Unix timestamp, or None if no data exists., Number of stored candles for a particular series. (+85 more)
+Nodes (100): CandleDB, CandleDB — SQLite persistent store for OHLCV candle data.  Location: Trading-P, Record the wall-clock time of the last successful TV fetch., Return candles sorted ASCENDING by timestamp.         If count is given, return, Return all candles with ts >= since_ts, sorted ascending.         Used by the d, Most recent candle Unix timestamp, or None if no data exists., Oldest candle Unix timestamp, or None if no data exists., Number of stored candles for a particular series. (+92 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.04
@@ -147,7 +147,7 @@ Nodes (46): FundamentalGraphs, Module providing a function to scrape fundamental
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
-Nodes (45): Exception, get_indicators(), Module providing a function to scrape markets/exchanges where a symbol is traded, Scrape all markets/exchanges where a symbol is traded.          Args:, A class to scrape markets and exchanges where a symbol is traded from TradingVie, Build the payload for the scanner API.          Args:             symbol (str):, SymbolMarkets, Revise the JSON response by removing timeframes from indicator keys.          Ar (+37 more)
+Nodes (51): Configuration file for the Sphinx documentation builder.  For the full list of b, Skip autodoc for __init__ method., skip(), Exception, Ideas, Module providing a function to scrape published user ideas about a symbol., Scrapes trading ideas (popular or recent) for a specified symbol and page from T, get_indicators() (+43 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.06
@@ -158,44 +158,44 @@ Cohesion: 0.06
 Nodes (33): Overview, Module providing a function to scrape symbol overview data from TradingView., A class to scrape comprehensive overview data for symbols from TradingView., Validate and format symbol.          Args:             symbol (str): The symbol, Get comprehensive overview data for a symbol.          Args:             symbol, Get basic profile information for a symbol.          Args:             symbol (s, Get market statistics for a symbol.          Args:             symbol (str): The, Get financial metrics for a symbol.          Args:             symbol (str): The (+25 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.04
-Nodes (40): detect_all_consolidations(), Consolidation detector (price action based), Detect consolidation zones.     A zone is active when (high - low) / close < ran, DataFetcher, DataFetcher — in-memory candle store for the multi-timeframe engine.  Optimizati, Add a closed candle.         Format: {timestamp, open, high, low, close, is_clos, Fast O(1) latest close price lookup., Returns a pandas DataFrame for the timeframe — validated before construction. (+32 more)
-
-### Community 7 - "Community 7"
 Cohesion: 0.06
 Nodes (30): MarketMovers, Module providing a function to scrape market movers data (gainers, losers, penny, Validate if the category is supported for the given market.          Args:, Build the payload for the TradingView scanner API.          Args:             ma, A class to scrape market movers data from TradingView.      This class provides, Get filter conditions based on market and category.          Args:             m, Get sort configuration based on category.          Args:             category (s, Get the appropriate scanner URL for the market.          Args:             marke (+22 more)
 
-### Community 8 - "Community 8"
-Cohesion: 0.05
-Nodes (33): Configuration file for the Sphinx documentation builder.  For the full list of b, Skip autodoc for __init__ method., skip(), Export scraped data to file.          Args:             data (Dict): The data to, Ideas, Module providing a function to scrape published user ideas about a symbol., Scrapes trading ideas (popular or recent) for a specified symbol and page from T, Extract trading ideas from TradingView for a specified symbol over a range of pa (+25 more)
-
-### Community 9 - "Community 9"
+### Community 7 - "Community 7"
 Cohesion: 0.06
 Nodes (31): Markets, Module providing a function to scrape market overview data (top stocks, indices,, Build the payload for the scanner API.          Args:             filters (List[, A class to scrape market overview data from TradingView.      This class provide, Get top stocks by specified criteria.          Args:             market (str): T, Validate if the market is supported.          Args:             market (str): Th, Validate and convert sort criteria.          Args:             sort_by (str): Th, Test getting top stocks with no data. (+23 more)
 
-### Community 10 - "Community 10"
+### Community 8 - "Community 8"
 Cohesion: 0.06
 Nodes (31): Module providing a function to screen stocks, crypto, forex, and other markets w, Validate if the market is supported.          Args:             market (str): Th, Get default columns based on market type.          Args:             market (str, A class to screen financial instruments from TradingView with custom filters., Build the payload for the scanner API.          Args:             filters (List[, Screen financial instruments based on custom filters.          Args:, Screener, Test screening with filters. (+23 more)
 
-### Community 11 - "Community 11"
+### Community 9 - "Community 9"
+Cohesion: 0.04
+Nodes (33): detect_all_consolidations(), Consolidation detector (price action based), Detect consolidation zones.     A zone is active when (high - low) / close < ran, DataFetcher, DataFetcher — in-memory candle store for the multi-timeframe engine.  Optimizati, Add a closed candle.         Format: {timestamp, open, high, low, close, is_clos, Fast O(1) latest close price lookup., Returns a pandas DataFrame for the timeframe — validated before construction. (+25 more)
+
+### Community 10 - "Community 10"
 Cohesion: 0.05
 Nodes (25): AlertDialogFooter(), AlertDialogHeader(), Badge(), BreadcrumbEllipsis(), BreadcrumbSeparator(), Calendar(), CommandShortcut(), ContextMenuShortcut() (+17 more)
 
-### Community 12 - "Community 12"
-Cohesion: 0.09
-Nodes (15): Config, DashboardLauncher, _find_node_exec(), _http_ok(), _kill_pid(), _kill_port(), Dashboard Launcher — TradingView Scraper =======================================, Thread-safe log call via root.after. (+7 more)
+### Community 11 - "Community 11"
+Cohesion: 0.08
+Nodes (17): Config, DashboardLauncher, _find_node_exec(), _http_ok(), _kill_pid(), _kill_port(), Dashboard Launcher — TradingView Scraper =======================================, Thread-safe log call via root.after. (+9 more)
 
-### Community 13 - "Community 13"
+### Community 12 - "Community 12"
 Cohesion: 0.09
 Nodes (25): CalendarScraper, DividendEvent, EarningsEvent, Module providing a function to scrape dividend and earnings of a specific market, A class used to scrape dividend and earnings events from the TradingView event c, Scrapes dividends events from the TradingView event calendar.          Args:, Represents a dividend event for a financial asset.      Attributes:         full, Scrapes earnings events from the TradingView event calendar.          Args: (+17 more)
 
-### Community 14 - "Community 14"
+### Community 13 - "Community 13"
 Cohesion: 0.09
 Nodes (21): Prepends the message with a header indicating its length.          Args:, Constructs a message in JSON format.          Args:             func (str): T, Creates a complete message with a header and a JSON body.          Args:, Sends a message to the WebSocket server.          Args:             func (str, Returns a generator that yields OHLC data for a specified symbol in real-time., Initializes the WebSocket sessions for quotes and charts., Returns the fields to be set for the quote session.                  Returns:, Adds the specified symbol to the quote and chart sessions. (+13 more)
 
-### Community 15 - "Community 15"
+### Community 14 - "Community 14"
 Cohesion: 0.09
 Nodes (18): NewsScraper, Module providing a function to scrape published news about a symbol., Scrapes news headlines for a specified symbol from a given exchange, provider, o, Load languages from a specified file.          Returns:             list: A list, Load exchanges from a specified file.          Returns:             list: A list, Load news providers from a specified file.          Returns:             list: A, Load areas from a specified file.          Returns:             list: A list of, Scrapes news content from a TradingView article based on the provided story path (+10 more)
+
+### Community 15 - "Community 15"
+Cohesion: 0.1
+Nodes (18): Export scraped data to file.          Args:             data (Dict): The data to, Extract trading ideas from TradingView for a specified symbol over a range of pa, Export scraped data to file.          Args:             data (List[Dict]): The d, Export scraped data to file.          Args:             data (List[Dict]): The d, Export scraped data to file.          Args:             data (List[Dict]): The d, Export scraped data to file.          Args:             data (Dict): The data to, Export screened data to file.          Args:             data (List[Dict]): The, Exports data to a specified format (JSON or CSV).          Args:             jso (+10 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.08
@@ -206,36 +206,36 @@ Cohesion: 0.11
 Nodes (18): detect_breakout(), Breakout detector — optimized.  Changes:   - Added ATR-based expansion check: br, Detects an aggressive breakout candle.      Rules (all must pass):       1. Clos, _build_path(), _calc_rr(), _find_historical_tp(), generate_scenarios(), _no_trade() (+10 more)
 
 ### Community 18 - "Community 18"
+Cohesion: 0.13
+Nodes (12): is_valid_event(), is_valid_time(), is_valid_timeframe(), Check if timeframe is allowed for alerts., Check if the event is stringently breakout or trap., Check if current time is between 11:00 and 22:00 IST., AlertManager, Alert Manager — optimized.  Changes:   - sent_alerts uses collections.deque(maxl (+4 more)
+
+### Community 19 - "Community 19"
 Cohesion: 0.11
 Nodes (9): Initialize the FundamentalGraphs scraper.          Args:             export_resu, Initialize the MarketMovers scraper.          Args:             export_result (b, Initialize the Markets scraper.          Args:             export_result (bool):, Initialize the Minds scraper.          Args:             export_result (bool): W, Initialize the Overview scraper.          Args:             export_result (bool), Initialize the Screener.          Args:             export_result (bool): Whethe, Initialize the SymbolMarkets scraper.          Args:             export_result (, generate_user_agent() (+1 more)
 
-### Community 19 - "Community 19"
-Cohesion: 0.15
-Nodes (5): ChartPage(), getSymbolPrecision(), btnStyle(), ChartBoxContainer(), useChartMemory()
-
 ### Community 20 - "Community 20"
-Cohesion: 0.26
+Cohesion: 0.24
 Nodes (10): hexAlpha(), worldToCanvas(), drawCandles(), drawConsolidations(), drawCrosshair(), drawGrid(), drawNowLine(), drawScenarios() (+2 more)
 
 ### Community 21 - "Community 21"
+Cohesion: 0.15
+Nodes (5): ChartPage(), getSymbolPrecision(), btnStyle(), ChartBoxContainer(), useChartMemory()
+
+### Community 22 - "Community 22"
 Cohesion: 0.16
 Nodes (4): classifySwings(), exportSwingsAsCsv(), loadSwingsFromMemory(), selectActiveSwings()
 
-### Community 22 - "Community 22"
-Cohesion: 0.19
-Nodes (5): DataStorage, Append or update a candle based on timestamp., Fetch the last 'count' candles, optionally older than end_time., In-memory storage for raw and derived candles.     Thread-safe implementation f, Prepend a chunk of older candles to the cache (avoiding duplicates).
-
 ### Community 23 - "Community 23"
-Cohesion: 0.18
-Nodes (11): display_and_select_indicator(), fetch_indicator_metadata(), fetch_tradingview_indicators(), prepare_indicator_metadata(), Module providing utility functions for validating exchange symbols and fetching, Display a list of indicators and prompt the user to select one.      This functi, Validate one or more exchange symbols.      This function checks whether the pro, Fetch metadata for a TradingView indicator based on its script ID and version. (+3 more)
+Cohesion: 0.21
+Nodes (7): consolidation_boxes(), ConsolidationCNN, get_instance(), NNPredictor, Detect consolidation boxes.     df must have columns ['open','high','low','clos, get_nn_refined_zones(), Return consolidation zones enriched with NN-predicted refined box coordinates.
 
 ### Community 24 - "Community 24"
 Cohesion: 0.18
-Nodes (0): 
+Nodes (11): display_and_select_indicator(), fetch_indicator_metadata(), fetch_tradingview_indicators(), prepare_indicator_metadata(), Module providing utility functions for validating exchange symbols and fetching, Display a list of indicators and prompt the user to select one.      This functi, Validate one or more exchange symbols.      This function checks whether the pro, Fetch metadata for a TradingView indicator based on its script ID and version. (+3 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.25
-Nodes (5): consolidation_boxes(), ConsolidationCNN, get_instance(), NNPredictor, Detect consolidation boxes.     df must have columns ['open','high','low','clos
+Cohesion: 0.18
+Nodes (0): 
 
 ### Community 26 - "Community 26"
 Cohesion: 0.36
@@ -622,17 +622,17 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `save_json_file()` connect `Community 8` to `Community 13`, `Community 15`?**
+- **Why does `save_json_file()` connect `Community 15` to `Community 12`, `Community 14`?**
+  _High betweenness centrality (0.134) - this node is a cross-community bridge._
+- **Why does `save_csv_file()` connect `Community 15` to `Community 12`, `Community 14`?**
+  _High betweenness centrality (0.134) - this node is a cross-community bridge._
+- **Why does `Indicators` connect `Community 0` to `Community 3`, `Community 9`, `Community 11`, `Community 15`, `Community 23`?**
   _High betweenness centrality (0.124) - this node is a cross-community bridge._
-- **Why does `save_csv_file()` connect `Community 8` to `Community 13`, `Community 15`?**
-  _High betweenness centrality (0.124) - this node is a cross-community bridge._
-- **Why does `Indicators` connect `Community 0` to `Community 8`, `Community 3`, `Community 6`?**
-  _High betweenness centrality (0.123) - this node is a cross-community bridge._
-- **Are the 41 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?**
-  _`Indicators` has 41 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 42 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?**
+  _`Indicators` has 42 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 38 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API — optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars.`) actually correct?**
+  _`HistoricalFetcher` has 38 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 26 inferred relationships involving `FundamentalGraphs` (e.g. with `TestFundamentalGraphs` and `Fixture to create an instance of FundamentalGraphs for testing.`) actually correct?**
   _`FundamentalGraphs` has 26 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 37 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API — optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars.`) actually correct?**
-  _`HistoricalFetcher` has 37 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 21 inferred relationships involving `MarketMovers` (e.g. with `TestMarketMovers` and `Fixture to create an instance of MarketMovers for testing.`) actually correct?**
   _`MarketMovers` has 21 INFERRED edges - model-reasoned connections that need verification._

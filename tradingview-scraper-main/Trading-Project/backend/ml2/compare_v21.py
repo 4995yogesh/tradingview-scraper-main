@@ -11,31 +11,46 @@ import numpy as np
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from evaluation_metrics import evaluate_batch
+from dataset import ConsolidationDataset
+from model_d import QualityScorer
 
-def train_version(version_name, dataset_cls, model_cls):
+def benchmark_v21():
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     db_path = os.path.join(backend_dir, 'training_set.db')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    print(f"\n--- Training {version_name} ---")
-    dataset = dataset_cls(db_path=db_path)
-    dataloader = DataLoader(dataset, batch_size=16, shuffle=True)
-    model = model_cls().to(device)
+    print(f"\n--- Benchmarking ML2 v2.1 Stabilization ---")
+    dataset = ConsolidationDataset(db_path=db_path)
+    
+    # 1. Train v2.1
+    sampler = dataset.get_sampler()
+    dataloader = DataLoader(dataset, batch_size=16, sampler=sampler)
+    
+    model = QualityScorer().to(device)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    criterion = nn.MSELoss()
 
     start_time = time.time()
+    epochs = 30
     
-    for epoch in range(100):
+    print(f"Training on {len(dataset)} samples (Balanced)...")
+    for epoch in range(epochs):
         total_loss = 0.0
         for batch in dataloader:
             features = batch['features'].to(device)
             box = batch['box_coords'].to(device)
-            target = batch['quality_score'].to(device)
+            target_score = batch['quality_score'].to(device)
+            is_con = batch['is_consolidation'].to(device)
 
             optimizer.zero_grad()
-            output = model(features, box)
-            loss = criterion(output, target.float().view_as(output))
+            score, valid_logits, gates = model(features, box)
+            
+            mse_loss = nn.MSELoss()(score, target_score.squeeze())
+            bce_loss = nn.BCEWithLogitsLoss()(valid_logits, is_con.squeeze().float())
+            loss = 0.5 * mse_loss + 0.5 * bce_loss
+            
+            l1_gate = sum(g.abs().mean() for g in gates)
+            loss += 1e-4 * l1_gate
+                
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
@@ -45,65 +60,45 @@ def train_version(version_name, dataset_cls, model_cls):
 
     duration = time.time() - start_time
     
-    # ── Final Evaluation Pass ────────────────────────────────────────────────
+    # 2. Evaluate
     model.eval()
     all_eval_samples = []
+    eval_loader = DataLoader(dataset, batch_size=1, shuffle=False)
+    
     with torch.no_grad():
-        for batch in dataloader:
+        for batch in eval_loader:
             features = batch['features'].to(device)
             box = batch['box_coords'].to(device)
             target = batch['quality_score'].to(device)
             is_consol = batch['is_consolidation'].to(device)
 
-            output = model(features, box)
+            score, _, _ = model(features, box)
             
-            # Prepare for evaluate_batch
-            preds = output.cpu().numpy().flatten()
-            trues = target.cpu().numpy().flatten()
-            is_c = is_consol.cpu().numpy().flatten()
-            p_boxes = box.cpu().numpy()
-            
-            for i in range(len(preds)):
-                all_eval_samples.append({
-                    "pred_box": p_boxes[i].tolist(),
-                    "true_box": p_boxes[i].tolist(),
-                    "pred_score": float(preds[i]),
-                    "true_quality": float(trues[i]),
-                    "is_consolidation": int(is_c[i])
-                })
+            all_eval_samples.append({
+                "pred_box": box.squeeze().cpu().numpy().tolist(),
+                "true_box": box.squeeze().cpu().numpy().tolist(),
+                "pred_score": float(score.item()),
+                "true_quality": float(target.item()),
+                "is_consolidation": int(is_consol.item())
+            })
     
     metrics = evaluate_batch(all_eval_samples)
-    return metrics, duration
-
-if __name__ == "__main__":
-    # Import Legacy
-    from legacy.dataset import ConsolidationDataset as LegacyDataset
-    from legacy.model_d import QualityScorer as LegacyModel
-    
-    # Import New
-    from dataset import ConsolidationDataset as NewDataset
-    from model_d import QualityScorer as NewModel
-    
-    # Run Legacy
-    legacy_metrics, legacy_time = train_version("Legacy (12-ch)", LegacyDataset, LegacyModel)
-    
-    # Run New
-    new_metrics, new_time = train_version("v2.1 (21-ch)", NewDataset, NewModel)
     
     print("\n" + "="*50)
-    print(f"{'METRIC':<20} | {'LEGACY':<12} | {'V2.1':<12} | {'DIFF'}")
+    print(f"{'V2.1 STABILIZATION REPORT':^50}")
+    print("="*50)
+    print(f"{'METRIC':<25} | {'VALUE':<12}")
     print("-" * 50)
     
-    m_list = ["accuracy", "f1_score", "precision", "recall", "score_mse", "final_score"]
+    m_list = ["accuracy", "f1_score", "rejection_accuracy", "false_positive_rate", "score_mse"]
     for m in m_list:
-        l_v = legacy_metrics[m]
-        n_v = new_metrics[m]
-        diff = n_v - l_v
-        if m == "score_mse": # Lower is better
-            status = " [↑]" if diff < 0 else " [↓]"
-        else:
-            status = " [↑]" if diff > 0 else " [↓]"
-        print(f"{m:<20} | {l_v:<12.6f} | {n_v:<12.6f} | {diff:+.6f}{status}")
+        val = metrics.get(m, 0.0)
+        print(f"{m:<25} | {val:<12.4f}")
     
+    print("-" * 50)
+    print(f"TP: {metrics['tp']} | FP: {metrics['fp']} | TN: {metrics['tn']} | FN: {metrics['fn']}")
     print("="*50)
-    print(f"Total Time: Legacy {legacy_time:.1f}s vs V2.1 {new_time:.1f}s")
+    print(f"Total Training Time: {duration:.1f}s")
+
+if __name__ == "__main__":
+    benchmark_v21()

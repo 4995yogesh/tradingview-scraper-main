@@ -114,13 +114,10 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   }
 
   // ── 1. Find the "True" Box indices in the full filtered array ──────────
-  const impFull = detectImprovedBox(allFiltered);
+  // Use Meta (Ground Truth) as the primary anchor for windowing
   let finalStart = 0, finalEnd = allFiltered.length - 1;
 
-  if (impFull) {
-    finalStart = impFull.start;
-    finalEnd   = impFull.end;
-  } else if (meta && meta.timeStart != null && meta.timeEnd != null) {
+  if (meta && meta.timeStart != null && meta.timeEnd != null) {
     const times   = allFiltered.map(c => new Date(c.time).getTime());
     const tsStart = typeof meta.timeStart === 'number' ? meta.timeStart : new Date(meta.timeStart).getTime();
     const tsEnd   = typeof meta.timeEnd   === 'number' ? meta.timeEnd   : new Date(meta.timeEnd).getTime();
@@ -133,11 +130,16 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
     finalEnd   = findIdx(tsEnd);
   }
 
-  // ── 2. Apply 15+15 Context Windowing ──────────────────────────────────────
+  // Detect improved box for visual reference, but don't drive windowing with it
+  const impFull = detectImprovedBox(allFiltered);
+
+  // ── 2. Apply strict 15+15 Context Windowing ───────────────────────────────
   const CONTEXT = 15;
   const winStart = Math.max(0, finalStart - CONTEXT);
   const winEnd   = Math.min(allFiltered.length - 1, finalEnd + CONTEXT);
-  const ohlc     = allFiltered.slice(winStart, winEnd + 1);
+  
+  // Ensure we get exactly 15 if possible, but don't exceed boundaries
+  const ohlc = allFiltered.slice(winStart, winEnd + 1);
 
   // Re-map indices to the new cropped window
   const relStart = finalStart - winStart;
@@ -1283,7 +1285,15 @@ const RefinementDashboard = () => {
                   try { metaRaw = typeof box.original_meta === 'string' ? JSON.parse(box.original_meta) : (box.original_meta || {}); } catch(e){}
                   const startT = box.time_start_ms || box.timeStart || metaRaw.timeStart;
                   const endT = box.time_end_ms || box.timeEnd || metaRaw.timeEnd;
-                  const fmt = t => t ? (new Date(t).toISOString().replace('T', ' ').slice(0,16)) : 'N/A';
+                  const fmt = t => {
+                    if (!t) return 'N/A';
+                    const dt = new Date(t);
+                    return dt.toLocaleString('en-IN', { 
+                      timeZone: 'Asia/Kolkata',
+                      year: 'numeric', month: '2-digit', day: '2-digit',
+                      hour: '2-digit', minute: '2-digit', hour12: false 
+                    }) + ' IST';
+                  };
                   return [
                     ['ID',      box.box_id],
                     ['Symbol',  box.symbol],

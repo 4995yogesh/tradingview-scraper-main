@@ -91,7 +91,7 @@ const NNTrainingDashboard = () => {
           <div className="bg-[#0B0E14] p-3 rounded-xl border border-[#2A2E39] hover:border-[#2962FF50] transition-colors">
             <div className="text-[9px] text-[#787B86] uppercase tracking-widest mb-1 font-bold">Model Version</div>
             <div className="text-lg font-mono font-bold text-[#00BFA5] leading-none">
-              v1.0.0
+              v2.1.0
             </div>
           </div>
         </div>

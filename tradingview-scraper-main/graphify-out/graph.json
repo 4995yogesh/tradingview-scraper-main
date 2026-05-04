@@ -9,7 +9,7 @@
       "source_file": "launcher.py",
       "source_location": "L1",
       "id": "launcher_py",
-      "community": 12,
+      "community": 11,
       "norm_label": "launcher.py"
     },
     {
@@ -18,7 +18,7 @@
       "source_file": "launcher.py",
       "source_location": "L29",
       "id": "launcher_http_ok",
-      "community": 12,
+      "community": 11,
       "norm_label": "_http_ok()"
     },
     {
@@ -27,7 +27,7 @@
       "source_file": "launcher.py",
       "source_location": "L68",
       "id": "launcher_find_node_exec",
-      "community": 12,
+      "community": 11,
       "norm_label": "_find_node_exec()"
     },
     {
@@ -36,7 +36,7 @@
       "source_file": "launcher.py",
       "source_location": "L79",
       "id": "launcher_kill_pid",
-      "community": 12,
+      "community": 11,
       "norm_label": "_kill_pid()"
     },
     {
@@ -45,7 +45,7 @@
       "source_file": "launcher.py",
       "source_location": "L86",
       "id": "launcher_kill_port",
-      "community": 12,
+      "community": 11,
       "norm_label": "_kill_port()"
     },
     {
@@ -54,7 +54,7 @@
       "source_file": "launcher.py",
       "source_location": "L111",
       "id": "launcher_dashboardlauncher",
-      "community": 12,
+      "community": 11,
       "norm_label": "dashboardlauncher"
     },
     {
@@ -63,7 +63,7 @@
       "source_file": "launcher.py",
       "source_location": "L112",
       "id": "launcher_dashboardlauncher_init",
-      "community": 12,
+      "community": 11,
       "norm_label": ".__init__()"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "launcher.py",
       "source_location": "L133",
       "id": "launcher_dashboardlauncher_deferred_init",
-      "community": 12,
+      "community": 11,
       "norm_label": "._deferred_init()"
     },
     {
@@ -81,7 +81,7 @@
       "source_file": "launcher.py",
       "source_location": "L144",
       "id": "launcher_dashboardlauncher_build_ui",
-      "community": 12,
+      "community": 11,
       "norm_label": "._build_ui()"
     },
     {
@@ -90,7 +90,7 @@
       "source_file": "launcher.py",
       "source_location": "L240",
       "id": "launcher_dashboardlauncher_log",
-      "community": 12,
+      "community": 11,
       "norm_label": "._log()"
     },
     {
@@ -99,7 +99,7 @@
       "source_file": "launcher.py",
       "source_location": "L248",
       "id": "launcher_dashboardlauncher_log_ts",
-      "community": 12,
+      "community": 11,
       "norm_label": "._log_ts()"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "launcher.py",
       "source_location": "L252",
       "id": "launcher_dashboardlauncher_log_safe",
-      "community": 12,
+      "community": 11,
       "norm_label": "._log_safe()"
     },
     {
@@ -117,7 +117,7 @@
       "source_file": "launcher.py",
       "source_location": "L256",
       "id": "launcher_dashboardlauncher_read_output",
-      "community": 12,
+      "community": 11,
       "norm_label": "._read_output()"
     },
     {
@@ -126,7 +126,7 @@
       "source_file": "launcher.py",
       "source_location": "L274",
       "id": "launcher_dashboardlauncher_set_status",
-      "community": 12,
+      "community": 11,
       "norm_label": "._set_status()"
     },
     {
@@ -135,7 +135,7 @@
       "source_file": "launcher.py",
       "source_location": "L285",
       "id": "launcher_dashboardlauncher_poll_ready",
-      "community": 12,
+      "community": 11,
       "norm_label": "._poll_ready()"
     },
     {
@@ -144,7 +144,7 @@
       "source_file": "launcher.py",
       "source_location": "L311",
       "id": "launcher_dashboardlauncher_kill_port",
-      "community": 12,
+      "community": 11,
       "norm_label": "._kill_port()"
     },
     {
@@ -153,7 +153,7 @@
       "source_file": "launcher.py",
       "source_location": "L316",
       "id": "launcher_dashboardlauncher_toggle",
-      "community": 12,
+      "community": 11,
       "norm_label": "._toggle()"
     },
     {
@@ -162,7 +162,7 @@
       "source_file": "launcher.py",
       "source_location": "L325",
       "id": "launcher_dashboardlauncher_start_backend",
-      "community": 12,
+      "community": 11,
       "norm_label": "._start_backend()"
     },
     {
@@ -171,7 +171,7 @@
       "source_file": "launcher.py",
       "source_location": "L367",
       "id": "launcher_dashboardlauncher_stop_backend",
-      "community": 12,
+      "community": 11,
       "norm_label": "._stop_backend()"
     },
     {
@@ -180,7 +180,7 @@
       "source_file": "launcher.py",
       "source_location": "L378",
       "id": "launcher_dashboardlauncher_start_frontend",
-      "community": 12,
+      "community": 11,
       "norm_label": "._start_frontend()"
     },
     {
@@ -189,7 +189,7 @@
       "source_file": "launcher.py",
       "source_location": "L436",
       "id": "launcher_dashboardlauncher_stop_frontend",
-      "community": 12,
+      "community": 11,
       "norm_label": "._stop_frontend()"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "launcher.py",
       "source_location": "L447",
       "id": "launcher_dashboardlauncher_start_all",
-      "community": 12,
+      "community": 11,
       "norm_label": "._start_all()"
     },
     {
@@ -207,7 +207,7 @@
       "source_file": "launcher.py",
       "source_location": "L482",
       "id": "launcher_dashboardlauncher_stop_all",
-      "community": 12,
+      "community": 11,
       "norm_label": "._stop_all()"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "launcher.py",
       "source_location": "L491",
       "id": "launcher_dashboardlauncher_on_close",
-      "community": 12,
+      "community": 11,
       "norm_label": "._on_close()"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "launcher.py",
       "source_location": "L1",
       "id": "launcher_rationale_1",
-      "community": 12,
+      "community": 11,
       "norm_label": "dashboard launcher \u2014 tradingview scraper ======================================="
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "launcher.py",
       "source_location": "L69",
       "id": "launcher_rationale_69",
-      "community": 12,
+      "community": 11,
       "norm_label": "return full path to yarn.cmd or npm.cmd, whichever is preferred + available."
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "launcher.py",
       "source_location": "L87",
       "id": "launcher_rationale_87",
-      "community": 12,
+      "community": 11,
       "norm_label": "kill any process currently listening on the given port."
     },
     {
@@ -252,7 +252,7 @@
       "source_file": "launcher.py",
       "source_location": "L253",
       "id": "launcher_rationale_253",
-      "community": 12,
+      "community": 11,
       "norm_label": "thread-safe log call via root.after."
     },
     {
@@ -261,7 +261,7 @@
       "source_file": "launcher.py",
       "source_location": "L257",
       "id": "launcher_rationale_257",
-      "community": 12,
+      "community": 11,
       "norm_label": "stream subprocess stdout into the log window (runs in daemon thread)."
     },
     {
@@ -270,7 +270,7 @@
       "source_file": "launcher.py",
       "source_location": "L287",
       "id": "launcher_rationale_287",
-      "community": 12,
+      "community": 11,
       "norm_label": "poll `url` every 2 s until it returns http 200 or timeout.         runs in a dae"
     },
     {
@@ -279,7 +279,7 @@
       "source_file": "launcher.py",
       "source_location": "L448",
       "id": "launcher_rationale_448",
-      "community": 12,
+      "community": 11,
       "norm_label": "start backend + frontend in parallel \u2014 frontend compile overlaps with backend in"
     },
     {
@@ -315,7 +315,7 @@
       "source_file": "test_frontend.py",
       "source_location": "L1",
       "id": "test_frontend_py",
-      "community": 12,
+      "community": 11,
       "norm_label": "test_frontend.py"
     },
     {
@@ -324,7 +324,7 @@
       "source_file": "test_frontend.py",
       "source_location": "L4",
       "id": "test_frontend_run",
-      "community": 12,
+      "community": 11,
       "norm_label": "run()"
     },
     {
@@ -351,7 +351,7 @@
       "source_file": "trial.py",
       "source_location": "L1",
       "id": "trial_py",
-      "community": 3,
+      "community": 0,
       "norm_label": "trial.py"
     },
     {
@@ -360,7 +360,7 @@
       "source_file": "trial.py",
       "source_location": "L5",
       "id": "trial_main",
-      "community": 3,
+      "community": 0,
       "norm_label": "main()"
     },
     {
@@ -369,7 +369,7 @@
       "source_file": "docs\\conf.py",
       "source_location": "L1",
       "id": "docs_conf_py",
-      "community": 8,
+      "community": 3,
       "norm_label": "conf.py"
     },
     {
@@ -378,7 +378,7 @@
       "source_file": "docs\\conf.py",
       "source_location": "L44",
       "id": "conf_skip",
-      "community": 8,
+      "community": 3,
       "norm_label": "skip()"
     },
     {
@@ -387,7 +387,7 @@
       "source_file": "docs\\conf.py",
       "source_location": "L50",
       "id": "conf_setup",
-      "community": 8,
+      "community": 3,
       "norm_label": "setup()"
     },
     {
@@ -396,7 +396,7 @@
       "source_file": "docs\\conf.py",
       "source_location": "L1",
       "id": "conf_rationale_1",
-      "community": 8,
+      "community": 3,
       "norm_label": "configuration file for the sphinx documentation builder.  for the full list of b"
     },
     {
@@ -405,7 +405,7 @@
       "source_file": "docs\\conf.py",
       "source_location": "L45",
       "id": "conf_rationale_45",
-      "community": 8,
+      "community": 3,
       "norm_label": "skip autodoc for __init__ method."
     },
     {
@@ -414,7 +414,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L1",
       "id": "tests_test_cal_py",
-      "community": 13,
+      "community": 12,
       "norm_label": "test_cal.py"
     },
     {
@@ -423,7 +423,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L16",
       "id": "test_cal_testcalendar",
-      "community": 13,
+      "community": 12,
       "norm_label": "testcalendar"
     },
     {
@@ -432,7 +432,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L18",
       "id": "test_cal_calendar_scraper",
-      "community": 13,
+      "community": 12,
       "norm_label": "calendar_scraper()"
     },
     {
@@ -441,7 +441,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L22",
       "id": "test_cal_testcalendar_test_scrape_earnings_all_markets",
-      "community": 13,
+      "community": 12,
       "norm_label": ".test_scrape_earnings_all_markets()"
     },
     {
@@ -450,7 +450,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L39",
       "id": "test_cal_testcalendar_test_scrape_earnings_specific_market",
-      "community": 13,
+      "community": 12,
       "norm_label": ".test_scrape_earnings_specific_market()"
     },
     {
@@ -459,7 +459,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L59",
       "id": "test_cal_testcalendar_test_scrape_earnings_with_custom_fields",
-      "community": 13,
+      "community": 12,
       "norm_label": ".test_scrape_earnings_with_custom_fields()"
     },
     {
@@ -468,7 +468,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L71",
       "id": "test_cal_testcalendar_test_scrape_dividends_all_markets",
-      "community": 13,
+      "community": 12,
       "norm_label": ".test_scrape_dividends_all_markets()"
     },
     {
@@ -477,7 +477,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L88",
       "id": "test_cal_testcalendar_test_scrape_dividends_specific_market",
-      "community": 13,
+      "community": 12,
       "norm_label": ".test_scrape_dividends_specific_market()"
     },
     {
@@ -486,7 +486,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L108",
       "id": "test_cal_testcalendar_test_scrape_dividends_with_custom_fields",
-      "community": 13,
+      "community": 12,
       "norm_label": ".test_scrape_dividends_with_custom_fields()"
     },
     {
@@ -495,7 +495,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L120",
       "id": "test_cal_testcalendar_test_scrape_earnings_date_range",
-      "community": 13,
+      "community": 12,
       "norm_label": ".test_scrape_earnings_date_range()"
     },
     {
@@ -504,7 +504,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L139",
       "id": "test_cal_test_scrape_earnings_no_data",
-      "community": 13,
+      "community": 12,
       "norm_label": "test_scrape_earnings_no_data()"
     },
     {
@@ -513,7 +513,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L154",
       "id": "test_cal_testcalendar_test_scrape_dividends_multiple_markets",
-      "community": 13,
+      "community": 12,
       "norm_label": ".test_scrape_dividends_multiple_markets()"
     },
     {
@@ -522,7 +522,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L19",
       "id": "test_cal_rationale_19",
-      "community": 13,
+      "community": 12,
       "norm_label": "fixture to create an instance of calendarscraper for testing."
     },
     {
@@ -531,7 +531,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L23",
       "id": "test_cal_rationale_23",
-      "community": 13,
+      "community": 12,
       "norm_label": "test scraping earnings from all markets."
     },
     {
@@ -540,7 +540,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L40",
       "id": "test_cal_rationale_40",
-      "community": 13,
+      "community": 12,
       "norm_label": "test scraping earnings from specific market (america)."
     },
     {
@@ -549,7 +549,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L60",
       "id": "test_cal_rationale_60",
-      "community": 13,
+      "community": 12,
       "norm_label": "test scraping earnings with custom fields."
     },
     {
@@ -558,7 +558,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L72",
       "id": "test_cal_rationale_72",
-      "community": 13,
+      "community": 12,
       "norm_label": "test scraping dividends from all markets."
     },
     {
@@ -567,7 +567,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L89",
       "id": "test_cal_rationale_89",
-      "community": 13,
+      "community": 12,
       "norm_label": "test scraping dividends from specific market (america)."
     },
     {
@@ -576,7 +576,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L109",
       "id": "test_cal_rationale_109",
-      "community": 13,
+      "community": 12,
       "norm_label": "test scraping dividends with custom fields."
     },
     {
@@ -585,7 +585,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L121",
       "id": "test_cal_rationale_121",
-      "community": 13,
+      "community": 12,
       "norm_label": "test scraping earnings within a specific date range."
     },
     {
@@ -594,7 +594,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L140",
       "id": "test_cal_rationale_140",
-      "community": 13,
+      "community": 12,
       "norm_label": "test handling of no earnings data."
     },
     {
@@ -603,7 +603,7 @@
       "source_file": "tests\\test_cal.py",
       "source_location": "L155",
       "id": "test_cal_rationale_155",
-      "community": 13,
+      "community": 12,
       "norm_label": "test scraping dividends from multiple markets."
     },
     {
@@ -1071,7 +1071,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L13",
       "id": "test_ideas_testideas",
-      "community": 8,
+      "community": 3,
       "norm_label": "testideas"
     },
     {
@@ -1080,7 +1080,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L15",
       "id": "test_ideas_ideas_scraper",
-      "community": 8,
+      "community": 3,
       "norm_label": "ideas_scraper()"
     },
     {
@@ -1116,7 +1116,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L85",
       "id": "test_ideas_testideas_test_scrape_recent_sorting_option",
-      "community": 8,
+      "community": 3,
       "norm_label": ".test_scrape_recent_sorting_option()"
     },
     {
@@ -1125,7 +1125,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L104",
       "id": "test_ideas_testideas_test_scrape_popular_sorting_option",
-      "community": 8,
+      "community": 3,
       "norm_label": ".test_scrape_popular_sorting_option()"
     },
     {
@@ -1134,7 +1134,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L122",
       "id": "test_ideas_testideas_test_threading_avoids_rate_limiting",
-      "community": 8,
+      "community": 3,
       "norm_label": ".test_threading_avoids_rate_limiting()"
     },
     {
@@ -1143,7 +1143,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L16",
       "id": "test_ideas_rationale_16",
-      "community": 8,
+      "community": 3,
       "norm_label": "fixture to create an instance of ideas for testing."
     },
     {
@@ -1152,7 +1152,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L21",
       "id": "test_ideas_rationale_21",
-      "community": 8,
+      "community": 3,
       "norm_label": "test scraping recent ideas successfully with mocked response."
     },
     {
@@ -1161,7 +1161,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L59",
       "id": "test_ideas_rationale_59",
-      "community": 8,
+      "community": 3,
       "norm_label": "test handling of no ideas found with mocked response."
     },
     {
@@ -1170,7 +1170,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L80",
       "id": "test_ideas_rationale_80",
-      "community": 8,
+      "community": 3,
       "norm_label": "test handling of invalid sort argument."
     },
     {
@@ -1179,7 +1179,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L86",
       "id": "test_ideas_rationale_86",
-      "community": 8,
+      "community": 3,
       "norm_label": "test scraping recent ideas with real api call."
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L105",
       "id": "test_ideas_rationale_105",
-      "community": 8,
+      "community": 3,
       "norm_label": "test scraping popular ideas with real api call."
     },
     {
@@ -1197,7 +1197,7 @@
       "source_file": "tests\\test_ideas.py",
       "source_location": "L123",
       "id": "test_ideas_rationale_123",
-      "community": 8,
+      "community": 3,
       "norm_label": "test that threading prevents rate limiting when scraping multiple pages concurre"
     },
     {
@@ -1206,7 +1206,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L1",
       "id": "tests_test_indicators_py",
-      "community": 3,
+      "community": 0,
       "norm_label": "test_indicators.py"
     },
     {
@@ -1215,7 +1215,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L15",
       "id": "test_indicators_testindicators",
-      "community": 3,
+      "community": 0,
       "norm_label": "testindicators"
     },
     {
@@ -1233,7 +1233,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L21",
       "id": "test_indicators_testindicators_test_scrape_indicators_success",
-      "community": 3,
+      "community": 0,
       "norm_label": ".test_scrape_indicators_success()"
     },
     {
@@ -1242,7 +1242,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L51",
       "id": "test_indicators_testindicators_test_scrape_indicators_invalid_exchange",
-      "community": 3,
+      "community": 0,
       "norm_label": ".test_scrape_indicators_invalid_exchange()"
     },
     {
@@ -1251,7 +1251,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L65",
       "id": "test_indicators_testindicators_test_scrape_indicators_empty_response",
-      "community": 3,
+      "community": 0,
       "norm_label": ".test_scrape_indicators_empty_response()"
     },
     {
@@ -1260,7 +1260,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L80",
       "id": "test_indicators_testindicators_test_scrape_indicators_valid_response",
-      "community": 3,
+      "community": 0,
       "norm_label": ".test_scrape_indicators_valid_response()"
     },
     {
@@ -1278,7 +1278,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L22",
       "id": "test_indicators_rationale_22",
-      "community": 3,
+      "community": 0,
       "norm_label": "test scraping indicators successfully."
     },
     {
@@ -1287,7 +1287,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L52",
       "id": "test_indicators_rationale_52",
-      "community": 3,
+      "community": 0,
       "norm_label": "test scraping indicators with an invalid exchange."
     },
     {
@@ -1296,7 +1296,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L66",
       "id": "test_indicators_rationale_66",
-      "community": 3,
+      "community": 0,
       "norm_label": "test scraping indicators returns empty response."
     },
     {
@@ -1305,7 +1305,7 @@
       "source_file": "tests\\test_indicators.py",
       "source_location": "L81",
       "id": "test_indicators_rationale_81",
-      "community": 3,
+      "community": 0,
       "norm_label": "test scraping indicators with a valid success response."
     },
     {
@@ -1314,7 +1314,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L1",
       "id": "tests_test_markets_py",
-      "community": 9,
+      "community": 7,
       "norm_label": "test_markets.py"
     },
     {
@@ -1323,7 +1323,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L15",
       "id": "test_markets_testmarkets",
-      "community": 9,
+      "community": 7,
       "norm_label": "testmarkets"
     },
     {
@@ -1332,7 +1332,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L17",
       "id": "test_markets_markets",
-      "community": 9,
+      "community": 7,
       "norm_label": "markets()"
     },
     {
@@ -1341,7 +1341,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L21",
       "id": "test_markets_testmarkets_test_validate_market_valid",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_validate_market_valid()"
     },
     {
@@ -1350,7 +1350,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L30",
       "id": "test_markets_testmarkets_test_validate_market_invalid",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_validate_market_invalid()"
     },
     {
@@ -1359,7 +1359,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L35",
       "id": "test_markets_testmarkets_test_validate_sort_by_valid",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_validate_sort_by_valid()"
     },
     {
@@ -1368,7 +1368,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L41",
       "id": "test_markets_testmarkets_test_validate_sort_by_invalid",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_validate_sort_by_invalid()"
     },
     {
@@ -1377,7 +1377,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L46",
       "id": "test_markets_testmarkets_test_build_payload_basic",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_build_payload_basic()"
     },
     {
@@ -1386,7 +1386,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L57",
       "id": "test_markets_testmarkets_test_build_payload_with_filters",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_build_payload_with_filters()"
     },
     {
@@ -1395,7 +1395,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L67",
       "id": "test_markets_testmarkets_test_build_payload_with_sort",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_build_payload_with_sort()"
     },
     {
@@ -1404,7 +1404,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L74",
       "id": "test_markets_testmarkets_test_build_payload_with_limit",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_build_payload_with_limit()"
     },
     {
@@ -1413,7 +1413,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L81",
       "id": "test_markets_test_get_top_stocks_success",
-      "community": 9,
+      "community": 7,
       "norm_label": "test_get_top_stocks_success()"
     },
     {
@@ -1422,7 +1422,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L115",
       "id": "test_markets_test_get_top_stocks_no_data",
-      "community": 9,
+      "community": 7,
       "norm_label": "test_get_top_stocks_no_data()"
     },
     {
@@ -1431,7 +1431,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L135",
       "id": "test_markets_test_get_top_stocks_http_error",
-      "community": 9,
+      "community": 7,
       "norm_label": "test_get_top_stocks_http_error()"
     },
     {
@@ -1440,7 +1440,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L152",
       "id": "test_markets_test_get_top_stocks_request_exception",
-      "community": 9,
+      "community": 7,
       "norm_label": "test_get_top_stocks_request_exception()"
     },
     {
@@ -1449,7 +1449,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L165",
       "id": "test_markets_testmarkets_test_get_top_stocks_real_america_by_market_cap",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_get_top_stocks_real_america_by_market_cap()"
     },
     {
@@ -1458,7 +1458,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L188",
       "id": "test_markets_testmarkets_test_get_top_stocks_real_america_by_volume",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_get_top_stocks_real_america_by_volume()"
     },
     {
@@ -1467,7 +1467,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L203",
       "id": "test_markets_testmarkets_test_get_top_stocks_real_crypto",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_get_top_stocks_real_crypto()"
     },
     {
@@ -1476,7 +1476,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L219",
       "id": "test_markets_testmarkets_test_get_top_stocks_with_custom_columns",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_get_top_stocks_with_custom_columns()"
     },
     {
@@ -1485,7 +1485,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L240",
       "id": "test_markets_testmarkets_test_supported_markets",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_supported_markets()"
     },
     {
@@ -1494,7 +1494,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L248",
       "id": "test_markets_testmarkets_test_sort_criteria",
-      "community": 9,
+      "community": 7,
       "norm_label": ".test_sort_criteria()"
     },
     {
@@ -1503,7 +1503,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L18",
       "id": "test_markets_rationale_18",
-      "community": 9,
+      "community": 7,
       "norm_label": "fixture to create an instance of markets for testing."
     },
     {
@@ -1512,7 +1512,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L22",
       "id": "test_markets_rationale_22",
-      "community": 9,
+      "community": 7,
       "norm_label": "test validation of valid markets."
     },
     {
@@ -1521,7 +1521,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L31",
       "id": "test_markets_rationale_31",
-      "community": 9,
+      "community": 7,
       "norm_label": "test validation of invalid market."
     },
     {
@@ -1530,7 +1530,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L36",
       "id": "test_markets_rationale_36",
-      "community": 9,
+      "community": 7,
       "norm_label": "test validation of valid sort criteria."
     },
     {
@@ -1539,7 +1539,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L42",
       "id": "test_markets_rationale_42",
-      "community": 9,
+      "community": 7,
       "norm_label": "test validation of invalid sort criteria."
     },
     {
@@ -1548,7 +1548,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L47",
       "id": "test_markets_rationale_47",
-      "community": 9,
+      "community": 7,
       "norm_label": "test building basic payload."
     },
     {
@@ -1557,7 +1557,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L58",
       "id": "test_markets_rationale_58",
-      "community": 9,
+      "community": 7,
       "norm_label": "test building payload with filters."
     },
     {
@@ -1566,7 +1566,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L68",
       "id": "test_markets_rationale_68",
-      "community": 9,
+      "community": 7,
       "norm_label": "test building payload with custom sort."
     },
     {
@@ -1575,7 +1575,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L75",
       "id": "test_markets_rationale_75",
-      "community": 9,
+      "community": 7,
       "norm_label": "test building payload with custom limit."
     },
     {
@@ -1584,7 +1584,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L82",
       "id": "test_markets_rationale_82",
-      "community": 9,
+      "community": 7,
       "norm_label": "test successful retrieval of top stocks."
     },
     {
@@ -1593,7 +1593,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L116",
       "id": "test_markets_rationale_116",
-      "community": 9,
+      "community": 7,
       "norm_label": "test getting top stocks with no data."
     },
     {
@@ -1602,7 +1602,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L136",
       "id": "test_markets_rationale_136",
-      "community": 9,
+      "community": 7,
       "norm_label": "test getting top stocks with http error."
     },
     {
@@ -1611,7 +1611,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L153",
       "id": "test_markets_rationale_153",
-      "community": 9,
+      "community": 7,
       "norm_label": "test getting top stocks with request exception."
     },
     {
@@ -1620,7 +1620,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L166",
       "id": "test_markets_rationale_166",
-      "community": 9,
+      "community": 7,
       "norm_label": "test getting real top stocks by market cap."
     },
     {
@@ -1629,7 +1629,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L189",
       "id": "test_markets_rationale_189",
-      "community": 9,
+      "community": 7,
       "norm_label": "test getting real top stocks by volume."
     },
     {
@@ -1638,7 +1638,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L204",
       "id": "test_markets_rationale_204",
-      "community": 9,
+      "community": 7,
       "norm_label": "test getting real top crypto."
     },
     {
@@ -1647,7 +1647,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L220",
       "id": "test_markets_rationale_220",
-      "community": 9,
+      "community": 7,
       "norm_label": "test getting top stocks with custom columns."
     },
     {
@@ -1656,7 +1656,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L241",
       "id": "test_markets_rationale_241",
-      "community": 9,
+      "community": 7,
       "norm_label": "test that all supported markets are accessible."
     },
     {
@@ -1665,7 +1665,7 @@
       "source_file": "tests\\test_markets.py",
       "source_location": "L249",
       "id": "test_markets_rationale_249",
-      "community": 9,
+      "community": 7,
       "norm_label": "test that sort criteria are defined."
     },
     {
@@ -1683,7 +1683,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L15",
       "id": "test_market_movers_testmarketmovers",
-      "community": 7,
+      "community": 6,
       "norm_label": "testmarketmovers"
     },
     {
@@ -1701,7 +1701,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L21",
       "id": "test_market_movers_testmarketmovers_test_validate_market_valid",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_validate_market_valid()"
     },
     {
@@ -1710,7 +1710,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L30",
       "id": "test_market_movers_testmarketmovers_test_validate_market_invalid",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_validate_market_invalid()"
     },
     {
@@ -1719,7 +1719,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L35",
       "id": "test_market_movers_testmarketmovers_test_validate_category_valid",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_validate_category_valid()"
     },
     {
@@ -1728,7 +1728,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L44",
       "id": "test_market_movers_testmarketmovers_test_validate_category_invalid",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_validate_category_invalid()"
     },
     {
@@ -1737,7 +1737,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L49",
       "id": "test_market_movers_testmarketmovers_test_get_scanner_url",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_get_scanner_url()"
     },
     {
@@ -1746,7 +1746,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L55",
       "id": "test_market_movers_testmarketmovers_test_build_scanner_payload",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_build_scanner_payload()"
     },
     {
@@ -1755,7 +1755,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L69",
       "id": "test_market_movers_testmarketmovers_test_get_filter_conditions_gainers",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_get_filter_conditions_gainers()"
     },
     {
@@ -1764,7 +1764,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L77",
       "id": "test_market_movers_testmarketmovers_test_get_filter_conditions_penny_stocks",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_get_filter_conditions_penny_stocks()"
     },
     {
@@ -1773,7 +1773,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L85",
       "id": "test_market_movers_testmarketmovers_test_get_sort_config_gainers",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_get_sort_config_gainers()"
     },
     {
@@ -1782,7 +1782,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L92",
       "id": "test_market_movers_testmarketmovers_test_get_sort_config_losers",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_get_sort_config_losers()"
     },
     {
@@ -1791,7 +1791,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L99",
       "id": "test_market_movers_testmarketmovers_test_get_sort_config_most_active",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_get_sort_config_most_active()"
     },
     {
@@ -1827,7 +1827,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L167",
       "id": "test_market_movers_testmarketmovers_test_scrape_real_gainers",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_scrape_real_gainers()"
     },
     {
@@ -1836,7 +1836,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L182",
       "id": "test_market_movers_testmarketmovers_test_scrape_real_losers",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_scrape_real_losers()"
     },
     {
@@ -1845,7 +1845,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L197",
       "id": "test_market_movers_testmarketmovers_test_scrape_real_penny_stocks",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_scrape_real_penny_stocks()"
     },
     {
@@ -1854,7 +1854,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L211",
       "id": "test_market_movers_testmarketmovers_test_scrape_with_custom_fields",
-      "community": 7,
+      "community": 6,
       "norm_label": ".test_scrape_with_custom_fields()"
     },
     {
@@ -1863,7 +1863,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L18",
       "id": "test_market_movers_rationale_18",
-      "community": 7,
+      "community": 6,
       "norm_label": "fixture to create an instance of marketmovers for testing."
     },
     {
@@ -1872,7 +1872,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L22",
       "id": "test_market_movers_rationale_22",
-      "community": 7,
+      "community": 6,
       "norm_label": "test validation of valid markets."
     },
     {
@@ -1881,7 +1881,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L31",
       "id": "test_market_movers_rationale_31",
-      "community": 7,
+      "community": 6,
       "norm_label": "test validation of invalid market."
     },
     {
@@ -1890,7 +1890,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L36",
       "id": "test_market_movers_rationale_36",
-      "community": 7,
+      "community": 6,
       "norm_label": "test validation of valid categories."
     },
     {
@@ -1899,7 +1899,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L45",
       "id": "test_market_movers_rationale_45",
-      "community": 7,
+      "community": 6,
       "norm_label": "test validation of invalid category."
     },
     {
@@ -1908,7 +1908,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L50",
       "id": "test_market_movers_rationale_50",
-      "community": 7,
+      "community": 6,
       "norm_label": "test getting correct scanner urls for different markets."
     },
     {
@@ -1917,7 +1917,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L56",
       "id": "test_market_movers_rationale_56",
-      "community": 7,
+      "community": 6,
       "norm_label": "test building scanner payload."
     },
     {
@@ -1926,7 +1926,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L70",
       "id": "test_market_movers_rationale_70",
-      "community": 7,
+      "community": 6,
       "norm_label": "test filter conditions for gainers."
     },
     {
@@ -1935,7 +1935,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L78",
       "id": "test_market_movers_rationale_78",
-      "community": 7,
+      "community": 6,
       "norm_label": "test filter conditions for penny stocks."
     },
     {
@@ -1944,7 +1944,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L86",
       "id": "test_market_movers_rationale_86",
-      "community": 7,
+      "community": 6,
       "norm_label": "test sort configuration for gainers."
     },
     {
@@ -1953,7 +1953,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L93",
       "id": "test_market_movers_rationale_93",
-      "community": 7,
+      "community": 6,
       "norm_label": "test sort configuration for losers."
     },
     {
@@ -1962,7 +1962,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L100",
       "id": "test_market_movers_rationale_100",
-      "community": 7,
+      "community": 6,
       "norm_label": "test sort configuration for most active."
     },
     {
@@ -1971,7 +1971,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L108",
       "id": "test_market_movers_rationale_108",
-      "community": 7,
+      "community": 6,
       "norm_label": "test successful scraping of market movers."
     },
     {
@@ -1980,7 +1980,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L138",
       "id": "test_market_movers_rationale_138",
-      "community": 7,
+      "community": 6,
       "norm_label": "test scraping with http error."
     },
     {
@@ -1989,7 +1989,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L155",
       "id": "test_market_movers_rationale_155",
-      "community": 7,
+      "community": 6,
       "norm_label": "test scraping with request exception."
     },
     {
@@ -1998,7 +1998,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L168",
       "id": "test_market_movers_rationale_168",
-      "community": 7,
+      "community": 6,
       "norm_label": "test scraping real gainers data."
     },
     {
@@ -2007,7 +2007,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L183",
       "id": "test_market_movers_rationale_183",
-      "community": 7,
+      "community": 6,
       "norm_label": "test scraping real losers data."
     },
     {
@@ -2016,7 +2016,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L198",
       "id": "test_market_movers_rationale_198",
-      "community": 7,
+      "community": 6,
       "norm_label": "test scraping real penny stocks data."
     },
     {
@@ -2025,7 +2025,7 @@
       "source_file": "tests\\test_market_movers.py",
       "source_location": "L212",
       "id": "test_market_movers_rationale_212",
-      "community": 7,
+      "community": 6,
       "norm_label": "test scraping with custom fields."
     },
     {
@@ -2412,7 +2412,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L1",
       "id": "tests_test_news_py",
-      "community": 15,
+      "community": 14,
       "norm_label": "test_news.py"
     },
     {
@@ -2421,7 +2421,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L15",
       "id": "test_news_testnews",
-      "community": 15,
+      "community": 14,
       "norm_label": "testnews"
     },
     {
@@ -2430,7 +2430,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L17",
       "id": "test_news_news_scraper",
-      "community": 15,
+      "community": 14,
       "norm_label": "news_scraper()"
     },
     {
@@ -2439,7 +2439,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L21",
       "id": "test_news_testnews_test_scrape_headlines_by_symbol",
-      "community": 15,
+      "community": 14,
       "norm_label": ".test_scrape_headlines_by_symbol()"
     },
     {
@@ -2448,7 +2448,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L42",
       "id": "test_news_testnews_test_scrape_headlines_with_provider",
-      "community": 15,
+      "community": 14,
       "norm_label": ".test_scrape_headlines_with_provider()"
     },
     {
@@ -2457,7 +2457,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L58",
       "id": "test_news_testnews_test_scrape_news_content",
-      "community": 15,
+      "community": 14,
       "norm_label": ".test_scrape_news_content()"
     },
     {
@@ -2466,7 +2466,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L89",
       "id": "test_news_test_scrape_headlines_no_data",
-      "community": 15,
+      "community": 14,
       "norm_label": "test_scrape_headlines_no_data()"
     },
     {
@@ -2475,7 +2475,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L107",
       "id": "test_news_testnews_test_scrape_headlines_with_area_filter",
-      "community": 15,
+      "community": 14,
       "norm_label": ".test_scrape_headlines_with_area_filter()"
     },
     {
@@ -2484,7 +2484,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L123",
       "id": "test_news_testnews_test_scrape_headlines_sort_options",
-      "community": 15,
+      "community": 14,
       "norm_label": ".test_scrape_headlines_sort_options()"
     },
     {
@@ -2493,7 +2493,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L18",
       "id": "test_news_rationale_18",
-      "community": 15,
+      "community": 14,
       "norm_label": "fixture to create an instance of newsscraper for testing."
     },
     {
@@ -2502,7 +2502,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L22",
       "id": "test_news_rationale_22",
-      "community": 15,
+      "community": 14,
       "norm_label": "test scraping news headlines by symbol."
     },
     {
@@ -2511,7 +2511,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L43",
       "id": "test_news_rationale_43",
-      "community": 15,
+      "community": 14,
       "norm_label": "test scraping news headlines with specific provider."
     },
     {
@@ -2520,7 +2520,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L59",
       "id": "test_news_rationale_59",
-      "community": 15,
+      "community": 14,
       "norm_label": "test scraping detailed news content."
     },
     {
@@ -2529,7 +2529,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L90",
       "id": "test_news_rationale_90",
-      "community": 15,
+      "community": 14,
       "norm_label": "test handling of no news found."
     },
     {
@@ -2538,7 +2538,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L108",
       "id": "test_news_rationale_108",
-      "community": 15,
+      "community": 14,
       "norm_label": "test scraping news headlines with area filter."
     },
     {
@@ -2547,7 +2547,7 @@
       "source_file": "tests\\test_news.py",
       "source_location": "L124",
       "id": "test_news_rationale_124",
-      "community": 15,
+      "community": 14,
       "norm_label": "test different sort options for news headlines."
     },
     {
@@ -2898,7 +2898,7 @@
       "source_file": "tests\\test_realtime_price.py",
       "source_location": "L1",
       "id": "tests_test_realtime_price_py",
-      "community": 14,
+      "community": 13,
       "norm_label": "test_realtime_price.py"
     },
     {
@@ -2907,7 +2907,7 @@
       "source_file": "tests\\test_realtime_price.py",
       "source_location": "L16",
       "id": "test_realtime_price_testrealtimedata",
-      "community": 14,
+      "community": 13,
       "norm_label": "testrealtimedata"
     },
     {
@@ -2916,7 +2916,7 @@
       "source_file": "tests\\test_realtime_price.py",
       "source_location": "L19",
       "id": "test_realtime_price_test_returns_generator",
-      "community": 14,
+      "community": 13,
       "norm_label": "test_returns_generator()"
     },
     {
@@ -2925,7 +2925,7 @@
       "source_file": "tests\\test_realtime_price.py",
       "source_location": "L37",
       "id": "test_realtime_price_test_generator_yields_valid_data",
-      "community": 14,
+      "community": 13,
       "norm_label": "test_generator_yields_valid_data()"
     },
     {
@@ -2934,7 +2934,7 @@
       "source_file": "tests\\test_realtime_price.py",
       "source_location": "L1",
       "id": "test_realtime_price_rationale_1",
-      "community": 14,
+      "community": 13,
       "norm_label": "test script for websocket realtime data generator"
     },
     {
@@ -2943,7 +2943,7 @@
       "source_file": "tests\\test_realtime_price.py",
       "source_location": "L20",
       "id": "test_realtime_price_rationale_20",
-      "community": 14,
+      "community": 13,
       "norm_label": "test that the method returns a generator."
     },
     {
@@ -2952,7 +2952,7 @@
       "source_file": "tests\\test_realtime_price.py",
       "source_location": "L38",
       "id": "test_realtime_price_rationale_38",
-      "community": 14,
+      "community": 13,
       "norm_label": "test that the generator yields valid data."
     },
     {
@@ -2961,7 +2961,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L1",
       "id": "tests_test_screener_py",
-      "community": 10,
+      "community": 8,
       "norm_label": "test_screener.py"
     },
     {
@@ -2970,7 +2970,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L15",
       "id": "test_screener_testscreener",
-      "community": 10,
+      "community": 8,
       "norm_label": "testscreener"
     },
     {
@@ -2979,7 +2979,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L17",
       "id": "test_screener_screener",
-      "community": 10,
+      "community": 8,
       "norm_label": "screener()"
     },
     {
@@ -2988,7 +2988,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L21",
       "id": "test_screener_testscreener_test_validate_market_valid",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_validate_market_valid()"
     },
     {
@@ -2997,7 +2997,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L30",
       "id": "test_screener_testscreener_test_validate_market_invalid",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_validate_market_invalid()"
     },
     {
@@ -3006,7 +3006,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L35",
       "id": "test_screener_testscreener_test_get_default_columns_stock",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_get_default_columns_stock()"
     },
     {
@@ -3015,7 +3015,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L43",
       "id": "test_screener_testscreener_test_get_default_columns_crypto",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_get_default_columns_crypto()"
     },
     {
@@ -3024,7 +3024,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L50",
       "id": "test_screener_testscreener_test_get_default_columns_forex",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_get_default_columns_forex()"
     },
     {
@@ -3033,7 +3033,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L57",
       "id": "test_screener_testscreener_test_build_payload_basic",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_build_payload_basic()"
     },
     {
@@ -3042,7 +3042,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L66",
       "id": "test_screener_testscreener_test_build_payload_with_filters",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_build_payload_with_filters()"
     },
     {
@@ -3051,7 +3051,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L77",
       "id": "test_screener_testscreener_test_build_payload_with_sort",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_build_payload_with_sort()"
     },
     {
@@ -3060,7 +3060,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L86",
       "id": "test_screener_testscreener_test_build_payload_with_custom_columns",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_build_payload_with_custom_columns()"
     },
     {
@@ -3069,7 +3069,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L94",
       "id": "test_screener_test_screen_success",
-      "community": 10,
+      "community": 8,
       "norm_label": "test_screen_success()"
     },
     {
@@ -3078,7 +3078,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L125",
       "id": "test_screener_test_screen_with_filters",
-      "community": 10,
+      "community": 8,
       "norm_label": "test_screen_with_filters()"
     },
     {
@@ -3087,7 +3087,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L153",
       "id": "test_screener_test_screen_http_error",
-      "community": 10,
+      "community": 8,
       "norm_label": "test_screen_http_error()"
     },
     {
@@ -3096,7 +3096,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L170",
       "id": "test_screener_test_screen_request_exception",
-      "community": 10,
+      "community": 8,
       "norm_label": "test_screen_request_exception()"
     },
     {
@@ -3105,7 +3105,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L183",
       "id": "test_screener_testscreener_test_screen_real_america",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_screen_real_america()"
     },
     {
@@ -3114,7 +3114,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L204",
       "id": "test_screener_testscreener_test_screen_real_crypto",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_screen_real_crypto()"
     },
     {
@@ -3123,7 +3123,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L219",
       "id": "test_screener_testscreener_test_screen_real_forex",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_screen_real_forex()"
     },
     {
@@ -3132,7 +3132,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L232",
       "id": "test_screener_testscreener_test_screen_with_custom_columns",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_screen_with_custom_columns()"
     },
     {
@@ -3141,7 +3141,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L250",
       "id": "test_screener_testscreener_test_screen_with_range_filter",
-      "community": 10,
+      "community": 8,
       "norm_label": ".test_screen_with_range_filter()"
     },
     {
@@ -3150,7 +3150,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L18",
       "id": "test_screener_rationale_18",
-      "community": 10,
+      "community": 8,
       "norm_label": "fixture to create an instance of screener for testing."
     },
     {
@@ -3159,7 +3159,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L22",
       "id": "test_screener_rationale_22",
-      "community": 10,
+      "community": 8,
       "norm_label": "test validation of valid markets."
     },
     {
@@ -3168,7 +3168,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L31",
       "id": "test_screener_rationale_31",
-      "community": 10,
+      "community": 8,
       "norm_label": "test validation of invalid market."
     },
     {
@@ -3177,7 +3177,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L36",
       "id": "test_screener_rationale_36",
-      "community": 10,
+      "community": 8,
       "norm_label": "test getting default columns for stock market."
     },
     {
@@ -3186,7 +3186,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L44",
       "id": "test_screener_rationale_44",
-      "community": 10,
+      "community": 8,
       "norm_label": "test getting default columns for crypto market."
     },
     {
@@ -3195,7 +3195,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L51",
       "id": "test_screener_rationale_51",
-      "community": 10,
+      "community": 8,
       "norm_label": "test getting default columns for forex market."
     },
     {
@@ -3204,7 +3204,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L58",
       "id": "test_screener_rationale_58",
-      "community": 10,
+      "community": 8,
       "norm_label": "test building basic payload."
     },
     {
@@ -3213,7 +3213,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L67",
       "id": "test_screener_rationale_67",
-      "community": 10,
+      "community": 8,
       "norm_label": "test building payload with filters."
     },
     {
@@ -3222,7 +3222,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L78",
       "id": "test_screener_rationale_78",
-      "community": 10,
+      "community": 8,
       "norm_label": "test building payload with sort."
     },
     {
@@ -3231,7 +3231,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L87",
       "id": "test_screener_rationale_87",
-      "community": 10,
+      "community": 8,
       "norm_label": "test building payload with custom columns."
     },
     {
@@ -3240,7 +3240,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L95",
       "id": "test_screener_rationale_95",
-      "community": 10,
+      "community": 8,
       "norm_label": "test successful screening."
     },
     {
@@ -3249,7 +3249,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L126",
       "id": "test_screener_rationale_126",
-      "community": 10,
+      "community": 8,
       "norm_label": "test screening with filters."
     },
     {
@@ -3258,7 +3258,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L154",
       "id": "test_screener_rationale_154",
-      "community": 10,
+      "community": 8,
       "norm_label": "test screening with http error."
     },
     {
@@ -3267,7 +3267,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L171",
       "id": "test_screener_rationale_171",
-      "community": 10,
+      "community": 8,
       "norm_label": "test screening with request exception."
     },
     {
@@ -3276,7 +3276,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L184",
       "id": "test_screener_rationale_184",
-      "community": 10,
+      "community": 8,
       "norm_label": "test screening real us stocks."
     },
     {
@@ -3285,7 +3285,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L205",
       "id": "test_screener_rationale_205",
-      "community": 10,
+      "community": 8,
       "norm_label": "test screening real crypto."
     },
     {
@@ -3294,7 +3294,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L220",
       "id": "test_screener_rationale_220",
-      "community": 10,
+      "community": 8,
       "norm_label": "test screening real forex pairs."
     },
     {
@@ -3303,7 +3303,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L233",
       "id": "test_screener_rationale_233",
-      "community": 10,
+      "community": 8,
       "norm_label": "test screening with custom columns."
     },
     {
@@ -3312,7 +3312,7 @@
       "source_file": "tests\\test_screener.py",
       "source_location": "L251",
       "id": "test_screener_rationale_251",
-      "community": 10,
+      "community": 8,
       "norm_label": "test screening with range filter."
     },
     {
@@ -3996,7 +3996,7 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L726",
       "id": "server_lifespan",
-      "community": 12,
+      "community": 11,
       "norm_label": "lifespan()"
     },
     {
@@ -4005,7 +4005,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L60",
       "id": "server_health",
-      "community": 6,
+      "community": 9,
       "norm_label": "health()"
     },
     {
@@ -4023,7 +4023,7 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L830",
       "id": "server_repair_gaps",
-      "community": 0,
+      "community": 11,
       "norm_label": "repair_gaps()"
     },
     {
@@ -4093,7 +4093,7 @@
       "label": "get_swings_all()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1156",
+      "source_location": "L1165",
       "id": "server_get_swings_all",
       "community": 0,
       "norm_label": "get_swings_all()"
@@ -4102,7 +4102,7 @@
       "label": "get_features()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1270",
+      "source_location": "L1279",
       "id": "server_get_features",
       "community": 0,
       "norm_label": "get_features()"
@@ -4111,7 +4111,7 @@
       "label": "get_indicators()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1281",
+      "source_location": "L1290",
       "id": "server_get_indicators",
       "community": 3,
       "norm_label": "get_indicators()"
@@ -4120,7 +4120,7 @@
       "label": "get_watchlist()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1299",
+      "source_location": "L1308",
       "id": "server_get_watchlist",
       "community": 0,
       "norm_label": "get_watchlist()"
@@ -4129,7 +4129,7 @@
       "label": "get_all_boxes()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1346",
+      "source_location": "L1355",
       "id": "server_get_all_boxes",
       "community": 0,
       "norm_label": "get_all_boxes()"
@@ -4138,7 +4138,7 @@
       "label": "get_training_pending()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1396",
+      "source_location": "L1405",
       "id": "server_get_training_pending",
       "community": 0,
       "norm_label": "get_training_pending()"
@@ -4147,7 +4147,7 @@
       "label": "get_needs_screenshot()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1405",
+      "source_location": "L1414",
       "id": "server_get_needs_screenshot",
       "community": 0,
       "norm_label": "get_needs_screenshot()"
@@ -4156,7 +4156,7 @@
       "label": "upload_screenshot()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1414",
+      "source_location": "L1423",
       "id": "server_upload_screenshot",
       "community": 0,
       "norm_label": "upload_screenshot()"
@@ -4165,7 +4165,7 @@
       "label": "undo_training_label()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1427",
+      "source_location": "L1436",
       "id": "server_undo_training_label",
       "community": 0,
       "norm_label": "undo_training_label()"
@@ -4174,7 +4174,7 @@
       "label": "get_training_stats()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1439",
+      "source_location": "L1448",
       "id": "server_get_training_stats",
       "community": 0,
       "norm_label": "get_training_stats()"
@@ -4183,7 +4183,7 @@
       "label": "get_training_lessons()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1456",
+      "source_location": "L1465",
       "id": "server_get_training_lessons",
       "community": 0,
       "norm_label": "get_training_lessons()"
@@ -4192,7 +4192,7 @@
       "label": "submit_training_label()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1497",
+      "source_location": "L1506",
       "id": "server_submit_training_label",
       "community": 0,
       "norm_label": "submit_training_label()"
@@ -4201,7 +4201,7 @@
       "label": "get_nn_status()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1530",
+      "source_location": "L1539",
       "id": "server_get_nn_status",
       "community": 0,
       "norm_label": "get_nn_status()"
@@ -4210,7 +4210,7 @@
       "label": "skip_training_sample()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1539",
+      "source_location": "L1548",
       "id": "server_skip_training_sample",
       "community": 0,
       "norm_label": "skip_training_sample()"
@@ -4219,7 +4219,7 @@
       "label": "manual_retrain_nn()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1552",
+      "source_location": "L1561",
       "id": "server_manual_retrain_nn",
       "community": 0,
       "norm_label": "manual_retrain_nn()"
@@ -4228,7 +4228,7 @@
       "label": "get_nn_training_progress()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1562",
+      "source_location": "L1571",
       "id": "server_get_nn_training_progress",
       "community": 0,
       "norm_label": "get_nn_training_progress()"
@@ -4237,10 +4237,19 @@
       "label": "sync_training_queue()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1572",
+      "source_location": "L1581",
       "id": "server_sync_training_queue",
       "community": 0,
       "norm_label": "sync_training_queue()"
+    },
+    {
+      "label": "get_nn_refined_zones()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1615",
+      "id": "server_get_nn_refined_zones",
+      "community": 23,
+      "norm_label": "get_nn_refined_zones()"
     },
     {
       "label": "Trading Intelligence API \u2014 optimized.  Changes:   - asyncio.Lock guards all s",
@@ -4248,7 +4257,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L1",
       "id": "server_rationale_1",
-      "community": 6,
+      "community": 9,
       "norm_label": "trading intelligence api \u2014 optimized.  changes:   - asyncio.lock guards all s"
     },
     {
@@ -4428,7 +4437,7 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L831",
       "id": "server_rationale_831",
-      "community": 0,
+      "community": 11,
       "norm_label": "immediately trigger a full gap-fill for all persistent series.     use this to"
     },
     {
@@ -4480,8 +4489,8 @@
       "label": "3-bar pivot swing highs/lows with server-side 3+3 active unmitigated selection.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1157",
-      "id": "server_rationale_1157",
+      "source_location": "L1166",
+      "id": "server_rationale_1166",
       "community": 0,
       "norm_label": "3-bar pivot swing highs/lows with server-side 3+3 active unmitigated selection."
     },
@@ -4489,8 +4498,8 @@
       "label": "Async watchlist \u2014 runs blocking Indicators.scrape() in a thread pool     so it",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1300",
-      "id": "server_rationale_1300",
+      "source_location": "L1309",
+      "id": "server_rationale_1309",
       "community": 0,
       "norm_label": "async watchlist \u2014 runs blocking indicators.scrape() in a thread pool     so it"
     },
@@ -4498,8 +4507,8 @@
       "label": "Returns ALL boxes regardless of status, with full ohlc_context for canvas render",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1347",
-      "id": "server_rationale_1347",
+      "source_location": "L1356",
+      "id": "server_rationale_1356",
       "community": 0,
       "norm_label": "returns all boxes regardless of status, with full ohlc_context for canvas render"
     },
@@ -4507,8 +4516,8 @@
       "label": "Trigger the PyTorch CNN training manually.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1553",
-      "id": "server_rationale_1553",
+      "source_location": "L1562",
+      "id": "server_rationale_1562",
       "community": 0,
       "norm_label": "trigger the pytorch cnn training manually."
     },
@@ -4516,8 +4525,8 @@
       "label": "Return the real-time logs and loss of the CNN trainer.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1563",
-      "id": "server_rationale_1563",
+      "source_location": "L1572",
+      "id": "server_rationale_1572",
       "community": 0,
       "norm_label": "return the real-time logs and loss of the cnn trainer."
     },
@@ -4525,10 +4534,19 @@
       "label": "Force-sync all currently detected consolidations into the training DB.     Allo",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1573",
-      "id": "server_rationale_1573",
+      "source_location": "L1582",
+      "id": "server_rationale_1582",
       "community": 0,
       "norm_label": "force-sync all currently detected consolidations into the training db.     allo"
+    },
+    {
+      "label": "Return consolidation zones enriched with NN-predicted refined box coordinates.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1616",
+      "id": "server_rationale_1616",
+      "community": 23,
+      "norm_label": "return consolidation zones enriched with nn-predicted refined box coordinates."
     },
     {
       "label": "craco.config.js",
@@ -4779,7 +4797,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_marketoverview_jsx",
-      "community": 24,
+      "community": 25,
       "norm_label": "marketoverview.jsx"
     },
     {
@@ -4788,7 +4806,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L5",
       "id": "marketoverview_minisparkline",
-      "community": 24,
+      "community": 25,
       "norm_label": "minisparkline()"
     },
     {
@@ -4797,7 +4815,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L29",
       "id": "marketoverview_marketrow",
-      "community": 24,
+      "community": 25,
       "norm_label": "marketrow()"
     },
     {
@@ -4806,7 +4824,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L66",
       "id": "marketoverview_marketsummarytab",
-      "community": 24,
+      "community": 25,
       "norm_label": "marketsummarytab()"
     },
     {
@@ -4815,7 +4833,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L119",
       "id": "marketoverview_cryptotab",
-      "community": 24,
+      "community": 25,
       "norm_label": "cryptotab()"
     },
     {
@@ -4824,7 +4842,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L149",
       "id": "marketoverview_usstockstab",
-      "community": 24,
+      "community": 25,
       "norm_label": "usstockstab()"
     },
     {
@@ -4833,7 +4851,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L163",
       "id": "marketoverview_futurestab",
-      "community": 24,
+      "community": 25,
       "norm_label": "futurestab()"
     },
     {
@@ -4842,7 +4860,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L188",
       "id": "marketoverview_forextab",
-      "community": 24,
+      "community": 25,
       "norm_label": "forextab()"
     },
     {
@@ -4851,7 +4869,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L201",
       "id": "marketoverview_economytab",
-      "community": 24,
+      "community": 25,
       "norm_label": "economytab()"
     },
     {
@@ -4860,7 +4878,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L237",
       "id": "marketoverview_brokerstab",
-      "community": 24,
+      "community": 25,
       "norm_label": "brokerstab()"
     },
     {
@@ -4869,7 +4887,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\MarketOverview.jsx",
       "source_location": "L289",
       "id": "marketoverview_marketoverview",
-      "community": 24,
+      "community": 25,
       "norm_label": "marketoverview()"
     },
     {
@@ -4995,7 +5013,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\DecisionCluster.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_canvas_decisioncluster_jsx",
-      "community": 19,
+      "community": 21,
       "norm_label": "decisioncluster.jsx"
     },
     {
@@ -5004,7 +5022,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\DecisionCluster.jsx",
       "source_location": "L14",
       "id": "decisioncluster_decisioncluster",
-      "community": 19,
+      "community": 21,
       "norm_label": "decisioncluster()"
     },
     {
@@ -5013,7 +5031,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\DecisionCluster.jsx",
       "source_location": "L122",
       "id": "decisioncluster_chartboxcontainer",
-      "community": 19,
+      "community": 21,
       "norm_label": "chartboxcontainer()"
     },
     {
@@ -5022,7 +5040,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\DecisionCluster.jsx",
       "source_location": "L224",
       "id": "decisioncluster_btnstyle",
-      "community": 19,
+      "community": 21,
       "norm_label": "btnstyle()"
     },
     {
@@ -5107,10 +5125,19 @@
       "norm_label": "drawconsolidations()"
     },
     {
-      "label": "drawScenarios()",
+      "label": "drawNNBoxes()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
       "source_location": "L128",
+      "id": "renderers_drawnnboxes",
+      "community": 20,
+      "norm_label": "drawnnboxes()"
+    },
+    {
+      "label": "drawScenarios()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
+      "source_location": "L159",
       "id": "renderers_drawscenarios",
       "community": 20,
       "norm_label": "drawscenarios()"
@@ -5119,7 +5146,7 @@
       "label": "drawNowLine()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L248",
+      "source_location": "L279",
       "id": "renderers_drawnowline",
       "community": 20,
       "norm_label": "drawnowline()"
@@ -5128,7 +5155,7 @@
       "label": "drawCrosshair()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L264",
+      "source_location": "L295",
       "id": "renderers_drawcrosshair",
       "community": 20,
       "norm_label": "drawcrosshair()"
@@ -5137,7 +5164,7 @@
       "label": "getTimeStep()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L282",
+      "source_location": "L313",
       "id": "renderers_gettimestep",
       "community": 20,
       "norm_label": "gettimestep()"
@@ -5146,7 +5173,7 @@
       "label": "getPriceStep()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L291",
+      "source_location": "L322",
       "id": "renderers_getpricestep",
       "community": 20,
       "norm_label": "getpricestep()"
@@ -5211,7 +5238,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_chart_chartpage_jsx",
-      "community": 19,
+      "community": 21,
       "norm_label": "chartpage.jsx"
     },
     {
@@ -5220,7 +5247,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
       "source_location": "L39",
       "id": "chartpage_getsymbolprecision",
-      "community": 19,
+      "community": 21,
       "norm_label": "getsymbolprecision()"
     },
     {
@@ -5229,7 +5256,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
       "source_location": "L57",
       "id": "chartpage_getswingsettings",
-      "community": 19,
+      "community": 21,
       "norm_label": "getswingsettings()"
     },
     {
@@ -5238,7 +5265,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
       "source_location": "L63",
       "id": "chartpage_getconsolidationsettings",
-      "community": 19,
+      "community": 21,
       "norm_label": "getconsolidationsettings()"
     },
     {
@@ -5247,7 +5274,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
       "source_location": "L69",
       "id": "chartpage_resizehandle",
-      "community": 19,
+      "community": 21,
       "norm_label": "resizehandle()"
     },
     {
@@ -5256,7 +5283,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
       "source_location": "L82",
       "id": "chartpage_chartpage",
-      "community": 19,
+      "community": 21,
       "norm_label": "chartpage()"
     },
     {
@@ -5508,7 +5535,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\alert-dialog.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_alert_dialog_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "alert-dialog.jsx"
     },
     {
@@ -5517,7 +5544,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\alert-dialog.jsx",
       "source_location": "L38",
       "id": "alert_dialog_alertdialogheader",
-      "community": 11,
+      "community": 10,
       "norm_label": "alertdialogheader()"
     },
     {
@@ -5526,7 +5553,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\alert-dialog.jsx",
       "source_location": "L48",
       "id": "alert_dialog_alertdialogfooter",
-      "community": 11,
+      "community": 10,
       "norm_label": "alertdialogfooter()"
     },
     {
@@ -5544,7 +5571,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\badge.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_badge_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "badge.jsx"
     },
     {
@@ -5553,7 +5580,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\badge.jsx",
       "source_location": "L26",
       "id": "badge_badge",
-      "community": 11,
+      "community": 10,
       "norm_label": "badge()"
     },
     {
@@ -5562,7 +5589,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\breadcrumb.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_breadcrumb_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "breadcrumb.jsx"
     },
     {
@@ -5571,7 +5598,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\breadcrumb.jsx",
       "source_location": "L54",
       "id": "breadcrumb_breadcrumbseparator",
-      "community": 11,
+      "community": 10,
       "norm_label": "breadcrumbseparator()"
     },
     {
@@ -5580,7 +5607,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\breadcrumb.jsx",
       "source_location": "L69",
       "id": "breadcrumb_breadcrumbellipsis",
-      "community": 11,
+      "community": 10,
       "norm_label": "breadcrumbellipsis()"
     },
     {
@@ -5598,7 +5625,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\calendar.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_calendar_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "calendar.jsx"
     },
     {
@@ -5607,7 +5634,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\calendar.jsx",
       "source_location": "L8",
       "id": "calendar_calendar",
-      "community": 11,
+      "community": 10,
       "norm_label": "calendar()"
     },
     {
@@ -5661,7 +5688,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\command.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_command_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "command.jsx"
     },
     {
@@ -5670,7 +5697,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\command.jsx",
       "source_location": "L19",
       "id": "command_commanddialog",
-      "community": 11,
+      "community": 10,
       "norm_label": "commanddialog()"
     },
     {
@@ -5679,7 +5706,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\command.jsx",
       "source_location": "L94",
       "id": "command_commandshortcut",
-      "community": 11,
+      "community": 10,
       "norm_label": "commandshortcut()"
     },
     {
@@ -5688,7 +5715,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\context-menu.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_context_menu_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "context-menu.jsx"
     },
     {
@@ -5697,7 +5724,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\context-menu.jsx",
       "source_location": "L128",
       "id": "context_menu_contextmenushortcut",
-      "community": 11,
+      "community": 10,
       "norm_label": "contextmenushortcut()"
     },
     {
@@ -5706,7 +5733,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\dialog.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_dialog_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "dialog.jsx"
     },
     {
@@ -5715,7 +5742,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\dialog.jsx",
       "source_location": "L47",
       "id": "dialog_dialogheader",
-      "community": 11,
+      "community": 10,
       "norm_label": "dialogheader()"
     },
     {
@@ -5724,7 +5751,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\dialog.jsx",
       "source_location": "L57",
       "id": "dialog_dialogfooter",
-      "community": 11,
+      "community": 10,
       "norm_label": "dialogfooter()"
     },
     {
@@ -5733,7 +5760,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\drawer.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_drawer_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "drawer.jsx"
     },
     {
@@ -5742,7 +5769,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\drawer.jsx",
       "source_location": "L6",
       "id": "drawer_drawer",
-      "community": 11,
+      "community": 10,
       "norm_label": "drawer()"
     },
     {
@@ -5751,7 +5778,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\drawer.jsx",
       "source_location": "L45",
       "id": "drawer_drawerheader",
-      "community": 11,
+      "community": 10,
       "norm_label": "drawerheader()"
     },
     {
@@ -5760,7 +5787,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\drawer.jsx",
       "source_location": "L55",
       "id": "drawer_drawerfooter",
-      "community": 11,
+      "community": 10,
       "norm_label": "drawerfooter()"
     },
     {
@@ -5769,7 +5796,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\dropdown-menu.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_dropdown_menu_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "dropdown-menu.jsx"
     },
     {
@@ -5778,7 +5805,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\dropdown-menu.jsx",
       "source_location": "L128",
       "id": "dropdown_menu_dropdownmenushortcut",
-      "community": 11,
+      "community": 10,
       "norm_label": "dropdownmenushortcut()"
     },
     {
@@ -5832,7 +5859,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\menubar.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_menubar_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "menubar.jsx"
     },
     {
@@ -5841,7 +5868,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\menubar.jsx",
       "source_location": "L7",
       "id": "menubar_menubarmenu",
-      "community": 11,
+      "community": 10,
       "norm_label": "menubarmenu()"
     },
     {
@@ -5850,7 +5877,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\menubar.jsx",
       "source_location": "L13",
       "id": "menubar_menubargroup",
-      "community": 11,
+      "community": 10,
       "norm_label": "menubargroup()"
     },
     {
@@ -5859,7 +5886,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\menubar.jsx",
       "source_location": "L19",
       "id": "menubar_menubarportal",
-      "community": 11,
+      "community": 10,
       "norm_label": "menubarportal()"
     },
     {
@@ -5868,7 +5895,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\menubar.jsx",
       "source_location": "L25",
       "id": "menubar_menubarradiogroup",
-      "community": 11,
+      "community": 10,
       "norm_label": "menubarradiogroup()"
     },
     {
@@ -5877,7 +5904,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\menubar.jsx",
       "source_location": "L31",
       "id": "menubar_menubarsub",
-      "community": 11,
+      "community": 10,
       "norm_label": "menubarsub()"
     },
     {
@@ -5886,7 +5913,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\menubar.jsx",
       "source_location": "L169",
       "id": "menubar_menubarshortcut",
-      "community": 11,
+      "community": 10,
       "norm_label": "menubarshortcut()"
     },
     {
@@ -5895,7 +5922,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\pagination.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_pagination_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "pagination.jsx"
     },
     {
@@ -5904,7 +5931,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\pagination.jsx",
       "source_location": "L7",
       "id": "pagination_pagination",
-      "community": 11,
+      "community": 10,
       "norm_label": "pagination()"
     },
     {
@@ -5913,7 +5940,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\pagination.jsx",
       "source_location": "L32",
       "id": "pagination_paginationlink",
-      "community": 11,
+      "community": 10,
       "norm_label": "paginationlink()"
     },
     {
@@ -5922,7 +5949,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\pagination.jsx",
       "source_location": "L48",
       "id": "pagination_paginationprevious",
-      "community": 11,
+      "community": 10,
       "norm_label": "paginationprevious()"
     },
     {
@@ -5931,7 +5958,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\pagination.jsx",
       "source_location": "L63",
       "id": "pagination_paginationnext",
-      "community": 11,
+      "community": 10,
       "norm_label": "paginationnext()"
     },
     {
@@ -5940,7 +5967,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\pagination.jsx",
       "source_location": "L78",
       "id": "pagination_paginationellipsis",
-      "community": 11,
+      "community": 10,
       "norm_label": "paginationellipsis()"
     },
     {
@@ -5967,7 +5994,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\resizable.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_resizable_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "resizable.jsx"
     },
     {
@@ -5976,7 +6003,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\resizable.jsx",
       "source_location": "L6",
       "id": "resizable_resizablepanelgroup",
-      "community": 11,
+      "community": 10,
       "norm_label": "resizablepanelgroup()"
     },
     {
@@ -5985,7 +6012,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\resizable.jsx",
       "source_location": "L20",
       "id": "resizable_resizablehandle",
-      "community": 11,
+      "community": 10,
       "norm_label": "resizablehandle()"
     },
     {
@@ -6012,7 +6039,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\sheet.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_sheet_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "sheet.jsx"
     },
     {
@@ -6021,7 +6048,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\sheet.jsx",
       "source_location": "L61",
       "id": "sheet_sheetheader",
-      "community": 11,
+      "community": 10,
       "norm_label": "sheetheader()"
     },
     {
@@ -6030,7 +6057,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\sheet.jsx",
       "source_location": "L71",
       "id": "sheet_sheetfooter",
-      "community": 11,
+      "community": 10,
       "norm_label": "sheetfooter()"
     },
     {
@@ -6039,7 +6066,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\skeleton.jsx",
       "source_location": "L1",
       "id": "trading_project_frontend_src_components_ui_skeleton_jsx",
-      "community": 11,
+      "community": 10,
       "norm_label": "skeleton.jsx"
     },
     {
@@ -6048,7 +6075,7 @@
       "source_file": "Trading-Project\\frontend\\src\\components\\ui\\skeleton.jsx",
       "source_location": "L3",
       "id": "skeleton_skeleton",
-      "community": 11,
+      "community": 10,
       "norm_label": "skeleton()"
     },
     {
@@ -6300,7 +6327,7 @@
       "source_file": "Trading-Project\\frontend\\src\\hooks\\useChartMemory.js",
       "source_location": "L1",
       "id": "trading_project_frontend_src_hooks_usechartmemory_js",
-      "community": 19,
+      "community": 21,
       "norm_label": "usechartmemory.js"
     },
     {
@@ -6309,7 +6336,7 @@
       "source_file": "Trading-Project\\frontend\\src\\hooks\\useChartMemory.js",
       "source_location": "L17",
       "id": "usechartmemory_readstorage",
-      "community": 19,
+      "community": 21,
       "norm_label": "readstorage()"
     },
     {
@@ -6318,7 +6345,7 @@
       "source_file": "Trading-Project\\frontend\\src\\hooks\\useChartMemory.js",
       "source_location": "L27",
       "id": "usechartmemory_writestorage",
-      "community": 19,
+      "community": 21,
       "norm_label": "writestorage()"
     },
     {
@@ -6327,7 +6354,7 @@
       "source_file": "Trading-Project\\frontend\\src\\hooks\\useChartMemory.js",
       "source_location": "L35",
       "id": "usechartmemory_usechartmemory",
-      "community": 19,
+      "community": 21,
       "norm_label": "usechartmemory()"
     },
     {
@@ -6336,7 +6363,7 @@
       "source_file": "Trading-Project\\frontend\\src\\hooks\\useChartMemory.js",
       "source_location": "L60",
       "id": "usechartmemory_clearchartmemory",
-      "community": 19,
+      "community": 21,
       "norm_label": "clearchartmemory()"
     },
     {
@@ -6345,7 +6372,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L1",
       "id": "trading_project_frontend_src_lib_swinglevels_js",
-      "community": 21,
+      "community": 22,
       "norm_label": "swinglevels.js"
     },
     {
@@ -6354,7 +6381,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L84",
       "id": "swinglevels_normalizetimeforchart",
-      "community": 21,
+      "community": 22,
       "norm_label": "normalizetimeforchart()"
     },
     {
@@ -6363,7 +6390,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L101",
       "id": "swinglevels_aggregatecandles",
-      "community": 21,
+      "community": 22,
       "norm_label": "aggregatecandles()"
     },
     {
@@ -6372,7 +6399,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L156",
       "id": "swinglevels_detectswings",
-      "community": 21,
+      "community": 22,
       "norm_label": "detectswings()"
     },
     {
@@ -6381,7 +6408,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L190",
       "id": "swinglevels_isfilled",
-      "community": 21,
+      "community": 22,
       "norm_label": "isfilled()"
     },
     {
@@ -6390,7 +6417,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L200",
       "id": "swinglevels_updatemitigationstate",
-      "community": 21,
+      "community": 22,
       "norm_label": "updatemitigationstate()"
     },
     {
@@ -6399,7 +6426,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L218",
       "id": "swinglevels_classifyswings",
-      "community": 21,
+      "community": 22,
       "norm_label": "classifyswings()"
     },
     {
@@ -6408,7 +6435,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L244",
       "id": "swinglevels_selectactiveswings",
-      "community": 21,
+      "community": 22,
       "norm_label": "selectactiveswings()"
     },
     {
@@ -6417,7 +6444,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L269",
       "id": "swinglevels_enforcemaxlines",
-      "community": 21,
+      "community": 22,
       "norm_label": "enforcemaxlines()"
     },
     {
@@ -6426,7 +6453,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L299",
       "id": "swinglevels_gethighertfs",
-      "community": 21,
+      "community": 22,
       "norm_label": "gethighertfs()"
     },
     {
@@ -6435,7 +6462,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L323",
       "id": "swinglevels_saveswingstomemory",
-      "community": 21,
+      "community": 22,
       "norm_label": "saveswingstomemory()"
     },
     {
@@ -6444,7 +6471,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L349",
       "id": "swinglevels_loadswingsfrommemory",
-      "community": 21,
+      "community": 22,
       "norm_label": "loadswingsfrommemory()"
     },
     {
@@ -6453,7 +6480,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L367",
       "id": "swinglevels_exportswingsascsv",
-      "community": 21,
+      "community": 22,
       "norm_label": "exportswingsascsv()"
     },
     {
@@ -6462,7 +6489,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
       "source_location": "L382",
       "id": "swinglevels_clearswingsfrommemory",
-      "community": 21,
+      "community": 22,
       "norm_label": "clearswingsfrommemory()"
     },
     {
@@ -6471,7 +6498,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\utils.js",
       "source_location": "L1",
       "id": "trading_project_frontend_src_lib_utils_js",
-      "community": 11,
+      "community": 10,
       "norm_label": "utils.js"
     },
     {
@@ -6480,7 +6507,7 @@
       "source_file": "Trading-Project\\frontend\\src\\lib\\utils.js",
       "source_location": "L4",
       "id": "utils_cn",
-      "community": 11,
+      "community": 10,
       "norm_label": "cn()"
     },
     {
@@ -6489,7 +6516,7 @@
       "source_file": "Trading-Project\\pipeline\\config.py",
       "source_location": "L1",
       "id": "trading_project_pipeline_config_py",
-      "community": 12,
+      "community": 11,
       "norm_label": "config.py"
     },
     {
@@ -6498,7 +6525,7 @@
       "source_file": "Trading-Project\\pipeline\\config.py",
       "source_location": "L7",
       "id": "config_config",
-      "community": 12,
+      "community": 11,
       "norm_label": "config"
     },
     {
@@ -6507,7 +6534,7 @@
       "source_file": "Trading-Project\\pipeline\\config.py",
       "source_location": "L8",
       "id": "config_config_init",
-      "community": 12,
+      "community": 11,
       "norm_label": ".__init__()"
     },
     {
@@ -6696,7 +6723,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\collector.py",
       "source_location": "L87",
       "id": "collector_datacollector_start",
-      "community": 12,
+      "community": 11,
       "norm_label": ".start()"
     },
     {
@@ -6705,7 +6732,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\collector.py",
       "source_location": "L112",
       "id": "collector_datacollector_stop",
-      "community": 12,
+      "community": 11,
       "norm_label": ".stop()"
     },
     {
@@ -6957,7 +6984,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L1",
       "id": "trading_project_pipeline_data_storage_py",
-      "community": 22,
+      "community": 9,
       "norm_label": "storage.py"
     },
     {
@@ -6966,7 +6993,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L7",
       "id": "storage_datastorage",
-      "community": 22,
+      "community": 9,
       "norm_label": "datastorage"
     },
     {
@@ -6975,7 +7002,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L12",
       "id": "storage_datastorage_init",
-      "community": 22,
+      "community": 9,
       "norm_label": ".__init__()"
     },
     {
@@ -6984,7 +7011,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L21",
       "id": "storage_datastorage_ensure_paths",
-      "community": 22,
+      "community": 9,
       "norm_label": "._ensure_paths()"
     },
     {
@@ -6993,7 +7020,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L43",
       "id": "storage_datastorage_append_candle",
-      "community": 22,
+      "community": 9,
       "norm_label": ".append_candle()"
     },
     {
@@ -7002,7 +7029,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L75",
       "id": "storage_datastorage_get_candles",
-      "community": 22,
+      "community": 9,
       "norm_label": ".get_candles()"
     },
     {
@@ -7011,7 +7038,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L87",
       "id": "storage_datastorage_prepend_candles",
-      "community": 22,
+      "community": 9,
       "norm_label": ".prepend_candles()"
     },
     {
@@ -7020,7 +7047,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L98",
       "id": "storage_datastorage_get_features",
-      "community": 22,
+      "community": 9,
       "norm_label": ".get_features()"
     },
     {
@@ -7029,7 +7056,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L106",
       "id": "storage_datastorage_on_validated_candle",
-      "community": 22,
+      "community": 9,
       "norm_label": ".on_validated_candle()"
     },
     {
@@ -7038,7 +7065,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L109",
       "id": "storage_datastorage_on_new_feature",
-      "community": 22,
+      "community": 9,
       "norm_label": ".on_new_feature()"
     },
     {
@@ -7047,7 +7074,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L8",
       "id": "storage_rationale_8",
-      "community": 22,
+      "community": 9,
       "norm_label": "in-memory storage for raw and derived candles.     thread-safe implementation f"
     },
     {
@@ -7056,7 +7083,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L44",
       "id": "storage_rationale_44",
-      "community": 22,
+      "community": 9,
       "norm_label": "append or update a candle based on timestamp."
     },
     {
@@ -7065,7 +7092,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L76",
       "id": "storage_rationale_76",
-      "community": 22,
+      "community": 9,
       "norm_label": "fetch the last 'count' candles, optionally older than end_time."
     },
     {
@@ -7074,7 +7101,7 @@
       "source_file": "Trading-Project\\pipeline\\data\\storage.py",
       "source_location": "L88",
       "id": "storage_rationale_88",
-      "community": 22,
+      "community": 9,
       "norm_label": "prepend a chunk of older candles to the cache (avoiding duplicates)."
     },
     {
@@ -7299,7 +7326,7 @@
       "source_file": "Trading-Project\\project\\main.py",
       "source_location": "L1",
       "id": "trading_project_project_main_py",
-      "community": 6,
+      "community": 9,
       "norm_label": "main.py"
     },
     {
@@ -7308,7 +7335,7 @@
       "source_file": "Trading-Project\\project\\main.py",
       "source_location": "L41",
       "id": "main_run_engine_cycle",
-      "community": 6,
+      "community": 9,
       "norm_label": "run_engine_cycle()"
     },
     {
@@ -7317,7 +7344,7 @@
       "source_file": "Trading-Project\\project\\main.py",
       "source_location": "L98",
       "id": "main_fetch_from_api",
-      "community": 6,
+      "community": 9,
       "norm_label": "_fetch_from_api()"
     },
     {
@@ -7326,7 +7353,7 @@
       "source_file": "Trading-Project\\project\\main.py",
       "source_location": "L111",
       "id": "main_live_feed_loop",
-      "community": 6,
+      "community": 9,
       "norm_label": "_live_feed_loop()"
     },
     {
@@ -7335,7 +7362,7 @@
       "source_file": "Trading-Project\\project\\main.py",
       "source_location": "L150",
       "id": "main_engine_lifespan",
-      "community": 6,
+      "community": 9,
       "norm_label": "engine_lifespan()"
     },
     {
@@ -7344,7 +7371,7 @@
       "source_file": "Trading-Project\\project\\main.py",
       "source_location": "L1",
       "id": "main_rationale_1",
-      "community": 6,
+      "community": 9,
       "norm_label": "multi-timeframe engine \u2014 main entry point (optimized).  changes:   1. uses moder"
     },
     {
@@ -7353,7 +7380,7 @@
       "source_file": "Trading-Project\\project\\main.py",
       "source_location": "L42",
       "id": "main_rationale_42",
-      "community": 6,
+      "community": 9,
       "norm_label": "one full analysis cycle:       1. fetch candles for all timeframes (once per tf"
     },
     {
@@ -7362,7 +7389,7 @@
       "source_file": "Trading-Project\\project\\main.py",
       "source_location": "L112",
       "id": "main_rationale_112",
-      "community": 6,
+      "community": 9,
       "norm_label": "continuously poll backend (dashboard chart source) and run engine cycle."
     },
     {
@@ -7371,7 +7398,7 @@
       "source_file": "Trading-Project\\project\\alerts\\filters.py",
       "source_location": "L1",
       "id": "trading_project_project_alerts_filters_py",
-      "community": 6,
+      "community": 18,
       "norm_label": "filters.py"
     },
     {
@@ -7380,7 +7407,7 @@
       "source_file": "Trading-Project\\project\\alerts\\filters.py",
       "source_location": "L4",
       "id": "filters_is_valid_time",
-      "community": 6,
+      "community": 18,
       "norm_label": "is_valid_time()"
     },
     {
@@ -7389,7 +7416,7 @@
       "source_file": "Trading-Project\\project\\alerts\\filters.py",
       "source_location": "L10",
       "id": "filters_is_valid_timeframe",
-      "community": 6,
+      "community": 18,
       "norm_label": "is_valid_timeframe()"
     },
     {
@@ -7398,7 +7425,7 @@
       "source_file": "Trading-Project\\project\\alerts\\filters.py",
       "source_location": "L14",
       "id": "filters_is_valid_event",
-      "community": 6,
+      "community": 18,
       "norm_label": "is_valid_event()"
     },
     {
@@ -7407,7 +7434,7 @@
       "source_file": "Trading-Project\\project\\alerts\\filters.py",
       "source_location": "L5",
       "id": "filters_rationale_5",
-      "community": 6,
+      "community": 18,
       "norm_label": "check if current time is between 11:00 and 22:00 ist."
     },
     {
@@ -7416,7 +7443,7 @@
       "source_file": "Trading-Project\\project\\alerts\\filters.py",
       "source_location": "L11",
       "id": "filters_rationale_11",
-      "community": 6,
+      "community": 18,
       "norm_label": "check if timeframe is allowed for alerts."
     },
     {
@@ -7425,7 +7452,7 @@
       "source_file": "Trading-Project\\project\\alerts\\filters.py",
       "source_location": "L15",
       "id": "filters_rationale_15",
-      "community": 6,
+      "community": 18,
       "norm_label": "check if the event is stringently breakout or trap."
     },
     {
@@ -7434,7 +7461,7 @@
       "source_file": "Trading-Project\\project\\alerts\\manager.py",
       "source_location": "L1",
       "id": "trading_project_project_alerts_manager_py",
-      "community": 6,
+      "community": 18,
       "norm_label": "manager.py"
     },
     {
@@ -7443,7 +7470,7 @@
       "source_file": "Trading-Project\\project\\alerts\\manager.py",
       "source_location": "L21",
       "id": "manager_alertmanager",
-      "community": 6,
+      "community": 18,
       "norm_label": "alertmanager"
     },
     {
@@ -7452,7 +7479,7 @@
       "source_file": "Trading-Project\\project\\alerts\\manager.py",
       "source_location": "L22",
       "id": "manager_alertmanager_init",
-      "community": 6,
+      "community": 18,
       "norm_label": ".__init__()"
     },
     {
@@ -7461,7 +7488,7 @@
       "source_file": "Trading-Project\\project\\alerts\\manager.py",
       "source_location": "L27",
       "id": "manager_alertmanager_track",
-      "community": 6,
+      "community": 18,
       "norm_label": "._track()"
     },
     {
@@ -7470,7 +7497,7 @@
       "source_file": "Trading-Project\\project\\alerts\\manager.py",
       "source_location": "L39",
       "id": "manager_alertmanager_process_scenarios",
-      "community": 6,
+      "community": 18,
       "norm_label": ".process_scenarios()"
     },
     {
@@ -7479,7 +7506,7 @@
       "source_file": "Trading-Project\\project\\alerts\\manager.py",
       "source_location": "L1",
       "id": "manager_rationale_1",
-      "community": 6,
+      "community": 18,
       "norm_label": "alert manager \u2014 optimized.  changes:   - sent_alerts uses collections.deque(maxl"
     },
     {
@@ -7488,7 +7515,7 @@
       "source_file": "Trading-Project\\project\\alerts\\manager.py",
       "source_location": "L28",
       "id": "manager_rationale_28",
-      "community": 6,
+      "community": 18,
       "norm_label": "return false if already seen; true and record if new."
     },
     {
@@ -7497,7 +7524,7 @@
       "source_file": "Trading-Project\\project\\alerts\\manager.py",
       "source_location": "L42",
       "id": "manager_rationale_42",
-      "community": 6,
+      "community": 18,
       "norm_label": "process confirmed/actionable scenarios and fire telegram alerts.         skips:"
     },
     {
@@ -7506,7 +7533,7 @@
       "source_file": "Trading-Project\\project\\alerts\\telegram.py",
       "source_location": "L1",
       "id": "trading_project_project_alerts_telegram_py",
-      "community": 6,
+      "community": 18,
       "norm_label": "telegram.py"
     },
     {
@@ -7515,7 +7542,7 @@
       "source_file": "Trading-Project\\project\\alerts\\telegram.py",
       "source_location": "L9",
       "id": "telegram_send_alert",
-      "community": 6,
+      "community": 18,
       "norm_label": "send_alert()"
     },
     {
@@ -7524,7 +7551,7 @@
       "source_file": "Trading-Project\\project\\alerts\\telegram.py",
       "source_location": "L10",
       "id": "telegram_rationale_10",
-      "community": 6,
+      "community": 18,
       "norm_label": "sends asynchronous message to telegram."
     },
     {
@@ -7533,7 +7560,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L1",
       "id": "trading_project_project_api_server_py",
-      "community": 6,
+      "community": 9,
       "norm_label": "server.py"
     },
     {
@@ -7542,7 +7569,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L33",
       "id": "server_update_engine_output",
-      "community": 6,
+      "community": 9,
       "norm_label": "update_engine_output()"
     },
     {
@@ -7551,7 +7578,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L66",
       "id": "server_get_scenarios",
-      "community": 6,
+      "community": 9,
       "norm_label": "get_scenarios()"
     },
     {
@@ -7560,7 +7587,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L80",
       "id": "server_get_candles",
-      "community": 6,
+      "community": 9,
       "norm_label": "get_candles()"
     },
     {
@@ -7569,7 +7596,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L106",
       "id": "server_get_consolidations",
-      "community": 6,
+      "community": 9,
       "norm_label": "get_consolidations()"
     },
     {
@@ -7578,7 +7605,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L34",
       "id": "server_rationale_34",
-      "community": 6,
+      "community": 9,
       "norm_label": "thread-safe update of the shared engine state."
     },
     {
@@ -7587,7 +7614,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L61",
       "id": "server_rationale_61",
-      "community": 6,
+      "community": 9,
       "norm_label": "quick liveness check."
     },
     {
@@ -7596,7 +7623,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L67",
       "id": "server_rationale_67",
-      "community": 6,
+      "community": 9,
       "norm_label": "returns the latest scenario projections grouped by timeframe.     shape: { \"1m\""
     },
     {
@@ -7605,7 +7632,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L85",
       "id": "server_rationale_85",
-      "community": 6,
+      "community": 9,
       "norm_label": "returns the latest n closed candles for the given timeframe.     each candle: {"
     },
     {
@@ -7614,7 +7641,7 @@
       "source_file": "Trading-Project\\project\\api\\server.py",
       "source_location": "L107",
       "id": "server_rationale_107",
-      "community": 6,
+      "community": 9,
       "norm_label": "returns detected consolidation zones for all active timeframes.     each zone:"
     },
     {
@@ -7623,7 +7650,7 @@
       "source_file": "Trading-Project\\project\\confirmation\\mtf.py",
       "source_location": "L1",
       "id": "trading_project_project_confirmation_mtf_py",
-      "community": 6,
+      "community": 9,
       "norm_label": "mtf.py"
     },
     {
@@ -7632,7 +7659,7 @@
       "source_file": "Trading-Project\\project\\confirmation\\mtf.py",
       "source_location": "L19",
       "id": "mtf_confirm_mtf",
-      "community": 6,
+      "community": 9,
       "norm_label": "confirm_mtf()"
     },
     {
@@ -7641,7 +7668,7 @@
       "source_file": "Trading-Project\\project\\confirmation\\mtf.py",
       "source_location": "L1",
       "id": "mtf_rationale_1",
-      "community": 6,
+      "community": 9,
       "norm_label": "multi-timeframe confirmation engine \u2014 optimized.  changes:   - sets confirmed=tr"
     },
     {
@@ -7650,7 +7677,7 @@
       "source_file": "Trading-Project\\project\\confirmation\\mtf.py",
       "source_location": "L23",
       "id": "mtf_rationale_23",
-      "community": 6,
+      "community": 9,
       "norm_label": "multi-timeframe confirmation:       4h \u2192 15m  |  1h \u2192 5m  |  15m \u2192 1m      rules"
     },
     {
@@ -7659,7 +7686,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L1",
       "id": "trading_project_project_data_fetcher_py",
-      "community": 6,
+      "community": 9,
       "norm_label": "fetcher.py"
     },
     {
@@ -7668,7 +7695,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L18",
       "id": "fetcher_datafetcher",
-      "community": 6,
+      "community": 9,
       "norm_label": "datafetcher"
     },
     {
@@ -7677,7 +7704,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L19",
       "id": "fetcher_datafetcher_init",
-      "community": 6,
+      "community": 9,
       "norm_label": ".__init__()"
     },
     {
@@ -7686,7 +7713,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L25",
       "id": "fetcher_datafetcher_add_candle",
-      "community": 6,
+      "community": 9,
       "norm_label": ".add_candle()"
     },
     {
@@ -7704,7 +7731,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L51",
       "id": "fetcher_datafetcher_get_latest_price",
-      "community": 6,
+      "community": 9,
       "norm_label": ".get_latest_price()"
     },
     {
@@ -7713,7 +7740,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L58",
       "id": "fetcher_datafetcher_get_dataframe",
-      "community": 6,
+      "community": 9,
       "norm_label": ".get_dataframe()"
     },
     {
@@ -7722,7 +7749,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L1",
       "id": "fetcher_rationale_1",
-      "community": 6,
+      "community": 9,
       "norm_label": "datafetcher \u2014 in-memory candle store for the multi-timeframe engine.  optimizati"
     },
     {
@@ -7731,7 +7758,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L26",
       "id": "fetcher_rationale_26",
-      "community": 6,
+      "community": 9,
       "norm_label": "add a closed candle.         format: {timestamp, open, high, low, close, is_clos"
     },
     {
@@ -7749,7 +7776,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L52",
       "id": "fetcher_rationale_52",
-      "community": 6,
+      "community": 9,
       "norm_label": "fast o(1) latest close price lookup."
     },
     {
@@ -7758,7 +7785,7 @@
       "source_file": "Trading-Project\\project\\data\\fetcher.py",
       "source_location": "L59",
       "id": "fetcher_rationale_59",
-      "community": 6,
+      "community": 9,
       "norm_label": "returns a pandas dataframe for the timeframe \u2014 validated before construction."
     },
     {
@@ -8046,7 +8073,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L1",
       "id": "trading_project_project_indicators_consolidation_py",
-      "community": 25,
+      "community": 23,
       "norm_label": "consolidation.py"
     },
     {
@@ -8055,7 +8082,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L9",
       "id": "consolidation_consolidationcnn",
-      "community": 25,
+      "community": 23,
       "norm_label": "consolidationcnn"
     },
     {
@@ -8064,7 +8091,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L10",
       "id": "consolidation_consolidationcnn_init",
-      "community": 25,
+      "community": 23,
       "norm_label": ".__init__()"
     },
     {
@@ -8073,7 +8100,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L23",
       "id": "consolidation_consolidationcnn_forward",
-      "community": 25,
+      "community": 23,
       "norm_label": ".forward()"
     },
     {
@@ -8082,7 +8109,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L29",
       "id": "consolidation_nnpredictor",
-      "community": 25,
+      "community": 23,
       "norm_label": "nnpredictor"
     },
     {
@@ -8091,7 +8118,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L34",
       "id": "consolidation_get_instance",
-      "community": 25,
+      "community": 23,
       "norm_label": "get_instance()"
     },
     {
@@ -8100,7 +8127,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L40",
       "id": "consolidation_nnpredictor_load_model",
-      "community": 25,
+      "community": 23,
       "norm_label": "._load_model()"
     },
     {
@@ -8109,7 +8136,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L53",
       "id": "consolidation_nnpredictor_predict",
-      "community": 25,
+      "community": 23,
       "norm_label": ".predict()"
     },
     {
@@ -8118,7 +8145,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L89",
       "id": "consolidation_consolidation_boxes",
-      "community": 25,
+      "community": 23,
       "norm_label": "consolidation_boxes()"
     },
     {
@@ -8127,7 +8154,7 @@
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L95",
       "id": "consolidation_rationale_95",
-      "community": 25,
+      "community": 23,
       "norm_label": "detect consolidation boxes.     df must have columns ['open','high','low','clos"
     },
     {
@@ -8136,7 +8163,7 @@
       "source_file": "Trading-Project\\project\\indicators\\__init__.py",
       "source_location": "L1",
       "id": "trading_project_project_indicators_init_py",
-      "community": 25,
+      "community": 23,
       "norm_label": "__init__.py"
     },
     {
@@ -8289,7 +8316,7 @@
       "source_file": "Trading-Project\\project\\strategy\\consolidation.py",
       "source_location": "L1",
       "id": "trading_project_project_strategy_consolidation_py",
-      "community": 6,
+      "community": 9,
       "norm_label": "consolidation.py"
     },
     {
@@ -8298,7 +8325,7 @@
       "source_file": "Trading-Project\\project\\strategy\\consolidation.py",
       "source_location": "L7",
       "id": "consolidation_detect_all_consolidations",
-      "community": 6,
+      "community": 9,
       "norm_label": "detect_all_consolidations()"
     },
     {
@@ -8307,7 +8334,7 @@
       "source_file": "Trading-Project\\project\\strategy\\consolidation.py",
       "source_location": "L1",
       "id": "consolidation_rationale_1",
-      "community": 6,
+      "community": 9,
       "norm_label": "consolidation detector (price action based)"
     },
     {
@@ -8316,7 +8343,7 @@
       "source_file": "Trading-Project\\project\\strategy\\consolidation.py",
       "source_location": "L8",
       "id": "consolidation_rationale_8",
-      "community": 6,
+      "community": 9,
       "norm_label": "detect consolidation zones.     a zone is active when (high - low) / close < ran"
     },
     {
@@ -8460,7 +8487,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L1",
       "id": "tradingview_scraper_symbols_cal_py",
-      "community": 13,
+      "community": 12,
       "norm_label": "cal.py"
     },
     {
@@ -8469,7 +8496,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L15",
       "id": "cal_dividendevent",
-      "community": 13,
+      "community": 12,
       "norm_label": "dividendevent"
     },
     {
@@ -8478,7 +8505,7 @@
       "source_file": "",
       "source_location": "",
       "id": "typeddict",
-      "community": 13,
+      "community": 12,
       "norm_label": "typeddict"
     },
     {
@@ -8487,7 +8514,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L49",
       "id": "cal_earningsevent",
-      "community": 13,
+      "community": 12,
       "norm_label": "earningsevent"
     },
     {
@@ -8496,7 +8523,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L101",
       "id": "cal_calendarscraper",
-      "community": 13,
+      "community": 12,
       "norm_label": "calendarscraper"
     },
     {
@@ -8505,7 +8532,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L110",
       "id": "cal_calendarscraper_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -8514,7 +8541,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L115",
       "id": "cal_calendarscraper_export",
-      "community": 13,
+      "community": 12,
       "norm_label": "._export()"
     },
     {
@@ -8523,7 +8550,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L124",
       "id": "cal_calendarscraper_scrape_dividends",
-      "community": 13,
+      "community": 12,
       "norm_label": ".scrape_dividends()"
     },
     {
@@ -8532,7 +8559,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L258",
       "id": "cal_calendarscraper_scrape_earnings",
-      "community": 13,
+      "community": 12,
       "norm_label": ".scrape_earnings()"
     },
     {
@@ -8541,7 +8568,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L1",
       "id": "cal_rationale_1",
-      "community": 13,
+      "community": 12,
       "norm_label": "module providing a function to scrape dividend and earnings of a specific market"
     },
     {
@@ -8550,7 +8577,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L16",
       "id": "cal_rationale_16",
-      "community": 13,
+      "community": 12,
       "norm_label": "represents a dividend event for a financial asset.      attributes:         full"
     },
     {
@@ -8559,7 +8586,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L50",
       "id": "cal_rationale_50",
-      "community": 13,
+      "community": 12,
       "norm_label": "represents an earnings event for a financial asset.      attributes:         ful"
     },
     {
@@ -8568,7 +8595,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L102",
       "id": "cal_rationale_102",
-      "community": 13,
+      "community": 12,
       "norm_label": "a class used to scrape dividend and earnings events from the tradingview event c"
     },
     {
@@ -8577,7 +8604,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L131",
       "id": "cal_rationale_131",
-      "community": 13,
+      "community": 12,
       "norm_label": "scrapes dividends events from the tradingview event calendar.          args:"
     },
     {
@@ -8586,7 +8613,7 @@
       "source_file": "tradingview_scraper\\symbols\\cal.py",
       "source_location": "L265",
       "id": "cal_rationale_265",
-      "community": 13,
+      "community": 12,
       "norm_label": "scrapes earnings events from the tradingview event calendar.          args:"
     },
     {
@@ -8649,7 +8676,7 @@
       "source_file": "tradingview_scraper\\symbols\\fundamental_graphs.py",
       "source_location": "L136",
       "id": "fundamental_graphs_fundamentalgraphs_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -8766,7 +8793,7 @@
       "source_file": "tradingview_scraper\\symbols\\fundamental_graphs.py",
       "source_location": "L460",
       "id": "fundamental_graphs_fundamentalgraphs_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -8793,7 +8820,7 @@
       "source_file": "tradingview_scraper\\symbols\\fundamental_graphs.py",
       "source_location": "L137",
       "id": "fundamental_graphs_rationale_137",
-      "community": 18,
+      "community": 19,
       "norm_label": "initialize the fundamentalgraphs scraper.          args:             export_resu"
     },
     {
@@ -8910,7 +8937,7 @@
       "source_file": "tradingview_scraper\\symbols\\fundamental_graphs.py",
       "source_location": "L466",
       "id": "fundamental_graphs_rationale_466",
-      "community": 8,
+      "community": 15,
       "norm_label": "export scraped data to file.          args:             data (dict): the data to"
     },
     {
@@ -8991,7 +9018,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L1",
       "id": "tradingview_scraper_symbols_ideas_py",
-      "community": 8,
+      "community": 3,
       "norm_label": "ideas.py"
     },
     {
@@ -9000,7 +9027,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L15",
       "id": "ideas_ideas",
-      "community": 8,
+      "community": 3,
       "norm_label": "ideas"
     },
     {
@@ -9009,7 +9036,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L16",
       "id": "ideas_ideas_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -9018,7 +9045,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L21",
       "id": "ideas_ideas_scrape",
-      "community": 8,
+      "community": 15,
       "norm_label": ".scrape()"
     },
     {
@@ -9027,7 +9054,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L93",
       "id": "ideas_ideas_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -9036,7 +9063,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L100",
       "id": "ideas_ideas_scrape_ideas",
-      "community": 8,
+      "community": 3,
       "norm_label": ".scrape_ideas()"
     },
     {
@@ -9045,7 +9072,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L1",
       "id": "ideas_rationale_1",
-      "community": 8,
+      "community": 3,
       "norm_label": "module providing a function to scrape published user ideas about a symbol."
     },
     {
@@ -9054,7 +9081,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L28",
       "id": "ideas_rationale_28",
-      "community": 8,
+      "community": 15,
       "norm_label": "extract trading ideas from tradingview for a specified symbol over a range of pa"
     },
     {
@@ -9063,7 +9090,7 @@
       "source_file": "tradingview_scraper\\symbols\\ideas.py",
       "source_location": "L101",
       "id": "ideas_rationale_101",
-      "community": 8,
+      "community": 3,
       "norm_label": "scrapes trading ideas (popular or recent) for a specified symbol and page from t"
     },
     {
@@ -9072,7 +9099,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L1",
       "id": "tradingview_scraper_symbols_markets_py",
-      "community": 9,
+      "community": 7,
       "norm_label": "markets.py"
     },
     {
@@ -9081,7 +9108,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L14",
       "id": "markets_markets",
-      "community": 9,
+      "community": 7,
       "norm_label": "markets"
     },
     {
@@ -9090,7 +9117,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L70",
       "id": "markets_markets_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -9099,7 +9126,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L82",
       "id": "markets_markets_validate_market",
-      "community": 9,
+      "community": 7,
       "norm_label": "._validate_market()"
     },
     {
@@ -9108,7 +9135,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L98",
       "id": "markets_markets_validate_sort_by",
-      "community": 9,
+      "community": 7,
       "norm_label": "._validate_sort_by()"
     },
     {
@@ -9117,7 +9144,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L121",
       "id": "markets_markets_build_payload",
-      "community": 9,
+      "community": 7,
       "norm_label": "._build_payload()"
     },
     {
@@ -9126,7 +9153,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L165",
       "id": "markets_markets_get_top_stocks",
-      "community": 9,
+      "community": 7,
       "norm_label": ".get_top_stocks()"
     },
     {
@@ -9135,7 +9162,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L292",
       "id": "markets_markets_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -9144,7 +9171,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L1",
       "id": "markets_rationale_1",
-      "community": 9,
+      "community": 7,
       "norm_label": "module providing a function to scrape market overview data (top stocks, indices,"
     },
     {
@@ -9153,7 +9180,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L15",
       "id": "markets_rationale_15",
-      "community": 9,
+      "community": 7,
       "norm_label": "a class to scrape market overview data from tradingview.      this class provide"
     },
     {
@@ -9162,7 +9189,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L71",
       "id": "markets_rationale_71",
-      "community": 18,
+      "community": 19,
       "norm_label": "initialize the markets scraper.          args:             export_result (bool):"
     },
     {
@@ -9171,7 +9198,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L83",
       "id": "markets_rationale_83",
-      "community": 9,
+      "community": 7,
       "norm_label": "validate if the market is supported.          args:             market (str): th"
     },
     {
@@ -9180,7 +9207,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L99",
       "id": "markets_rationale_99",
-      "community": 9,
+      "community": 7,
       "norm_label": "validate and convert sort criteria.          args:             sort_by (str): th"
     },
     {
@@ -9189,7 +9216,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L129",
       "id": "markets_rationale_129",
-      "community": 9,
+      "community": 7,
       "norm_label": "build the payload for the scanner api.          args:             filters (list["
     },
     {
@@ -9198,7 +9225,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L172",
       "id": "markets_rationale_172",
-      "community": 9,
+      "community": 7,
       "norm_label": "get top stocks by specified criteria.          args:             market (str): t"
     },
     {
@@ -9207,7 +9234,7 @@
       "source_file": "tradingview_scraper\\symbols\\markets.py",
       "source_location": "L298",
       "id": "markets_rationale_298",
-      "community": 8,
+      "community": 15,
       "norm_label": "export scraped data to file.          args:             data (list[dict]): the d"
     },
     {
@@ -9216,7 +9243,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L1",
       "id": "tradingview_scraper_symbols_market_movers_py",
-      "community": 7,
+      "community": 6,
       "norm_label": "market_movers.py"
     },
     {
@@ -9225,7 +9252,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L14",
       "id": "market_movers_marketmovers",
-      "community": 7,
+      "community": 6,
       "norm_label": "marketmovers"
     },
     {
@@ -9234,7 +9261,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L72",
       "id": "market_movers_marketmovers_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -9243,7 +9270,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L84",
       "id": "market_movers_marketmovers_validate_market",
-      "community": 7,
+      "community": 6,
       "norm_label": "._validate_market()"
     },
     {
@@ -9252,7 +9279,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L100",
       "id": "market_movers_marketmovers_validate_category",
-      "community": 7,
+      "community": 6,
       "norm_label": "._validate_category()"
     },
     {
@@ -9261,7 +9288,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L117",
       "id": "market_movers_marketmovers_build_scanner_payload",
-      "community": 7,
+      "community": 6,
       "norm_label": "._build_scanner_payload()"
     },
     {
@@ -9270,7 +9297,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L157",
       "id": "market_movers_marketmovers_get_filter_conditions",
-      "community": 7,
+      "community": 6,
       "norm_label": "._get_filter_conditions()"
     },
     {
@@ -9279,7 +9306,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L224",
       "id": "market_movers_marketmovers_get_sort_config",
-      "community": 7,
+      "community": 6,
       "norm_label": "._get_sort_config()"
     },
     {
@@ -9288,7 +9315,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L260",
       "id": "market_movers_marketmovers_get_scanner_url",
-      "community": 7,
+      "community": 6,
       "norm_label": "._get_scanner_url()"
     },
     {
@@ -9297,7 +9324,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L282",
       "id": "market_movers_marketmovers_scrape",
-      "community": 7,
+      "community": 6,
       "norm_label": ".scrape()"
     },
     {
@@ -9306,7 +9333,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L396",
       "id": "market_movers_marketmovers_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -9315,7 +9342,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L1",
       "id": "market_movers_rationale_1",
-      "community": 7,
+      "community": 6,
       "norm_label": "module providing a function to scrape market movers data (gainers, losers, penny"
     },
     {
@@ -9324,7 +9351,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L15",
       "id": "market_movers_rationale_15",
-      "community": 7,
+      "community": 6,
       "norm_label": "a class to scrape market movers data from tradingview.      this class provides"
     },
     {
@@ -9333,7 +9360,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L73",
       "id": "market_movers_rationale_73",
-      "community": 18,
+      "community": 19,
       "norm_label": "initialize the marketmovers scraper.          args:             export_result (b"
     },
     {
@@ -9342,7 +9369,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L85",
       "id": "market_movers_rationale_85",
-      "community": 7,
+      "community": 6,
       "norm_label": "validate if the market is supported.          args:             market (str): th"
     },
     {
@@ -9351,7 +9378,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L101",
       "id": "market_movers_rationale_101",
-      "community": 7,
+      "community": 6,
       "norm_label": "validate if the category is supported for the given market.          args:"
     },
     {
@@ -9360,7 +9387,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L124",
       "id": "market_movers_rationale_124",
-      "community": 7,
+      "community": 6,
       "norm_label": "build the payload for the tradingview scanner api.          args:             ma"
     },
     {
@@ -9369,7 +9396,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L158",
       "id": "market_movers_rationale_158",
-      "community": 7,
+      "community": 6,
       "norm_label": "get filter conditions based on market and category.          args:             m"
     },
     {
@@ -9378,7 +9405,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L225",
       "id": "market_movers_rationale_225",
-      "community": 7,
+      "community": 6,
       "norm_label": "get sort configuration based on category.          args:             category (s"
     },
     {
@@ -9387,7 +9414,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L261",
       "id": "market_movers_rationale_261",
-      "community": 7,
+      "community": 6,
       "norm_label": "get the appropriate scanner url for the market.          args:             marke"
     },
     {
@@ -9396,7 +9423,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L289",
       "id": "market_movers_rationale_289",
-      "community": 7,
+      "community": 6,
       "norm_label": "scrape market movers data from tradingview.          args:             market (s"
     },
     {
@@ -9405,7 +9432,7 @@
       "source_file": "tradingview_scraper\\symbols\\market_movers.py",
       "source_location": "L402",
       "id": "market_movers_rationale_402",
-      "community": 8,
+      "community": 15,
       "norm_label": "export scraped data to file.          args:             data (list[dict]): the d"
     },
     {
@@ -9432,7 +9459,7 @@
       "source_file": "tradingview_scraper\\symbols\\minds.py",
       "source_location": "L43",
       "id": "minds_minds_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -9486,7 +9513,7 @@
       "source_file": "tradingview_scraper\\symbols\\minds.py",
       "source_location": "L368",
       "id": "minds_minds_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -9513,7 +9540,7 @@
       "source_file": "tradingview_scraper\\symbols\\minds.py",
       "source_location": "L44",
       "id": "minds_rationale_44",
-      "community": 18,
+      "community": 19,
       "norm_label": "initialize the minds scraper.          args:             export_result (bool): w"
     },
     {
@@ -9567,7 +9594,7 @@
       "source_file": "tradingview_scraper\\symbols\\minds.py",
       "source_location": "L374",
       "id": "minds_rationale_374",
-      "community": 8,
+      "community": 15,
       "norm_label": "export scraped data to file.          args:             data (list[dict]): the d"
     },
     {
@@ -9576,7 +9603,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L1",
       "id": "tradingview_scraper_symbols_news_py",
-      "community": 15,
+      "community": 14,
       "norm_label": "news.py"
     },
     {
@@ -9585,7 +9612,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L13",
       "id": "news_newsscraper",
-      "community": 15,
+      "community": 14,
       "norm_label": "newsscraper"
     },
     {
@@ -9594,7 +9621,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L14",
       "id": "news_newsscraper_init",
-      "community": 15,
+      "community": 14,
       "norm_label": ".__init__()"
     },
     {
@@ -9603,7 +9630,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L24",
       "id": "news_newsscraper_validate_inputs",
-      "community": 15,
+      "community": 14,
       "norm_label": ".validate_inputs()"
     },
     {
@@ -9612,7 +9639,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L63",
       "id": "news_newsscraper_scrape_news_content",
-      "community": 15,
+      "community": 14,
       "norm_label": ".scrape_news_content()"
     },
     {
@@ -9621,7 +9648,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L162",
       "id": "news_newsscraper_scrape_headlines",
-      "community": 15,
+      "community": 14,
       "norm_label": ".scrape_headlines()"
     },
     {
@@ -9630,7 +9657,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L262",
       "id": "news_newsscraper_sort_news",
-      "community": 15,
+      "community": 14,
       "norm_label": "._sort_news()"
     },
     {
@@ -9639,7 +9666,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L282",
       "id": "news_newsscraper_export",
-      "community": 15,
+      "community": 14,
       "norm_label": "._export()"
     },
     {
@@ -9648,7 +9675,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L292",
       "id": "news_newsscraper_load_languages",
-      "community": 15,
+      "community": 14,
       "norm_label": "._load_languages()"
     },
     {
@@ -9657,7 +9684,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L314",
       "id": "news_newsscraper_load_exchanges",
-      "community": 15,
+      "community": 14,
       "norm_label": "._load_exchanges()"
     },
     {
@@ -9666,7 +9693,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L336",
       "id": "news_newsscraper_load_news_providers",
-      "community": 15,
+      "community": 14,
       "norm_label": "._load_news_providers()"
     },
     {
@@ -9675,7 +9702,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L358",
       "id": "news_newsscraper_load_areas",
-      "community": 15,
+      "community": 14,
       "norm_label": "._load_areas()"
     },
     {
@@ -9684,7 +9711,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L1",
       "id": "news_rationale_1",
-      "community": 15,
+      "community": 14,
       "norm_label": "module providing a function to scrape published news about a symbol."
     },
     {
@@ -9693,7 +9720,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L67",
       "id": "news_rationale_67",
-      "community": 15,
+      "community": 14,
       "norm_label": "scrapes news content from a tradingview article based on the provided story path"
     },
     {
@@ -9702,7 +9729,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L172",
       "id": "news_rationale_172",
-      "community": 15,
+      "community": 14,
       "norm_label": "scrapes news headlines for a specified symbol from a given exchange, provider, o"
     },
     {
@@ -9711,7 +9738,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L293",
       "id": "news_rationale_293",
-      "community": 15,
+      "community": 14,
       "norm_label": "load languages from a specified file.          returns:             list: a list"
     },
     {
@@ -9720,7 +9747,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L315",
       "id": "news_rationale_315",
-      "community": 15,
+      "community": 14,
       "norm_label": "load exchanges from a specified file.          returns:             list: a list"
     },
     {
@@ -9729,7 +9756,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L337",
       "id": "news_rationale_337",
-      "community": 15,
+      "community": 14,
       "norm_label": "load news providers from a specified file.          returns:             list: a"
     },
     {
@@ -9738,7 +9765,7 @@
       "source_file": "tradingview_scraper\\symbols\\news.py",
       "source_location": "L359",
       "id": "news_rationale_359",
-      "community": 15,
+      "community": 14,
       "norm_label": "load areas from a specified file.          returns:             list: a list of"
     },
     {
@@ -9765,7 +9792,7 @@
       "source_file": "tradingview_scraper\\symbols\\overview.py",
       "source_location": "L143",
       "id": "overview_overview_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -9837,7 +9864,7 @@
       "source_file": "tradingview_scraper\\symbols\\overview.py",
       "source_location": "L340",
       "id": "overview_overview_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -9864,7 +9891,7 @@
       "source_file": "tradingview_scraper\\symbols\\overview.py",
       "source_location": "L144",
       "id": "overview_rationale_144",
-      "community": 18,
+      "community": 19,
       "norm_label": "initialize the overview scraper.          args:             export_result (bool)"
     },
     {
@@ -9936,7 +9963,7 @@
       "source_file": "tradingview_scraper\\symbols\\overview.py",
       "source_location": "L346",
       "id": "overview_rationale_346",
-      "community": 8,
+      "community": 15,
       "norm_label": "export scraped data to file.          args:             data (dict): the data to"
     },
     {
@@ -9945,7 +9972,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L1",
       "id": "tradingview_scraper_symbols_screener_py",
-      "community": 10,
+      "community": 8,
       "norm_label": "screener.py"
     },
     {
@@ -9954,7 +9981,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L14",
       "id": "screener_screener",
-      "community": 10,
+      "community": 8,
       "norm_label": "screener"
     },
     {
@@ -9963,7 +9990,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L110",
       "id": "screener_screener_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -9972,7 +9999,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L122",
       "id": "screener_screener_validate_market",
-      "community": 10,
+      "community": 8,
       "norm_label": "._validate_market()"
     },
     {
@@ -9981,7 +10008,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L138",
       "id": "screener_screener_get_default_columns",
-      "community": 10,
+      "community": 8,
       "norm_label": "._get_default_columns()"
     },
     {
@@ -9990,7 +10017,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L155",
       "id": "screener_screener_build_payload",
-      "community": 10,
+      "community": 8,
       "norm_label": "._build_payload()"
     },
     {
@@ -9999,7 +10026,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L195",
       "id": "screener_screener_screen",
-      "community": 10,
+      "community": 8,
       "norm_label": ".screen()"
     },
     {
@@ -10008,7 +10035,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L345",
       "id": "screener_screener_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -10017,7 +10044,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L1",
       "id": "screener_rationale_1",
-      "community": 10,
+      "community": 8,
       "norm_label": "module providing a function to screen stocks, crypto, forex, and other markets w"
     },
     {
@@ -10026,7 +10053,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L15",
       "id": "screener_rationale_15",
-      "community": 10,
+      "community": 8,
       "norm_label": "a class to screen financial instruments from tradingview with custom filters."
     },
     {
@@ -10035,7 +10062,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L111",
       "id": "screener_rationale_111",
-      "community": 18,
+      "community": 19,
       "norm_label": "initialize the screener.          args:             export_result (bool): whethe"
     },
     {
@@ -10044,7 +10071,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L123",
       "id": "screener_rationale_123",
-      "community": 10,
+      "community": 8,
       "norm_label": "validate if the market is supported.          args:             market (str): th"
     },
     {
@@ -10053,7 +10080,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L139",
       "id": "screener_rationale_139",
-      "community": 10,
+      "community": 8,
       "norm_label": "get default columns based on market type.          args:             market (str"
     },
     {
@@ -10062,7 +10089,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L163",
       "id": "screener_rationale_163",
-      "community": 10,
+      "community": 8,
       "norm_label": "build the payload for the scanner api.          args:             filters (list["
     },
     {
@@ -10071,7 +10098,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L204",
       "id": "screener_rationale_204",
-      "community": 10,
+      "community": 8,
       "norm_label": "screen financial instruments based on custom filters.          args:"
     },
     {
@@ -10080,7 +10107,7 @@
       "source_file": "tradingview_scraper\\symbols\\screener.py",
       "source_location": "L351",
       "id": "screener_rationale_351",
-      "community": 8,
+      "community": 15,
       "norm_label": "export screened data to file.          args:             data (list[dict]): the"
     },
     {
@@ -10107,7 +10134,7 @@
       "source_file": "tradingview_scraper\\symbols\\symbol_markets.py",
       "source_location": "L55",
       "id": "symbol_markets_symbolmarkets_init",
-      "community": 18,
+      "community": 19,
       "norm_label": ".__init__()"
     },
     {
@@ -10134,7 +10161,7 @@
       "source_file": "tradingview_scraper\\symbols\\symbol_markets.py",
       "source_location": "L224",
       "id": "symbol_markets_symbolmarkets_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -10161,7 +10188,7 @@
       "source_file": "tradingview_scraper\\symbols\\symbol_markets.py",
       "source_location": "L56",
       "id": "symbol_markets_rationale_56",
-      "community": 18,
+      "community": 19,
       "norm_label": "initialize the symbolmarkets scraper.          args:             export_result ("
     },
     {
@@ -10188,7 +10215,7 @@
       "source_file": "tradingview_scraper\\symbols\\symbol_markets.py",
       "source_location": "L230",
       "id": "symbol_markets_rationale_230",
-      "community": 8,
+      "community": 15,
       "norm_label": "export scraped data to file.          args:             data (list[dict]): the d"
     },
     {
@@ -10224,7 +10251,7 @@
       "source_file": "tradingview_scraper\\symbols\\technicals.py",
       "source_location": "L27",
       "id": "technicals_indicators_validate_timeframe",
-      "community": 3,
+      "community": 0,
       "norm_label": "._validate_timeframe()"
     },
     {
@@ -10233,7 +10260,7 @@
       "source_file": "tradingview_scraper\\symbols\\technicals.py",
       "source_location": "L41",
       "id": "technicals_indicators_edit_indicators_by_specified_timeframe",
-      "community": 3,
+      "community": 0,
       "norm_label": "._edit_indicators_by_specified_timeframe()"
     },
     {
@@ -10251,7 +10278,7 @@
       "source_file": "tradingview_scraper\\symbols\\technicals.py",
       "source_location": "L128",
       "id": "technicals_indicators_revise_response",
-      "community": 3,
+      "community": 0,
       "norm_label": ".revise_response()"
     },
     {
@@ -10260,7 +10287,7 @@
       "source_file": "tradingview_scraper\\symbols\\technicals.py",
       "source_location": "L140",
       "id": "technicals_indicators_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -10314,7 +10341,7 @@
       "source_file": "tradingview_scraper\\symbols\\technicals.py",
       "source_location": "L28",
       "id": "technicals_rationale_28",
-      "community": 3,
+      "community": 0,
       "norm_label": "validates the specified timeframe against the list of supported timeframes."
     },
     {
@@ -10323,7 +10350,7 @@
       "source_file": "tradingview_scraper\\symbols\\technicals.py",
       "source_location": "L42",
       "id": "technicals_rationale_42",
-      "community": 3,
+      "community": 0,
       "norm_label": "edits the list of indicators by appending the specified timeframe.          args"
     },
     {
@@ -10341,7 +10368,7 @@
       "source_file": "tradingview_scraper\\symbols\\technicals.py",
       "source_location": "L129",
       "id": "technicals_rationale_129",
-      "community": 3,
+      "community": 0,
       "norm_label": "revise the json response by removing timeframes from indicator keys.          ar"
     },
     {
@@ -10350,7 +10377,7 @@
       "source_file": "tradingview_scraper\\symbols\\technicals.py",
       "source_location": "L141",
       "id": "technicals_rationale_141",
-      "community": 8,
+      "community": 15,
       "norm_label": "export data to a file in the specified format.          args:             data ("
     },
     {
@@ -10395,7 +10422,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L1",
       "id": "tradingview_scraper_symbols_utils_py",
-      "community": 8,
+      "community": 15,
       "norm_label": "utils.py"
     },
     {
@@ -10404,7 +10431,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L10",
       "id": "utils_ensure_export_directory",
-      "community": 8,
+      "community": 15,
       "norm_label": "ensure_export_directory()"
     },
     {
@@ -10413,7 +10440,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L30",
       "id": "utils_generate_export_filepath",
-      "community": 8,
+      "community": 15,
       "norm_label": "generate_export_filepath()"
     },
     {
@@ -10422,7 +10449,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L60",
       "id": "utils_save_json_file",
-      "community": 8,
+      "community": 15,
       "norm_label": "save_json_file()"
     },
     {
@@ -10431,7 +10458,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L107",
       "id": "utils_save_csv_file",
-      "community": 8,
+      "community": 15,
       "norm_label": "save_csv_file()"
     },
     {
@@ -10440,7 +10467,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L154",
       "id": "utils_generate_user_agent",
-      "community": 18,
+      "community": 19,
       "norm_label": "generate_user_agent()"
     },
     {
@@ -10449,7 +10476,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L174",
       "id": "utils_validate_string_array",
-      "community": 13,
+      "community": 12,
       "norm_label": "validate_string_array()"
     },
     {
@@ -10458,7 +10485,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L11",
       "id": "utils_rationale_11",
-      "community": 8,
+      "community": 15,
       "norm_label": "check if the export directory exists, and create it if it does not.      paramet"
     },
     {
@@ -10467,7 +10494,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L31",
       "id": "utils_rationale_31",
-      "community": 8,
+      "community": 15,
       "norm_label": "generate a file path for exporting data, including the current timestamp.      t"
     },
     {
@@ -10476,7 +10503,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L61",
       "id": "utils_rationale_61",
-      "community": 8,
+      "community": 15,
       "norm_label": "save the provided data to a json file with a generated file path.      this func"
     },
     {
@@ -10485,7 +10512,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L108",
       "id": "utils_rationale_108",
-      "community": 8,
+      "community": 15,
       "norm_label": "save the provided data to a csv file with a generated file path.      this funct"
     },
     {
@@ -10494,7 +10521,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L155",
       "id": "utils_rationale_155",
-      "community": 18,
+      "community": 19,
       "norm_label": "generates a random user agent string from a predefined list of google bot user a"
     },
     {
@@ -10503,7 +10530,7 @@
       "source_file": "tradingview_scraper\\symbols\\utils.py",
       "source_location": "L175",
       "id": "utils_rationale_175",
-      "community": 13,
+      "community": 12,
       "norm_label": "validates a list of strings against a list of valid values.      this function c"
     },
     {
@@ -10530,7 +10557,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L21",
       "id": "price_realtimedata",
-      "community": 14,
+      "community": 13,
       "norm_label": "realtimedata"
     },
     {
@@ -10539,7 +10566,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L22",
       "id": "price_realtimedata_init",
-      "community": 14,
+      "community": 13,
       "norm_label": ".__init__()"
     },
     {
@@ -10548,7 +10575,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L44",
       "id": "price_realtimedata_validate_symbols",
-      "community": 14,
+      "community": 13,
       "norm_label": ".validate_symbols()"
     },
     {
@@ -10557,7 +10584,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L89",
       "id": "price_realtimedata_generate_session",
-      "community": 14,
+      "community": 13,
       "norm_label": ".generate_session()"
     },
     {
@@ -10566,7 +10593,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L103",
       "id": "price_realtimedata_prepend_header",
-      "community": 14,
+      "community": 13,
       "norm_label": ".prepend_header()"
     },
     {
@@ -10575,7 +10602,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L117",
       "id": "price_realtimedata_construct_message",
-      "community": 14,
+      "community": 13,
       "norm_label": ".construct_message()"
     },
     {
@@ -10584,7 +10611,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L130",
       "id": "price_realtimedata_create_message",
-      "community": 14,
+      "community": 13,
       "norm_label": ".create_message()"
     },
     {
@@ -10593,7 +10620,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L143",
       "id": "price_realtimedata_send_message",
-      "community": 14,
+      "community": 13,
       "norm_label": ".send_message()"
     },
     {
@@ -10602,7 +10629,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L160",
       "id": "price_realtimedata_get_ohlcv",
-      "community": 14,
+      "community": 13,
       "norm_label": ".get_ohlcv()"
     },
     {
@@ -10611,7 +10638,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L180",
       "id": "price_realtimedata_initialize_sessions",
-      "community": 14,
+      "community": 13,
       "norm_label": "._initialize_sessions()"
     },
     {
@@ -10620,7 +10647,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L191",
       "id": "price_realtimedata_get_quote_fields",
-      "community": 14,
+      "community": 13,
       "norm_label": "._get_quote_fields()"
     },
     {
@@ -10629,7 +10656,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L204",
       "id": "price_realtimedata_add_symbol_to_sessions",
-      "community": 14,
+      "community": 13,
       "norm_label": "._add_symbol_to_sessions()"
     },
     {
@@ -10638,7 +10665,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L218",
       "id": "price_realtimedata_get_latest_trade_info",
-      "community": 14,
+      "community": 13,
       "norm_label": ".get_latest_trade_info()"
     },
     {
@@ -10647,7 +10674,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L238",
       "id": "price_realtimedata_add_multiple_symbols_to_sessions",
-      "community": 14,
+      "community": 13,
       "norm_label": "._add_multiple_symbols_to_sessions()"
     },
     {
@@ -10656,7 +10683,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L250",
       "id": "price_realtimedata_get_data",
-      "community": 14,
+      "community": 13,
       "norm_label": ".get_data()"
     },
     {
@@ -10683,7 +10710,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L23",
       "id": "price_rationale_23",
-      "community": 14,
+      "community": 13,
       "norm_label": "initializes the realtimedata class, setting up the websocket connection"
     },
     {
@@ -10692,7 +10719,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L45",
       "id": "price_rationale_45",
-      "community": 14,
+      "community": 13,
       "norm_label": "validates the provided exchange symbols.          args:             exchange_"
     },
     {
@@ -10701,7 +10728,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L90",
       "id": "price_rationale_90",
-      "community": 14,
+      "community": 13,
       "norm_label": "generates a random session identifier.          args:             prefix (str"
     },
     {
@@ -10710,7 +10737,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L104",
       "id": "price_rationale_104",
-      "community": 14,
+      "community": 13,
       "norm_label": "prepends the message with a header indicating its length.          args:"
     },
     {
@@ -10719,7 +10746,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L118",
       "id": "price_rationale_118",
-      "community": 14,
+      "community": 13,
       "norm_label": "constructs a message in json format.          args:             func (str): t"
     },
     {
@@ -10728,7 +10755,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L131",
       "id": "price_rationale_131",
-      "community": 14,
+      "community": 13,
       "norm_label": "creates a complete message with a header and a json body.          args:"
     },
     {
@@ -10737,7 +10764,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L144",
       "id": "price_rationale_144",
-      "community": 14,
+      "community": 13,
       "norm_label": "sends a message to the websocket server.          args:             func (str"
     },
     {
@@ -10746,7 +10773,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L161",
       "id": "price_rationale_161",
-      "community": 14,
+      "community": 13,
       "norm_label": "returns a generator that yields ohlc data for a specified symbol in real-time."
     },
     {
@@ -10755,7 +10782,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L181",
       "id": "price_rationale_181",
-      "community": 14,
+      "community": 13,
       "norm_label": "initializes the websocket sessions for quotes and charts."
     },
     {
@@ -10764,7 +10791,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L192",
       "id": "price_rationale_192",
-      "community": 14,
+      "community": 13,
       "norm_label": "returns the fields to be set for the quote session.                  returns:"
     },
     {
@@ -10773,7 +10800,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L205",
       "id": "price_rationale_205",
-      "community": 14,
+      "community": 13,
       "norm_label": "adds the specified symbol to the quote and chart sessions."
     },
     {
@@ -10782,7 +10809,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L219",
       "id": "price_rationale_219",
-      "community": 14,
+      "community": 13,
       "norm_label": "returns summary information about multiple symbols including last changes,"
     },
     {
@@ -10791,7 +10818,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L239",
       "id": "price_rationale_239",
-      "community": 14,
+      "community": 13,
       "norm_label": "adds multiple symbols to the quote session."
     },
     {
@@ -10800,7 +10827,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\price.py",
       "source_location": "L251",
       "id": "price_rationale_251",
-      "community": 14,
+      "community": 13,
       "norm_label": "continuously receives data from the tradingview server via the websocket connect"
     },
     {
@@ -10917,7 +10944,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\streamer.py",
       "source_location": "L352",
       "id": "streamer_streamer_export",
-      "community": 8,
+      "community": 15,
       "norm_label": "._export()"
     },
     {
@@ -11043,7 +11070,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\streamer.py",
       "source_location": "L353",
       "id": "streamer_rationale_353",
-      "community": 8,
+      "community": 15,
       "norm_label": "exports data to a specified format (json or csv).          args:             jso"
     },
     {
@@ -11268,7 +11295,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L1",
       "id": "tradingview_scraper_symbols_stream_utils_py",
-      "community": 23,
+      "community": 24,
       "norm_label": "utils.py"
     },
     {
@@ -11277,7 +11304,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L17",
       "id": "utils_validate_symbols",
-      "community": 23,
+      "community": 24,
       "norm_label": "validate_symbols()"
     },
     {
@@ -11286,7 +11313,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L88",
       "id": "utils_fetch_tradingview_indicators",
-      "community": 23,
+      "community": 24,
       "norm_label": "fetch_tradingview_indicators()"
     },
     {
@@ -11295,7 +11322,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L144",
       "id": "utils_display_and_select_indicator",
-      "community": 23,
+      "community": 24,
       "norm_label": "display_and_select_indicator()"
     },
     {
@@ -11304,7 +11331,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L187",
       "id": "utils_fetch_indicator_metadata",
-      "community": 23,
+      "community": 24,
       "norm_label": "fetch_indicator_metadata()"
     },
     {
@@ -11313,7 +11340,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L222",
       "id": "utils_prepare_indicator_metadata",
-      "community": 23,
+      "community": 24,
       "norm_label": "prepare_indicator_metadata()"
     },
     {
@@ -11322,7 +11349,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L1",
       "id": "utils_rationale_1",
-      "community": 23,
+      "community": 24,
       "norm_label": "module providing utility functions for validating exchange symbols and fetching"
     },
     {
@@ -11331,7 +11358,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L18",
       "id": "utils_rationale_18",
-      "community": 23,
+      "community": 24,
       "norm_label": "validate one or more exchange symbols.      this function checks whether the pro"
     },
     {
@@ -11340,7 +11367,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L89",
       "id": "utils_rationale_89",
-      "community": 23,
+      "community": 24,
       "norm_label": "fetch tradingview indicators based on a search query.      this function sends a"
     },
     {
@@ -11349,7 +11376,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L145",
       "id": "utils_rationale_145",
-      "community": 23,
+      "community": 24,
       "norm_label": "display a list of indicators and prompt the user to select one.      this functi"
     },
     {
@@ -11358,7 +11385,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L188",
       "id": "utils_rationale_188",
-      "community": 23,
+      "community": 24,
       "norm_label": "fetch metadata for a tradingview indicator based on its script id and version."
     },
     {
@@ -11367,7 +11394,7 @@
       "source_file": "tradingview_scraper\\symbols\\stream\\utils.py",
       "source_location": "L223",
       "id": "utils_rationale_223",
-      "community": 23,
+      "community": 24,
       "norm_label": "prepare indicator metadata into the required payload structure.      this functi"
     },
     {
@@ -20766,7 +20793,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1156",
+      "source_location": "L1165",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_swings_all",
@@ -20778,7 +20805,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1270",
+      "source_location": "L1279",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_features",
@@ -20790,7 +20817,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1281",
+      "source_location": "L1290",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_indicators",
@@ -20802,7 +20829,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1299",
+      "source_location": "L1308",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_watchlist",
@@ -20814,7 +20841,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1346",
+      "source_location": "L1355",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_all_boxes",
@@ -20826,7 +20853,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1396",
+      "source_location": "L1405",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_training_pending",
@@ -20838,7 +20865,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1405",
+      "source_location": "L1414",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_needs_screenshot",
@@ -20850,7 +20877,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1414",
+      "source_location": "L1423",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_upload_screenshot",
@@ -20862,7 +20889,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1427",
+      "source_location": "L1436",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_undo_training_label",
@@ -20874,7 +20901,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1439",
+      "source_location": "L1448",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_training_stats",
@@ -20886,7 +20913,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1456",
+      "source_location": "L1465",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_training_lessons",
@@ -20898,7 +20925,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1497",
+      "source_location": "L1506",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_submit_training_label",
@@ -20910,7 +20937,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1530",
+      "source_location": "L1539",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_nn_status",
@@ -20922,7 +20949,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1539",
+      "source_location": "L1548",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_skip_training_sample",
@@ -20934,7 +20961,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1552",
+      "source_location": "L1561",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_manual_retrain_nn",
@@ -20946,7 +20973,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1562",
+      "source_location": "L1571",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_get_nn_training_progress",
@@ -20958,12 +20985,24 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1572",
+      "source_location": "L1581",
       "weight": 1.0,
       "_src": "trading_project_backend_server_py",
       "_tgt": "server_sync_training_queue",
       "source": "trading_project_backend_server_py",
       "target": "server_sync_training_queue",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1615",
+      "weight": 1.0,
+      "_src": "trading_project_backend_server_py",
+      "_tgt": "server_get_nn_refined_zones",
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_nn_refined_zones",
       "confidence_score": 1.0
     },
     {
@@ -20982,7 +21021,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1099",
+      "source_location": "L1108",
       "weight": 1.0,
       "_src": "server_get_consolidations_all",
       "_tgt": "server_compute_box_id_long",
@@ -21006,7 +21045,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1100",
+      "source_location": "L1109",
       "weight": 1.0,
       "_src": "server_get_consolidations_all",
       "_tgt": "server_compute_box_id_short",
@@ -21078,7 +21117,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1163",
+      "source_location": "L1172",
       "weight": 1.0,
       "_src": "server_get_swings_all",
       "_tgt": "server_cache_get",
@@ -21102,7 +21141,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1151",
+      "source_location": "L1160",
       "weight": 1.0,
       "_src": "server_get_consolidations_all",
       "_tgt": "server_cache_set",
@@ -21114,7 +21153,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1265",
+      "source_location": "L1274",
       "weight": 1.0,
       "_src": "server_get_swings_all",
       "_tgt": "server_cache_set",
@@ -21822,7 +21861,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1580",
+      "source_location": "L1589",
       "weight": 1.0,
       "_src": "server_sync_training_queue",
       "_tgt": "server_get_consolidations_all",
@@ -21846,12 +21885,12 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1157",
+      "source_location": "L1166",
       "weight": 1.0,
-      "_src": "server_rationale_1157",
+      "_src": "server_rationale_1166",
       "_tgt": "server_get_swings_all",
       "source": "server_get_swings_all",
-      "target": "server_rationale_1157",
+      "target": "server_rationale_1166",
       "confidence_score": 1.0
     },
     {
@@ -21859,7 +21898,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1290",
+      "source_location": "L1299",
       "weight": 1.0,
       "_src": "server_get_indicators",
       "_tgt": "technicals_indicators_scrape",
@@ -21871,7 +21910,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1290",
+      "source_location": "L1299",
       "weight": 1.0,
       "_src": "server_get_indicators",
       "_tgt": "technicals_indicators",
@@ -21882,24 +21921,24 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1300",
+      "source_location": "L1309",
       "weight": 1.0,
-      "_src": "server_rationale_1300",
+      "_src": "server_rationale_1309",
       "_tgt": "server_get_watchlist",
       "source": "server_get_watchlist",
-      "target": "server_rationale_1300",
+      "target": "server_rationale_1309",
       "confidence_score": 1.0
     },
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1347",
+      "source_location": "L1356",
       "weight": 1.0,
-      "_src": "server_rationale_1347",
+      "_src": "server_rationale_1356",
       "_tgt": "server_get_all_boxes",
       "source": "server_get_all_boxes",
-      "target": "server_rationale_1347",
+      "target": "server_rationale_1356",
       "confidence_score": 1.0
     },
     {
@@ -21907,7 +21946,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1518",
+      "source_location": "L1527",
       "weight": 1.0,
       "_src": "server_submit_training_label",
       "_tgt": "collector_datacollector_start",
@@ -21918,37 +21957,61 @@
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1553",
+      "source_location": "L1562",
       "weight": 1.0,
-      "_src": "server_rationale_1553",
+      "_src": "server_rationale_1562",
       "_tgt": "server_manual_retrain_nn",
       "source": "server_manual_retrain_nn",
-      "target": "server_rationale_1553",
+      "target": "server_rationale_1562",
       "confidence_score": 1.0
     },
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1563",
+      "source_location": "L1572",
       "weight": 1.0,
-      "_src": "server_rationale_1563",
+      "_src": "server_rationale_1572",
       "_tgt": "server_get_nn_training_progress",
       "source": "server_get_nn_training_progress",
-      "target": "server_rationale_1563",
+      "target": "server_rationale_1572",
       "confidence_score": 1.0
     },
     {
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1573",
+      "source_location": "L1582",
       "weight": 1.0,
-      "_src": "server_rationale_1573",
+      "_src": "server_rationale_1582",
       "_tgt": "server_sync_training_queue",
       "source": "server_sync_training_queue",
-      "target": "server_rationale_1573",
+      "target": "server_rationale_1582",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1616",
+      "weight": 1.0,
+      "_src": "server_rationale_1616",
+      "_tgt": "server_get_nn_refined_zones",
+      "source": "server_get_nn_refined_zones",
+      "target": "server_rationale_1616",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1633",
+      "weight": 1.0,
+      "_src": "server_get_nn_refined_zones",
+      "_tgt": "consolidation_consolidation_boxes",
+      "source": "server_get_nn_refined_zones",
+      "target": "consolidation_consolidation_boxes"
     },
     {
       "relation": "rationale_for",
@@ -22592,9 +22655,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L55",
       "weight": 0.8,
-      "_src": "server_rationale_1157",
+      "_src": "server_rationale_1166",
       "_tgt": "technicals_indicators",
-      "source": "server_rationale_1157",
+      "source": "server_rationale_1166",
       "target": "technicals_indicators",
       "confidence_score": 0.5
     },
@@ -22604,9 +22667,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L56",
       "weight": 0.8,
-      "_src": "server_rationale_1157",
+      "_src": "server_rationale_1166",
       "_tgt": "historical_historicalfetcher",
-      "source": "server_rationale_1157",
+      "source": "server_rationale_1166",
       "target": "historical_historicalfetcher",
       "confidence_score": 0.5
     },
@@ -22616,9 +22679,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L55",
       "weight": 0.8,
-      "_src": "server_rationale_1300",
+      "_src": "server_rationale_1309",
       "_tgt": "technicals_indicators",
-      "source": "server_rationale_1300",
+      "source": "server_rationale_1309",
       "target": "technicals_indicators",
       "confidence_score": 0.5
     },
@@ -22628,9 +22691,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L56",
       "weight": 0.8,
-      "_src": "server_rationale_1300",
+      "_src": "server_rationale_1309",
       "_tgt": "historical_historicalfetcher",
-      "source": "server_rationale_1300",
+      "source": "server_rationale_1309",
       "target": "historical_historicalfetcher",
       "confidence_score": 0.5
     },
@@ -22640,9 +22703,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L55",
       "weight": 0.8,
-      "_src": "server_rationale_1347",
+      "_src": "server_rationale_1356",
       "_tgt": "technicals_indicators",
-      "source": "server_rationale_1347",
+      "source": "server_rationale_1356",
       "target": "technicals_indicators",
       "confidence_score": 0.5
     },
@@ -22652,9 +22715,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L56",
       "weight": 0.8,
-      "_src": "server_rationale_1347",
+      "_src": "server_rationale_1356",
       "_tgt": "historical_historicalfetcher",
-      "source": "server_rationale_1347",
+      "source": "server_rationale_1356",
       "target": "historical_historicalfetcher",
       "confidence_score": 0.5
     },
@@ -22664,9 +22727,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L55",
       "weight": 0.8,
-      "_src": "server_rationale_1553",
+      "_src": "server_rationale_1562",
       "_tgt": "technicals_indicators",
-      "source": "server_rationale_1553",
+      "source": "server_rationale_1562",
       "target": "technicals_indicators",
       "confidence_score": 0.5
     },
@@ -22676,9 +22739,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L56",
       "weight": 0.8,
-      "_src": "server_rationale_1553",
+      "_src": "server_rationale_1562",
       "_tgt": "historical_historicalfetcher",
-      "source": "server_rationale_1553",
+      "source": "server_rationale_1562",
       "target": "historical_historicalfetcher",
       "confidence_score": 0.5
     },
@@ -22688,9 +22751,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L55",
       "weight": 0.8,
-      "_src": "server_rationale_1563",
+      "_src": "server_rationale_1572",
       "_tgt": "technicals_indicators",
-      "source": "server_rationale_1563",
+      "source": "server_rationale_1572",
       "target": "technicals_indicators",
       "confidence_score": 0.5
     },
@@ -22700,9 +22763,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L56",
       "weight": 0.8,
-      "_src": "server_rationale_1563",
+      "_src": "server_rationale_1572",
       "_tgt": "historical_historicalfetcher",
-      "source": "server_rationale_1563",
+      "source": "server_rationale_1572",
       "target": "historical_historicalfetcher",
       "confidence_score": 0.5
     },
@@ -22712,9 +22775,9 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L55",
       "weight": 0.8,
-      "_src": "server_rationale_1573",
+      "_src": "server_rationale_1582",
       "_tgt": "technicals_indicators",
-      "source": "server_rationale_1573",
+      "source": "server_rationale_1582",
       "target": "technicals_indicators",
       "confidence_score": 0.5
     },
@@ -22724,9 +22787,33 @@
       "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L56",
       "weight": 0.8,
-      "_src": "server_rationale_1573",
+      "_src": "server_rationale_1582",
       "_tgt": "historical_historicalfetcher",
-      "source": "server_rationale_1573",
+      "source": "server_rationale_1582",
+      "target": "historical_historicalfetcher",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L55",
+      "weight": 0.8,
+      "_src": "server_rationale_1616",
+      "_tgt": "technicals_indicators",
+      "source": "server_rationale_1616",
+      "target": "technicals_indicators",
+      "confidence_score": 0.5
+    },
+    {
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L56",
+      "weight": 0.8,
+      "_src": "server_rationale_1616",
+      "_tgt": "historical_historicalfetcher",
+      "source": "server_rationale_1616",
       "target": "historical_historicalfetcher",
       "confidence_score": 0.5
     },
@@ -23191,7 +23278,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L149",
+      "source_location": "L180",
       "weight": 1.0,
       "_src": "renderers_drawscenarios",
       "_tgt": "canvasutils_worldtocanvas",
@@ -23203,7 +23290,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L250",
+      "source_location": "L281",
       "weight": 1.0,
       "_src": "renderers_drawnowline",
       "_tgt": "canvasutils_worldtocanvas",
@@ -23239,7 +23326,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L157",
+      "source_location": "L188",
       "weight": 1.0,
       "_src": "renderers_drawscenarios",
       "_tgt": "canvasutils_hexalpha",
@@ -23251,7 +23338,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L253",
+      "source_location": "L284",
       "weight": 1.0,
       "_src": "renderers_drawnowline",
       "_tgt": "canvasutils_hexalpha",
@@ -23263,7 +23350,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L267",
+      "source_location": "L298",
       "weight": 1.0,
       "_src": "renderers_drawcrosshair",
       "_tgt": "canvasutils_hexalpha",
@@ -23274,7 +23361,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\ChartCanvas.jsx",
-      "source_location": "L22",
+      "source_location": "L23",
       "weight": 1.0,
       "_src": "trading_project_frontend_src_components_canvas_chartcanvas_jsx",
       "_tgt": "chartcanvas_chartcanvas",
@@ -23433,6 +23520,18 @@
       "source_location": "L128",
       "weight": 1.0,
       "_src": "trading_project_frontend_src_components_canvas_renderers_js",
+      "_tgt": "renderers_drawnnboxes",
+      "source": "trading_project_frontend_src_components_canvas_renderers_js",
+      "target": "renderers_drawnnboxes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
+      "source_location": "L159",
+      "weight": 1.0,
+      "_src": "trading_project_frontend_src_components_canvas_renderers_js",
       "_tgt": "renderers_drawscenarios",
       "source": "trading_project_frontend_src_components_canvas_renderers_js",
       "target": "renderers_drawscenarios",
@@ -23442,7 +23541,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L248",
+      "source_location": "L279",
       "weight": 1.0,
       "_src": "trading_project_frontend_src_components_canvas_renderers_js",
       "_tgt": "renderers_drawnowline",
@@ -23454,7 +23553,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L264",
+      "source_location": "L295",
       "weight": 1.0,
       "_src": "trading_project_frontend_src_components_canvas_renderers_js",
       "_tgt": "renderers_drawcrosshair",
@@ -23466,7 +23565,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L282",
+      "source_location": "L313",
       "weight": 1.0,
       "_src": "trading_project_frontend_src_components_canvas_renderers_js",
       "_tgt": "renderers_gettimestep",
@@ -23478,7 +23577,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\canvas\\renderers.js",
-      "source_location": "L291",
+      "source_location": "L322",
       "weight": 1.0,
       "_src": "trading_project_frontend_src_components_canvas_renderers_js",
       "_tgt": "renderers_getpricestep",

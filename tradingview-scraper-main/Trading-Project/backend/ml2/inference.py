@@ -7,10 +7,10 @@ from typing import List, Dict, Optional
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from feature_engine_v2_1 import build_features
-from model_a import SegmentationModel
+from model_a import SegmentationModel, predict_heatmap
 from model_b import extract_box
-from model_c import RefinementModel
-from model_d import QualityScorer
+from model_c import RefinementModel, refine_predict
+from model_d import QualityScorer, score_predict
 
 model_a = None
 model_c = None
@@ -24,49 +24,49 @@ try:
         model_a = SegmentationModel()
         model_a.load_state_dict(torch.load(model_a_path, map_location='cpu'))
         model_a.eval()
-        print("ML2: Model A loaded")
+        print("ML2: Model A (Gated) loaded")
 
     model_c_path = os.path.join(backend_dir, 'data', 'models', 'model_c.pt')
     if os.path.exists(model_c_path):
         model_c = RefinementModel()
         model_c.load_state_dict(torch.load(model_c_path, map_location='cpu'))
         model_c.eval()
-        print("ML2: Model C loaded")
+        print("ML2: Model C (Refinement) loaded")
 
     model_d_path = os.path.join(backend_dir, 'data', 'models', 'model_d.pt')
     if os.path.exists(model_d_path):
         model_d = QualityScorer()
         model_d.load_state_dict(torch.load(model_d_path, map_location='cpu'))
         model_d.eval()
-        print("ML2: Model D loaded")
+        print("ML2: Model D (Dual Head) loaded")
 except Exception as e:
     print(f"Error loading models: {e}")
 
 def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
+    heatmap = []
     try:
         if len(ohlc_candles) < 50:
             ohlc_candles = [ohlc_candles[0]] * (50 - len(ohlc_candles)) + ohlc_candles
         else:
+            # We must pass the FULL context to build features to avoid alignment issues,
+            # but model A is trained on the LAST 50. 
+            # To stay consistent with training, we only look at the last 50.
             ohlc_candles = ohlc_candles[-50:]
 
-        # Build 21-channel features using the v2.1 engine
         raw_ohlc = np.array([[c['open'], c['high'], c['low'], c['close']] for c in ohlc_candles], dtype=np.float32)
         features_tensor = build_features(raw_ohlc)
-        features = features_tensor.cpu().numpy() # [50, 21]
-        print(f"ML2 Debug: Features built, shape={features.shape}")
+        features = features_tensor.cpu().numpy()
         
-        heatmap = None
         initial_box = None
         refined_box = None
-        quality = 0.5
+        quality = 0.05
+        is_valid = False
 
         if model_a:
-            from model_a import predict_heatmap
-            heatmap = predict_heatmap(model_a, features)
-            print(f"ML2 Debug: Heatmap generated, min={heatmap.min():.4f}, max={heatmap.max():.4f}, mean={heatmap.mean():.4f}")
-
-        if heatmap is not None:
-            initial_box_dict = extract_box(heatmap, ohlc_candles)
+            heatmap_np = predict_heatmap(model_a, features)
+            heatmap = heatmap_np.tolist()
+            
+            initial_box_dict = extract_box(heatmap_np, ohlc_candles, threshold=0.15) # Lower threshold for visual feedback
             if initial_box_dict:
                 initial_box = np.array([
                     initial_box_dict['start_idx'], 
@@ -76,65 +76,59 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
                 ], dtype=np.float32)
 
         if model_c and initial_box is not None:
-            from model_c import refine
-            refined_box_vec = refine(model_c, features, initial_box)
-            # De-normalize indices (Model C was trained on 0-1)
+            input_box = np.array([initial_box[0]/50.0, initial_box[1]/50.0, 0.5, 0.5], dtype=np.float32)
+            refined_box_vec = refine_predict(model_c, features, input_box)
+            
             s_idx = int(np.clip(np.round(refined_box_vec[0] * 50.0), 0, 49))
             e_idx = int(np.clip(np.round(refined_box_vec[1] * 50.0), 0, 49))
-            print(f"ML2 Debug: Model C output {refined_box_vec[:2]}, Scaled Indices: {s_idx}, {e_idx}")
             if s_idx > e_idx: s_idx, e_idx = e_idx, s_idx
             
-            # Since training normalization for prices was buggy in dataset.py, 
-            # we re-calculate high/low from candles using the refined indices
-            # to avoid huge boxes.
-            p_high = max(c['high'] for c in ohlc_candles[s_idx:e_idx+1])
-            p_low  = min(c['low'] for c in ohlc_candles[s_idx:e_idx+1])
-            
-            refined_box = [s_idx, e_idx, p_high, p_low]
-            
-            # Smart Fallback: If Model C predicts nearly the whole window (>= 45 candles),
-            # it's likely under-trained for this context. Fallback to Initial Box (Model B).
-            if (e_idx - s_idx) >= 45:
-                refined_box = [
-                    initial_box_dict['start_idx'], 
-                    initial_box_dict['end_idx'], 
-                    initial_box_dict['priceHigh'], 
-                    initial_box_dict['priceLow']
-                ]
-                print(f"ML2: Refinement too wide ({e_idx - s_idx}c), falling back to Model B extraction.")
+            # Robust price extraction
+            slice_c = ohlc_candles[s_idx:e_idx+1]
+            if slice_c:
+                p_high = max(c['high'] for c in slice_c)
+                p_low  = min(c['low'] for c in slice_c)
+                refined_box = [s_idx, e_idx, p_high, p_low]
 
-        if model_d and refined_box is not None:
-            from model_d import score
-            # model_d expects [start, end, high, low] - we pass the indices + prices
-            quality = score(model_d, features, np.array(refined_box, dtype=np.float32))
+        if model_d and (refined_box or initial_box):
+            eval_box = refined_box if refined_box else initial_box
+            input_box_d = np.array([eval_box[0]/50.0, eval_box[1]/50.0, 0.5, 0.5], dtype=np.float32)
+            quality, is_valid = score_predict(model_d, features, input_box_d)
 
-        if refined_box is not None:
-            idx1, idx2 = refined_box[0], refined_box[1]
-            timeStart = ohlc_candles[idx1]['time']
-            timeEnd = ohlc_candles[idx2]['time']
-            priceHigh = float(refined_box[2])
-            priceLow = float(refined_box[3])
-        elif initial_box is not None:
-            # Fallback to Model B (extract_box) output
-            timeStart = initial_box_dict['timeStart']
-            timeEnd = initial_box_dict['timeEnd']
-            priceHigh = initial_box_dict['priceHigh']
-            priceLow = initial_box_dict['priceLow']
-        else:
-            timeStart = ohlc_candles[0]['time']
-            timeEnd = ohlc_candles[-1]['time']
-            priceHigh = max(candle['high'] for candle in ohlc_candles)
-            priceLow = min(candle['low'] for candle in ohlc_candles)
-
-        return {
-            'timeStart': timeStart,
-            'timeEnd': timeEnd,
-            'priceHigh': priceHigh,
-            'priceLow': priceLow,
-            'confidence': float(quality),
-            'heatmap': heatmap.tolist() if heatmap is not None else [],
-            'model_version': 'v2.1-stable'
+        # Map to final output
+        final_box = refined_box if refined_box else initial_box
+        
+        res = {
+            'heatmap': heatmap,
+            'confidence': float(quality) if is_valid else 0.01,
+            'model_version': 'v2.1-stable-gated'
         }
+        
+        if final_box:
+            idx1, idx2 = int(final_box[0]), int(final_box[1])
+            res.update({
+                'timeStart': ohlc_candles[idx1]['time'],
+                'timeEnd': ohlc_candles[idx2]['time'],
+                'priceHigh': float(final_box[2]),
+                'priceLow': float(final_box[3]),
+            })
+        else:
+            # Fallback empty box at end
+            res.update({
+                'timeStart': ohlc_candles[-2]['time'],
+                'timeEnd': ohlc_candles[-1]['time'],
+                'priceHigh': ohlc_candles[-1]['high'],
+                'priceLow': ohlc_candles[-1]['low'],
+            })
+            
+        return res
+
     except Exception as e:
-        print(f"Error during prediction: {e}")
-        return None
+        print(f"ML2 ERROR: Prediction failed: {e}")
+        import traceback
+        traceback.print_exc(file=sys.stdout)
+        return {
+            'heatmap': heatmap,
+            'confidence': 0,
+            'error': str(e)
+        }
