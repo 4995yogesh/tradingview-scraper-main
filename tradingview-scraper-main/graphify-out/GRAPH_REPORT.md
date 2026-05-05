@@ -1,4 +1,4 @@
-# Graph Report - .  (2026-05-04)
+# Graph Report - .  (2026-05-05)
 
 ## Corpus Check
 - 193 files · ~137,778 words
@@ -622,12 +622,12 @@ Nodes (0):
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `Streamer` connect `Community 1` to `Community 15`?**
+  _High betweenness centrality (0.138) - this node is a cross-community bridge._
 - **Why does `save_json_file()` connect `Community 15` to `Community 12`, `Community 14`?**
-  _High betweenness centrality (0.134) - this node is a cross-community bridge._
+  _High betweenness centrality (0.125) - this node is a cross-community bridge._
 - **Why does `save_csv_file()` connect `Community 15` to `Community 12`, `Community 14`?**
-  _High betweenness centrality (0.134) - this node is a cross-community bridge._
-- **Why does `Indicators` connect `Community 0` to `Community 3`, `Community 9`, `Community 11`, `Community 15`, `Community 23`?**
-  _High betweenness centrality (0.124) - this node is a cross-community bridge._
+  _High betweenness centrality (0.125) - this node is a cross-community bridge._
 - **Are the 42 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?**
   _`Indicators` has 42 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 38 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API — optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars.`) actually correct?**

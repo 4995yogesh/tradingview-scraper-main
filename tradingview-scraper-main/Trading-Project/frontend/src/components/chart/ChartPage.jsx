@@ -66,6 +66,12 @@ function getConsolidationSettings(pane) {
   return { enabled: ind.enabled, settings: ind.settings };
 }
 
+function getNeuralSettings(pane) {
+  const ind = (pane?.indicators || []).find(i => i.type === 'neuralBoxes');
+  if (!ind) return null;
+  return { enabled: ind.enabled, settings: ind.settings };
+}
+
 const ResizeHandle = ({ direction = 'horizontal', onDoubleClick }) => (
   <PanelResizeHandle 
     className={`group relative flex items-center justify-center ${
@@ -115,6 +121,7 @@ const ChartPage = () => {
   const [countdown, setCountdown] = useState(AUTO_REFRESH_INTERVAL);
   const [liveTickKey, setLiveTickKey] = useState(0);
   const [showML, setShowML] = useState(false);
+  const [showNN, setShowNN] = useState(false);
 
 
   const symbolPrecision = getSymbolPrecision(symbol);
@@ -336,9 +343,10 @@ const ChartPage = () => {
         )}
         {activeIndicators.map((ind, i) => {
           const isCb = ind.type === 'consolidationBoxes';
-          const color = isCb ? '#2962FF' : '#27a7b0';
-          const title = isCb ? 'Consolidation Boxes' : ind.type === 'swingLevels' ? 'Swing Levels' : ind.type;
-          const label = isCb ? 'CB' : ind.type === 'swingLevels' ? 'SL' : 'IN';
+          const isNb = ind.type === 'neuralBoxes';
+          const color = isNb ? '#29B6F6' : (isCb ? '#2962FF' : '#27a7b0');
+          const title = isNb ? 'Neural Boxes' : (isCb ? 'Consolidation Boxes' : ind.type === 'swingLevels' ? 'Swing Levels' : ind.type);
+          const label = isNb ? 'NB' : (isCb ? 'CB' : ind.type === 'swingLevels' ? 'SL' : 'IN');
           
           return (
             <span
@@ -366,6 +374,7 @@ const ChartPage = () => {
     const panePrecision = getSymbolPrecision(FIXED_SYMBOL);
     const swingSettings = getSwingSettings(effectivePane);
     const consolidationSettings = getConsolidationSettings(effectivePane);
+    const neuralSettings = getNeuralSettings(effectivePane);
     return (
       <div
         key={`pane-${idx}-${effectivePane.timeframe}`}
@@ -386,8 +395,10 @@ const ChartPage = () => {
           symbolPrecision={panePrecision}
           swingSettings={swingSettings}
           consolidationSettings={consolidationSettings}
+          neuralSettings={neuralSettings}
           liveTickKey={liveTickKey}
           aiMode={showML}
+          nnMode={showNN}
         />
         {/* Show mini toolbar for every pane in multi-layout */}
         {activeLayout !== '1' && (
@@ -460,8 +471,10 @@ const ChartPage = () => {
             symbolPrecision={symbolPrecision}
             swingSettings={getSwingSettings(panes[0] || {})}
             consolidationSettings={getConsolidationSettings(panes[0] || {})}
+            neuralSettings={getNeuralSettings(panes[0] || {})}
             liveTickKey={liveTickKey}
             aiMode={showML}
+            nnMode={showNN}
           />
         </div>
       );
@@ -501,6 +514,8 @@ const ChartPage = () => {
         panes={panes}
         aiMode={showML}
         onToggleML={() => setShowML(prev => !prev)}
+        nnMode={showNN}
+        onToggleNN={() => setShowNN(prev => !prev)}
       />
 
 

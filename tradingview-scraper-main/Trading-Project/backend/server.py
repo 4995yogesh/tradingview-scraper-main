@@ -1520,16 +1520,20 @@ async def submit_training_label(data: dict):
 
         if not user_box:
             raise HTTPException(status_code=400, detail="Missing user_box")
+
+        # Normalize: always store user_box as a list regardless of how many boxes drawn
+        if isinstance(user_box, dict):
+            user_box = [user_box]
+            
             
         count = training_db.update_label(box_id, user_box)
         
         # Trigger Gemini Analysis in background
         threading.Thread(target=gemini_trainer.process_and_save, args=(box_id,), daemon=True).start()
 
-        # Trigger NN Training if threshold reached (500, 1000, 1500...)
-        if count >= 500 and count % 500 == 0:
-            from ml.train_nn import train_async
-            train_async(force=True)
+        # Trigger NN Training on every label submission (no minimum threshold)
+        from ml.train_nn import train_async
+        train_async(force=True)
         
         return {"status": "ok", "count": count}
     except Exception as e:
@@ -1623,14 +1627,21 @@ async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
         if not is_nn_ready():
             load_nn_model()
 
-        raw_candles = storage.get("OANDA", symbol, timeframe) or []
+        raw_candles = storage.get_candles("OANDA", symbol, timeframe, count=1000)
         if not raw_candles:
             return []
 
         zones_with_nn = []
         try:
-            df = pd.DataFrame(raw_candles)[['time', 'open', 'high', 'low', 'close']]
-            raw_zones = consolidation_boxes(df)[-20:]
+            df = pd.DataFrame(raw_candles)
+            if 'time' in df.columns:
+                # Robust conversion: if first value > 1e11, it's likely ms
+                first_t = df['time'].iloc[0]
+                unit = 'ms' if first_t > 1e11 else 's'
+                df['time'] = pd.to_datetime(df['time'], unit=unit)
+                df.set_index('time', inplace=True)
+            
+            raw_zones = consolidation_boxes(df)[-20:].to_dict('records')
         except Exception as e:
             logger.warning(f"[nn_zones] consolidation_boxes failed: {e}")
             return []
@@ -1639,20 +1650,50 @@ async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
             nn_box = None
             if is_nn_ready():
                 try:
-                    start_t = zone.get('timeStart', 0) - 3600
-                    end_t   = zone.get('timeEnd', 0) + 3600
-                    # find context start index (25 candles before zone start)
-                    ctx_idx = 0
-                    for i, c in enumerate(raw_candles):
-                        if c['time'] >= start_t:
-                            ctx_idx = max(0, i - 15)
-                            break
-                    ohlc_slice = [c for c in raw_candles[ctx_idx:] if start_t <= c['time'] <= end_t]
-                    if ohlc_slice:
+                    z_idx_start = int(zone.get('start', 0))
+                    z_idx_end   = int(zone.get('end', 0))
+                    
+                    # Align with training: box ends ~30 candles before the window end
+                    ctx_end_idx   = min(len(df) - 1, z_idx_end + 30)
+                    ctx_start_idx = max(0, ctx_end_idx - 100)
+                    
+                    ohlc_slice_df = df.iloc[ctx_start_idx : ctx_end_idx].copy()
+                    ohlc_slice_df.index.name = 'time'
+                    ohlc_slice = ohlc_slice_df.reset_index().to_dict('records')
+                    
+                    for c in ohlc_slice:
+                        if 'time' in c:
+                            # Handle both datetime and other types
+                            if hasattr(c['time'], 'timestamp'):
+                                c['time'] = c['time'].timestamp()
+                            else:
+                                try:
+                                    import pandas as pd
+                                    c['time'] = pd.to_datetime(c['time']).timestamp()
+                                except: pass
+                    
+                    if len(ohlc_slice) >= 10:
                         nn_box = predict_box(ohlc_slice)
                 except Exception as e:
-                    logger.debug(f"[nn_zones] predict_box failed for {zone.get('box_id')}: {e}")
-            zones_with_nn.append({**zone, 'nn_box': nn_box})
+                    logger.debug(f"[nn_zones] predict_box failed for zone at {zone.get('start')}: {e}")
+            
+            # Map start/end/top/bottom to frontend names for the base zone too
+            try:
+                start_ts = df.index[int(zone['start'])].timestamp() * 1000
+                end_ts   = df.index[int(zone['end'])].timestamp() * 1000
+                zone_mapped = {
+                    'box_id': f"nn_base_{int(zone['start'])}",
+                    'timeStart': start_ts,
+                    'timeEnd': end_ts,
+                    'priceHigh': zone['top'],
+                    'priceLow': zone['bottom'],
+                    'type': zone['type'],
+                    'score': zone['score'],
+                    'nn_box': nn_box
+                }
+                zones_with_nn.append(zone_mapped)
+            except:
+                pass
 
         return zones_with_nn
     except Exception as e:

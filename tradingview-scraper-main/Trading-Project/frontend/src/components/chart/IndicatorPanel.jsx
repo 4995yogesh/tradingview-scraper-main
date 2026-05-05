@@ -36,6 +36,15 @@ const INDICATOR_CATALOGUE = [
     tags:        ['consolidation', 'boxes', 'multi-tf', 'structure'],
     defaultSettings: {},
   },
+  {
+    type:        'neuralBoxes',
+    name:        'Neural Boxes',
+    author:      'Antigravity',
+    description: 'AI-refined consolidation zones using CNN model',
+    color:       '#29B6F6',
+    tags:        ['neural', 'ai', 'cnn', 'refined', 'boxes'],
+    defaultSettings: {},
+  },
 ];
 
 // ── Layout pane count map ─────────────────────────────────────────────────────

@@ -111,12 +111,25 @@ class LLMManager:
         self._run_graphify()
         context = self._get_code_context()
         
-        # Step 1: Deep Structural Reasoning
+        # Format user_box — always a list now; render each box clearly
+        try:
+            import json as _json
+            raw_ub = sample.get('user_box')
+            ub_parsed = _json.loads(raw_ub) if isinstance(raw_ub, str) else raw_ub
+            if isinstance(ub_parsed, dict):
+                ub_parsed = [ub_parsed]
+            ub_lines = "\n".join(
+                f"  Box {i+1}: start={b.get('timeStart')} end={b.get('timeEnd')} high={b.get('priceHigh')} low={b.get('priceLow')}"
+                for i, b in enumerate(ub_parsed or [])
+            )
+        except Exception:
+            ub_lines = str(sample.get('user_box'))
+
         reasoning_prompt = f"""
         TASK: Analyze the Consolidation Box refinement and explain the trading logic behind the user's adjustments.
         SYMBOL: {sample.get('symbol')} | TF: {sample.get('timeframe')}
         ORIGINAL BOX: {sample.get('original_meta')}
-        USER-ADJUSTED BOX: {sample.get('user_box')}
+        USER-ADJUSTED BOX(ES):\n{ub_lines}
         OHLC CONTEXT: {sample.get('ohlc_context')}
 
         Please provide a plain-English explanation of the price action, wicks, and candle closes that led to the user's adjustments. Focus on the chart observations and trading logic. Respond in simple bullet points, avoiding any technical or programming-related terms.

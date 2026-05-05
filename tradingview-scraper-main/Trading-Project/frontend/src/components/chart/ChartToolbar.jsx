@@ -22,6 +22,7 @@ const ChartToolbar = ({
   activeLayout, onLayoutChange, showLayout, onToggleLayout,
   showIndicators, onToggleIndicators, panes,
   countdown, aiMode, onToggleML,
+  nnMode, onToggleNN
 }) => {
   const [showTimeframes, setShowTimeframes] = useState(false);
   const [showTfInput, setShowTfInput] = useState(false);
@@ -182,6 +183,18 @@ const ChartToolbar = ({
           }`}
         >
           AI MODE
+        </button>
+
+        <button
+          onClick={onToggleNN}
+          title="Toggle Neural Network Refined Boxes"
+          className={`h-[26px] px-2 flex items-center justify-center rounded-[4px] border transition-all text-[11px] font-bold tracking-wide mr-1 ${
+            nnMode
+              ? 'border-[#29B6F6] bg-[#29B6F615] text-[#29B6F6] shadow-[0_0_8px_rgba(41,182,246,0.15)]'
+              : 'border-[#2A2E39] text-[#787B86] hover:bg-[#2A2E3960] hover:text-[#D1D4DC]'
+          }`}
+        >
+          NEURAL
         </button>
         
         {/* Indicators button */}

@@ -133,8 +133,8 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   // Detect improved box for visual reference, but don't drive windowing with it
   const impFull = detectImprovedBox(allFiltered);
 
-  // ── 2. Apply strict 15+15 Context Windowing ───────────────────────────────
-  const CONTEXT = 15;
+  // ── 2. Apply strict 30+30 Context Windowing ───────────────────────────────
+  const CONTEXT = 30;
   const winStart = Math.max(0, finalStart - CONTEXT);
   const winEnd   = Math.min(allFiltered.length - 1, finalEnd + CONTEXT);
   
@@ -180,31 +180,83 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   }
 
 
-  // ── Single Dashed Yellow Box System ──────────────────────────────────────
-  let finalBox = null;
+  // ── Reference Box System (Original vs Improved) ───────────────────────────
+  if (meta) {
+    const bx1 = sx + relStart * (cw + cg) + (cw / 2);
+    const bx2 = sx + relEnd * (cw + cg) + (cw / 2) + cw;
+    const by1 = toY(meta.priceHigh);
+    const by2 = toY(meta.priceLow);
 
-  if (meta || impFull) {
-    finalBox = {
-      x1: sx + relStart * (cw + cg) + (cw / 2),
-      x2: sx + relEnd * (cw + cg) + (cw / 2) + cw,
-      y1: toY(impFull ? impFull.top : meta.priceHigh),
-      y2: toY(impFull ? impFull.bottom : meta.priceLow)
-    };
-  }
-
-  if (finalBox) {
-    const bx = Math.min(finalBox.x1, finalBox.x2);
-    const bw = Math.abs(finalBox.x2 - finalBox.x1);
-    const by = Math.min(finalBox.y1, finalBox.y2);
-    const bh = Math.abs(finalBox.y2 - finalBox.y1);
+    const bx = Math.min(bx1, bx2);
+    const bw = Math.abs(bx2 - bx1);
+    const by = Math.min(by1, by2);
+    const bh = Math.abs(by2 - by1);
 
     ctx.save();
+    // Yellow dashed = Original
     ctx.strokeStyle = '#F7C948'; ctx.lineWidth = 1.2;
     ctx.setLineDash([5, 3]);
     ctx.strokeRect(bx, by, bw, bh);
     ctx.fillStyle = 'rgba(247,201,72,0.02)';
     ctx.fillRect(bx, by, bw, bh);
     ctx.restore();
+  }
+
+  // ML2 Prediction Box (Light Blue dashed)
+  if (ml2Result && ml2Result.timeStart != null && ml2Result.timeEnd != null) {
+    const times = allFiltered.map(c => new Date(c.time).getTime());
+    const tsStart = typeof ml2Result.timeStart === 'number' ? ml2Result.timeStart : new Date(ml2Result.timeStart).getTime();
+    const tsEnd   = typeof ml2Result.timeEnd   === 'number' ? ml2Result.timeEnd   : new Date(ml2Result.timeEnd).getTime();
+    
+    const findIdx = ts => {
+      let best = 0, bestDiff = Infinity;
+      times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
+      return best;
+    };
+    
+    const mRelStart = findIdx(tsStart) - winStart;
+    const mRelEnd   = findIdx(tsEnd) - winStart;
+
+    if (mRelStart >= 0 && mRelEnd < ohlc.length) {
+      const bx1 = sx + mRelStart * (cw + cg) + (cw / 2);
+      const bx2 = sx + mRelEnd * (cw + cg) + (cw / 2) + cw;
+      const by1 = toY(ml2Result.priceHigh);
+      const by2 = toY(ml2Result.priceLow);
+
+      const bx = Math.min(bx1, bx2);
+      const bw = Math.abs(bx2 - bx1);
+      const by = Math.min(by1, by2);
+      const bh = Math.abs(by2 - by1);
+
+      ctx.save();
+      // Light blue dashed = ML Output
+      ctx.strokeStyle = '#29B6F6'; // light blue
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([5, 3]);
+      ctx.strokeRect(bx, by, bw, bh);
+      ctx.fillStyle = 'rgba(41,182,246,0.02)';
+      ctx.fillRect(bx, by, bw, bh);
+      ctx.restore();
+    }
+  }
+
+  // Improved box reference (Teal dotted)
+  if (impFull) {
+    const isIdx = impFull.start - winStart;
+    const ieIdx = impFull.end   - winStart;
+    
+    if (isIdx >= 0 && ieIdx < ohlc.length) {
+      const ix1 = sx + isIdx * (cw + cg) + (cw / 2);
+      const ix2 = sx + ieIdx * (cw + cg) + (cw / 2) + cw;
+      const iy1 = toY(impFull.top);
+      const iy2 = toY(impFull.bottom);
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(38, 166, 154, 0.4)';
+      ctx.setLineDash([2, 2]);
+      ctx.strokeRect(Math.min(ix1, ix2), Math.min(iy1, iy2), Math.abs(ix2 - ix1), Math.abs(iy2 - iy1));
+      ctx.restore();
+    }
   }
 
   // ── ML2 Heatmap Rendering ────────────────────────────────────────────────
@@ -513,7 +565,7 @@ const RefinementDashboard = () => {
   };
 
   const handleTrain = async () => {
-    if (!stats || (stats.labeled || 0) < 500) return;
+    if (!stats) return;
     setLoading(true);
     try {
       const res = await fetch('http://localhost:8000/api/training/retrain_nn', { method: 'POST' });
@@ -1113,7 +1165,7 @@ const RefinementDashboard = () => {
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
           <div>
             <h1 className="text-2xl font-bold text-white">Refine Studio</h1>
-            <p className="text-xs text-[#787B86]">Canvas OHLC · 15+15 buffer · All DB boxes accessible</p>
+            <p className="text-xs text-[#787B86]">Canvas OHLC · 30+30 buffer · All DB boxes accessible</p>
           </div>
 
           {/* Filter pills */}
@@ -1134,8 +1186,8 @@ const RefinementDashboard = () => {
             </button>
 
             <button onClick={handleTrain}
-              disabled={(stats.labeled || 0) < 500}
-              className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${(stats.labeled || 0) >= 500 ? 'border-[#00E67630] text-[#00E676] hover:bg-[#00E67610]' : 'border-[#363A45] text-[#787B86] opacity-50 cursor-not-allowed'}`}>
+              disabled={!stats || (stats.labeled || 0) < 1}
+              className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all flex items-center gap-2 ${(stats.labeled || 0) >= 1 ? 'border-[#00E67630] text-[#00E676] hover:bg-[#00E67610]' : 'border-[#363A45] text-[#787B86] opacity-50 cursor-not-allowed'}`}>
               Train Model
             </button>
           </div>

@@ -130,8 +130,8 @@ export function drawNNBoxes(ctx, consolidations, viewport) {
     if (!zone.nn_box) return;
 
     // Original zone — yellow dashed outline
-    const s = worldToCanvas(zone.timeStart * 1000, zone.priceHigh, viewport);
-    const e = worldToCanvas(zone.timeEnd   * 1000, zone.priceLow,  viewport);
+    const s = worldToCanvas(zone.timeStart, zone.priceHigh, viewport);
+    const e = worldToCanvas(zone.timeEnd,   zone.priceLow,  viewport);
     ctx.strokeStyle = hexAlpha('#F5C518', 0.6);
     ctx.lineWidth   = 1;
     ctx.setLineDash([5, 5]);

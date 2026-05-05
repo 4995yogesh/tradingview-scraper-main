@@ -45,13 +45,12 @@ except Exception as e:
 def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
     heatmap = []
     try:
-        if len(ohlc_candles) < 50:
-            ohlc_candles = [ohlc_candles[0]] * (50 - len(ohlc_candles)) + ohlc_candles
+        sequence_length = 100
+        if len(ohlc_candles) < sequence_length:
+            ohlc_candles = [ohlc_candles[0]] * (sequence_length - len(ohlc_candles)) + ohlc_candles
         else:
-            # We must pass the FULL context to build features to avoid alignment issues,
-            # but model A is trained on the LAST 50. 
-            # To stay consistent with training, we only look at the last 50.
-            ohlc_candles = ohlc_candles[-50:]
+            # Look at the relevant window (last 100)
+            ohlc_candles = ohlc_candles[-sequence_length:]
 
         raw_ohlc = np.array([[c['open'], c['high'], c['low'], c['close']] for c in ohlc_candles], dtype=np.float32)
         features_tensor = build_features(raw_ohlc)
@@ -66,7 +65,7 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
             heatmap_np = predict_heatmap(model_a, features)
             heatmap = heatmap_np.tolist()
             
-            initial_box_dict = extract_box(heatmap_np, ohlc_candles, threshold=0.15) # Lower threshold for visual feedback
+            initial_box_dict = extract_box(heatmap_np, ohlc_candles, threshold=0.15) 
             if initial_box_dict:
                 initial_box = np.array([
                     initial_box_dict['start_idx'], 
@@ -76,14 +75,14 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
                 ], dtype=np.float32)
 
         if model_c and initial_box is not None:
-            input_box = np.array([initial_box[0]/50.0, initial_box[1]/50.0, 0.5, 0.5], dtype=np.float32)
+            # Normalize to 100.0 instead of 50.0
+            input_box = np.array([initial_box[0]/100.0, initial_box[1]/100.0, 0.5, 0.5], dtype=np.float32)
             refined_box_vec = refine_predict(model_c, features, input_box)
             
-            s_idx = int(np.clip(np.round(refined_box_vec[0] * 50.0), 0, 49))
-            e_idx = int(np.clip(np.round(refined_box_vec[1] * 50.0), 0, 49))
+            s_idx = int(np.clip(np.round(refined_box_vec[0] * 100.0), 0, 99))
+            e_idx = int(np.clip(np.round(refined_box_vec[1] * 100.0), 0, 99))
             if s_idx > e_idx: s_idx, e_idx = e_idx, s_idx
             
-            # Robust price extraction
             slice_c = ohlc_candles[s_idx:e_idx+1]
             if slice_c:
                 p_high = max(c['high'] for c in slice_c)
@@ -92,7 +91,7 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
 
         if model_d and (refined_box or initial_box):
             eval_box = refined_box if refined_box else initial_box
-            input_box_d = np.array([eval_box[0]/50.0, eval_box[1]/50.0, 0.5, 0.5], dtype=np.float32)
+            input_box_d = np.array([eval_box[0]/100.0, eval_box[1]/100.0, 0.5, 0.5], dtype=np.float32)
             quality, is_valid = score_predict(model_d, features, input_box_d)
 
         # Map to final output
@@ -100,8 +99,8 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
         
         res = {
             'heatmap': heatmap,
-            'confidence': float(quality) if is_valid else 0.01,
-            'model_version': 'v2.1-stable-gated'
+            'confidence': float(quality) if is_valid else 0.05,
+            'model_version': 'v2.1-100ctx'
         }
         
         if final_box:
@@ -113,9 +112,9 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
                 'priceLow': float(final_box[3]),
             })
         else:
-            # Fallback empty box at end
+            # Fallback to a small slice at the end if detection failed
             res.update({
-                'timeStart': ohlc_candles[-2]['time'],
+                'timeStart': ohlc_candles[-5]['time'] if len(ohlc_candles) > 5 else ohlc_candles[0]['time'],
                 'timeEnd': ohlc_candles[-1]['time'],
                 'priceHigh': ohlc_candles[-1]['high'],
                 'priceLow': ohlc_candles[-1]['low'],

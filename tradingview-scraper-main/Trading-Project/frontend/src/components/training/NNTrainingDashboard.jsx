@@ -7,17 +7,31 @@ const NNTrainingDashboard = () => {
     epoch: 0,
     loss: 0,
     val_loss: 0,
+    max_iterations: 500,
     updated_at: null
   });
 
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await fetch('http://localhost:8000/api/training/nn_status');
-        const res = await response.json();
-        if (res.status === 'ok' && res.data) {
-          setData(res.data);
-        }
+        // training_progress_nn has live max_iterations; nn_status is DB-only
+        const [liveRes, dbRes] = await Promise.all([
+          fetch('http://localhost:8000/api/training/training_progress_nn'),
+          fetch('http://localhost:8000/api/training/nn_status'),
+        ]);
+        const live = await liveRes.json();
+        const db   = await dbRes.json();
+
+        // Merge: prefer live iteration count, use DB for persistent status
+        const merged = {
+          status:         live.is_training ? 'TRAINING' : (db.data?.status || live.status || 'IDLE'),
+          epoch:          live.is_training ? (live.iteration || 0) : (db.data?.epoch || 0),
+          loss:           live.is_training ? (live.val_logloss || 0) : (db.data?.loss || 0),
+          max_iterations: live.max_iterations || 500,
+          total_samples:  live.total_samples || 0,
+          updated_at:     db.data?.updated_at || null,
+        };
+        setData(merged);
       } catch (error) {
         console.error("Failed to fetch NN status:", error);
       }
@@ -37,7 +51,7 @@ const NNTrainingDashboard = () => {
     }
   };
 
-  const progress = Math.min(100, (data.epoch / 100) * 100);
+  const progress = Math.min(100, (data.epoch / (data.max_iterations || 500)) * 100);
 
   return (
     <div className="bg-[#131722] border border-[#2A2E39] rounded-2xl p-5 shadow-2xl relative overflow-hidden group">
@@ -70,7 +84,11 @@ const NNTrainingDashboard = () => {
             <span className="text-[11px] text-[#787B86] font-medium flex items-center gap-1.5">
               <Activity size={12} /> Training Progress
             </span>
-            <span className="text-xs font-mono text-white">{data.epoch} <span className="text-[#434651]">/ 100</span></span>
+            <span className="text-xs font-mono text-white">
+              Epoch: {data.epoch} <span className="text-[#434651]">/ {data.max_iterations || 500}</span>
+              <span className="mx-2 text-[#2A2E39]">|</span>
+              Samples: {data.total_samples || '...'}
+            </span>
           </div>
           <div className="h-1.5 w-full bg-[#1E222D] rounded-full overflow-hidden border border-[#2A2E39]">
             <div 
@@ -106,7 +124,7 @@ const NNTrainingDashboard = () => {
           ) : (
             <div className="flex items-center gap-1.5 text-[#787B86]">
               <Clock size={14} />
-              <span className="text-[10px] font-medium">Auto-trigger at 500 labels</span>
+              <span className="text-[10px] font-medium">Trains on all available data</span>
             </div>
           )}
           <button className="text-[9px] text-[#2962FF] font-bold hover:underline uppercase tracking-widest">

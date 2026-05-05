@@ -223,7 +223,7 @@ function mapOverlayTime(realTime, tf) {
 
 
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, liveTickKey, aiMode, isSubchart, initialBars }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, neuralSettings, liveTickKey, aiMode, nnMode, isSubchart, initialBars }, ref) => {
   const chartContainerRef      = useRef(null);
   const chartRef               = useRef(null);
   const seriesRef              = useRef(null);
@@ -233,6 +233,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const emaLowSeriesRef        = useRef(null);
   const consolidationPrimitiveRef = useRef(null); // Fast native shape plugin
   const aiPrimitiveRef = useRef(null); // Separate AI-predicted box layer
+  const nnPrimitiveRef = useRef(null); // Separate Neural-predicted box layer
   const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
 
   const [domZones, setDomZones] = useState([]);
@@ -624,6 +625,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   // ── Fetch Consolidation Zones + Swing Levels from backend ─────────────────
   const [consolidations, setConsolidations] = useState([]);
   const [swingLevels, setSwingLevels]       = useState([]);
+  const [nnZones, setNNZones]               = useState([]);
 
   const globalZoneMap = React.useMemo(() => {
     const map = {};
@@ -639,10 +641,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     let iv;
     const poll = async () => {
       try {
-        const [cRes, sRes, aRes] = await Promise.all([
+        const [cRes, sRes, aRes, nRes] = await Promise.all([
           fetch('http://localhost:8000/consolidations'),
           fetch('http://localhost:8000/swings'),
           fetch('http://localhost:8000/api/ml/quality/auto-labels'),
+          fetch(`http://localhost:8000/api/nn/refined_zones?symbol=${symbol}&timeframe=${timeframe}`),
         ]);
         if (cRes.ok) {
           const d = await cRes.json();
@@ -660,12 +663,16 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           const d = await aRes.json();
           setAutoLabels(prev => JSON.stringify(prev) === JSON.stringify(d) ? prev : (d || []));
         }
+        if (nRes && nRes.ok) {
+          const d = await nRes.json();
+          setNNZones(prev => JSON.stringify(prev) === JSON.stringify(d) ? prev : (d || []));
+        }
       } catch (_) {}
     };
     poll();
     iv = setInterval(poll, 5000);
     return () => clearInterval(iv);
-  }, []);
+  }, [symbol, timeframe]);
 
   // ── Consolidation Boxes Drawing ───────────────────────────────────────────
   const visibleZones = React.useMemo(() => {
@@ -1029,6 +1036,94 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [consolidations, timeframe, chartKey, aiMode]);
+
+  // ── NN Mode: Specialized refined boxes ─────────────────────────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+    if (!chart || !series || !chartDataRef.current?.candleData?.length) return;
+
+    console.log('[NN] Effect triggered', { nnMode, nnEnabled: neuralSettings?.enabled, zoneCount: nnZones.length });
+
+    if (!nnMode && !neuralSettings?.enabled) {
+      if (nnPrimitiveRef.current) {
+        try { series.detachPrimitive(nnPrimitiveRef.current); } catch (_) {}
+        nnPrimitiveRef.current = null;
+      }
+      return;
+    }
+
+    if (!nnPrimitiveRef.current) {
+      nnPrimitiveRef.current = new ConsolidationBoxesPrimitive();
+      series.attachPrimitive(nnPrimitiveRef.current);
+    }
+
+    const candles  = chartDataRef.current.candleData;
+    const getUnix  = (t) => typeof t === 'string' ? new Date(t).getTime() / 1000 : Number(t);
+    const lastUnix = getUnix(candles[candles.length - 1].time);
+    const unixArr  = candles.map(c => getUnix(c.time));
+    const bisectLeft = (arr, target) => {
+      let lo = 0, hi = arr.length;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (arr[mid] < target) lo = mid + 1; else hi = mid; }
+      return lo;
+    };
+    const snapToChart = (unixSec) => {
+      if (!unixArr.length) return null;
+      const idx = bisectLeft(unixArr, unixSec);
+      if (idx === 0) return candles[0].time;
+      if (idx >= unixArr.length) return candles[candles.length - 1].time;
+      const before = unixArr[idx - 1], after = unixArr[idx];
+      return (unixSec - before <= after - unixSec) ? candles[idx - 1].time : candles[idx].time;
+    };
+
+    const nnBoxDefs = [];
+    nnZones.forEach(zone => {
+      if (!zone.nn_box) return;
+      
+      const box = zone.nn_box;
+      // Handle seconds vs milliseconds
+      const parseT = (t) => {
+        let val = Number(t);
+        if (val < 1e11) val *= 1000;
+        return Math.floor(val / 1000);
+      };
+      const startUnix = parseT(box.timeStart);
+      const endUnix   = parseT(box.timeEnd);
+      const t1 = snapToChart(startUnix);
+      const t2 = endUnix >= lastUnix ? candles[candles.length - 1].time : snapToChart(endUnix);
+      if (!t1 || !t2 || t1 === t2) return;
+
+      const s1 = Math.min(getUnix(t1), getUnix(t2));
+      const s2 = Math.max(getUnix(t1), getUnix(t2));
+      const lo = bisectLeft(unixArr, s1);
+      const hi = bisectLeft(unixArr, s2 + 1);
+      const points = candles.slice(lo, hi).map(c => c.time);
+      if (points.length < 2) return;
+
+      nnBoxDefs.push({
+        box_id:      `nn_${zone.box_id}`,
+        t1:          points[0],
+        t2:          points[points.length - 1],
+        drawT1:      points[0],
+        drawT2:      points[points.length - 1],
+        priceHigh:   box.priceHigh,
+        priceLow:    box.priceLow,
+        borderColor: '#29B6F6',
+        fillColor:   'rgba(41, 182, 246, 0.15)',
+        isDashed:    true,
+        s1, s2,
+      });
+    });
+
+    nnPrimitiveRef.current.setData(nnBoxDefs);
+
+    return () => {
+      if (nnPrimitiveRef.current) {
+        try { series.detachPrimitive(nnPrimitiveRef.current); } catch (_) {}
+        nnPrimitiveRef.current = null;
+      }
+    };
+  }, [nnZones, timeframe, chartKey, nnMode, neuralSettings]);
 
   // ── Sync HTML Overlays to Chart Coordinates ────────────────────────────────
   useEffect(() => {
