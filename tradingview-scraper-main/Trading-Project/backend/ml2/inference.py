@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from feature_engine_v2_1 import build_features
+from feature_engine_v3 import build_features
 from model_a import SegmentationModel, predict_heatmap
 from model_b import extract_box
 from model_c import RefinementModel, refine_predict
@@ -45,11 +45,11 @@ except Exception as e:
 def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
     heatmap = []
     try:
-        sequence_length = 100
+        sequence_length = 50
         if len(ohlc_candles) < sequence_length:
             ohlc_candles = [ohlc_candles[0]] * (sequence_length - len(ohlc_candles)) + ohlc_candles
         else:
-            # Look at the relevant window (last 100)
+            # Look at the relevant window (last 50)
             ohlc_candles = ohlc_candles[-sequence_length:]
 
         raw_ohlc = np.array([[c['open'], c['high'], c['low'], c['close']] for c in ohlc_candles], dtype=np.float32)
@@ -75,12 +75,12 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
                 ], dtype=np.float32)
 
         if model_c and initial_box is not None:
-            # Normalize to 100.0 instead of 50.0
-            input_box = np.array([initial_box[0]/100.0, initial_box[1]/100.0, 0.5, 0.5], dtype=np.float32)
+            # Normalize to sequence_length
+            input_box = np.array([initial_box[0]/float(sequence_length), initial_box[1]/float(sequence_length), 0.5, 0.5], dtype=np.float32)
             refined_box_vec = refine_predict(model_c, features, input_box)
             
-            s_idx = int(np.clip(np.round(refined_box_vec[0] * 100.0), 0, 99))
-            e_idx = int(np.clip(np.round(refined_box_vec[1] * 100.0), 0, 99))
+            s_idx = int(np.clip(np.round(refined_box_vec[0] * sequence_length), 0, sequence_length - 1))
+            e_idx = int(np.clip(np.round(refined_box_vec[1] * sequence_length), 0, sequence_length - 1))
             if s_idx > e_idx: s_idx, e_idx = e_idx, s_idx
             
             slice_c = ohlc_candles[s_idx:e_idx+1]
@@ -91,7 +91,7 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
 
         if model_d and (refined_box or initial_box):
             eval_box = refined_box if refined_box else initial_box
-            input_box_d = np.array([eval_box[0]/100.0, eval_box[1]/100.0, 0.5, 0.5], dtype=np.float32)
+            input_box_d = np.array([eval_box[0]/float(sequence_length), eval_box[1]/float(sequence_length), 0.5, 0.5], dtype=np.float32)
             quality, is_valid = score_predict(model_d, features, input_box_d)
 
         # Map to final output
@@ -100,7 +100,7 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
         res = {
             'heatmap': heatmap,
             'confidence': float(quality) if is_valid else 0.05,
-            'model_version': 'v2.1-100ctx'
+            'model_version': 'v3-scale-invariant'
         }
         
         if final_box:

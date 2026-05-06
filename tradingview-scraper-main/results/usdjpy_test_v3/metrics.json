@@ -1,0 +1,10 @@
+{
+    "asset": "USDJPY",
+    "total_candles": 5000,
+    "ml_detections": 2325,
+    "heuristic_detections": 108,
+    "matches": 498,
+    "false_positives": 1827,
+    "missed": -390,
+    "avg_confidence": 0.9778311770449403
+}

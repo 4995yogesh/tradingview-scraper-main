@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from feature_engine_v2_1 import build_features
+from feature_engine_v3 import build_features
 
 def to_unix(t):
     if isinstance(t, str):

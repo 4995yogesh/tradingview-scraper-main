@@ -104,7 +104,7 @@ TIMEFRAME_MAP = {
 PERSISTENT_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d", "1w"]
 
 # Symbols to pre-load and gap-fill on startup
-PERSISTENT_SYMBOLS = [("OANDA", "EURUSD")]
+PERSISTENT_SYMBOLS = [("OANDA", "EURUSD"), ("OANDA", "USDJPY")]
 
 # Seconds per bar for each timeframe (used for gap calculation)
 TF_INTERVAL_SECS = {

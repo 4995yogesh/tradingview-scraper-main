@@ -26,7 +26,7 @@ const TF_SHORTCUT_MAP = {
   '1M':  '1M',
 };
 
-const FIXED_SYMBOL = 'EURUSD';
+const FIXED_SYMBOL = 'USDJPY';
 
 // Auto-refresh interval in seconds
 const AUTO_REFRESH_INTERVAL = 5;
@@ -34,6 +34,7 @@ const AUTO_REFRESH_INTERVAL = 5;
 // Symbol precision map
 const SYMBOL_PRECISION = {
   EURUSD: 5,
+  USDJPY: 3,
 };
 
 export function getSymbolPrecision(symbol) {

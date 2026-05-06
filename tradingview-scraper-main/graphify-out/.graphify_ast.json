@@ -4079,42 +4079,42 @@
       "label": "getSymbolPrecision()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L39"
+      "source_location": "L40"
     },
     {
       "id": "chartpage_getswingsettings",
       "label": "getSwingSettings()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L57"
+      "source_location": "L58"
     },
     {
       "id": "chartpage_getconsolidationsettings",
       "label": "getConsolidationSettings()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L63"
+      "source_location": "L64"
     },
     {
       "id": "chartpage_getneuralsettings",
       "label": "getNeuralSettings()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L69"
+      "source_location": "L70"
     },
     {
       "id": "chartpage_resizehandle",
       "label": "ResizeHandle()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L75"
+      "source_location": "L76"
     },
     {
       "id": "chartpage_chartpage",
       "label": "ChartPage()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L88"
+      "source_location": "L89"
     },
     {
       "id": "trading_project_frontend_src_components_chart_charttoolbar_jsx",
@@ -15867,7 +15867,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L39",
+      "source_location": "L40",
       "weight": 1.0
     },
     {
@@ -15876,7 +15876,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L57",
+      "source_location": "L58",
       "weight": 1.0
     },
     {
@@ -15885,7 +15885,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L63",
+      "source_location": "L64",
       "weight": 1.0
     },
     {
@@ -15894,7 +15894,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L69",
+      "source_location": "L70",
       "weight": 1.0
     },
     {
@@ -15903,7 +15903,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L75",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -15912,7 +15912,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L88",
+      "source_location": "L89",
       "weight": 1.0
     },
     {
@@ -15921,7 +15921,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L127",
+      "source_location": "L128",
       "weight": 1.0
     },
     {
@@ -30608,7 +30608,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L94",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
