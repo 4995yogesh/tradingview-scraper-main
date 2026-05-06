@@ -1531,9 +1531,7 @@ async def submit_training_label(data: dict):
         # Trigger Gemini Analysis in background
         threading.Thread(target=gemini_trainer.process_and_save, args=(box_id,), daemon=True).start()
 
-        # Trigger NN Training on every label submission (no minimum threshold)
-        from ml.train_nn import train_async
-        train_async(force=True)
+        # Automatic training disabled - user requested manual only
         
         return {"status": "ok", "count": count}
     except Exception as e:

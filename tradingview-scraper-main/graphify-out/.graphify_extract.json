@@ -3267,42 +3267,42 @@
       "label": "get_nn_status()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1539"
+      "source_location": "L1541"
     },
     {
       "id": "server_skip_training_sample",
       "label": "skip_training_sample()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1548"
+      "source_location": "L1550"
     },
     {
       "id": "server_manual_retrain_nn",
       "label": "manual_retrain_nn()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1561"
+      "source_location": "L1563"
     },
     {
       "id": "server_get_nn_training_progress",
       "label": "get_nn_training_progress()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1571"
+      "source_location": "L1573"
     },
     {
       "id": "server_sync_training_queue",
       "label": "sync_training_queue()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1581"
+      "source_location": "L1583"
     },
     {
       "id": "server_get_nn_refined_zones",
       "label": "get_nn_refined_zones()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1615"
+      "source_location": "L1617"
     },
     {
       "id": "server_rationale_1",
@@ -3508,32 +3508,32 @@
       "source_location": "L1356"
     },
     {
-      "id": "server_rationale_1562",
+      "id": "server_rationale_1564",
       "label": "Trigger the PyTorch CNN training manually.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1562"
+      "source_location": "L1564"
     },
     {
-      "id": "server_rationale_1572",
+      "id": "server_rationale_1574",
       "label": "Return the real-time logs and loss of the CNN trainer.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1572"
+      "source_location": "L1574"
     },
     {
-      "id": "server_rationale_1582",
+      "id": "server_rationale_1584",
       "label": "Force-sync all currently detected consolidations into the training DB.     Allo",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1582"
+      "source_location": "L1584"
     },
     {
-      "id": "server_rationale_1616",
+      "id": "server_rationale_1618",
       "label": "Return consolidation zones enriched with NN-predicted refined box coordinates.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1616"
+      "source_location": "L1618"
     },
     {
       "id": "trading_project_frontend_craco_config_js",
@@ -4096,18 +4096,25 @@
       "source_location": "L63"
     },
     {
+      "id": "chartpage_getneuralsettings",
+      "label": "getNeuralSettings()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
+      "source_location": "L69"
+    },
+    {
       "id": "chartpage_resizehandle",
       "label": "ResizeHandle()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L69"
+      "source_location": "L75"
     },
     {
       "id": "chartpage_chartpage",
       "label": "ChartPage()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L82"
+      "source_location": "L88"
     },
     {
       "id": "trading_project_frontend_src_components_chart_charttoolbar_jsx",
@@ -4198,28 +4205,28 @@
       "label": "PaneSelector()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
-      "source_location": "L52"
+      "source_location": "L61"
     },
     {
       "id": "indicatorpanel_activeindicatorrow",
       "label": "ActiveIndicatorRow()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
-      "source_location": "L81"
+      "source_location": "L90"
     },
     {
       "id": "indicatorpanel_cataloguecard",
       "label": "CatalogueCard()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
-      "source_location": "L120"
+      "source_location": "L129"
     },
     {
       "id": "indicatorpanel_indicatorpanel",
       "label": "IndicatorPanel()",
       "file_type": "code",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
-      "source_location": "L152"
+      "source_location": "L161"
     },
     {
       "id": "trading_project_frontend_src_components_chart_layoutselector_jsx",
@@ -14267,7 +14274,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1539",
+      "source_location": "L1541",
       "weight": 1.0
     },
     {
@@ -14276,7 +14283,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1548",
+      "source_location": "L1550",
       "weight": 1.0
     },
     {
@@ -14285,7 +14292,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1561",
+      "source_location": "L1563",
       "weight": 1.0
     },
     {
@@ -14294,7 +14301,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1571",
+      "source_location": "L1573",
       "weight": 1.0
     },
     {
@@ -14303,7 +14310,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1581",
+      "source_location": "L1583",
       "weight": 1.0
     },
     {
@@ -14312,7 +14319,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1615",
+      "source_location": "L1617",
       "weight": 1.0
     },
     {
@@ -14321,7 +14328,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1664",
+      "source_location": "L1703",
       "weight": 1.0
     },
     {
@@ -14510,7 +14517,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1589",
+      "source_location": "L1591",
       "weight": 1.0
     },
     {
@@ -14775,39 +14782,39 @@
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1562",
+      "source": "server_rationale_1564",
       "target": "server_manual_retrain_nn",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1562",
+      "source_location": "L1564",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1572",
+      "source": "server_rationale_1574",
       "target": "server_get_nn_training_progress",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1572",
+      "source_location": "L1574",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1582",
+      "source": "server_rationale_1584",
       "target": "server_sync_training_queue",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1582",
+      "source_location": "L1584",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1616",
+      "source": "server_rationale_1618",
       "target": "server_get_nn_refined_zones",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1616",
+      "source_location": "L1618",
       "weight": 1.0
     },
     {
@@ -15883,7 +15890,7 @@
     },
     {
       "source": "trading_project_frontend_src_components_chart_chartpage_jsx",
-      "target": "chartpage_resizehandle",
+      "target": "chartpage_getneuralsettings",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
@@ -15892,11 +15899,20 @@
     },
     {
       "source": "trading_project_frontend_src_components_chart_chartpage_jsx",
+      "target": "chartpage_resizehandle",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_chartpage_jsx",
       "target": "chartpage_chartpage",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L82",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -15905,7 +15921,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L120",
+      "source_location": "L127",
       "weight": 1.0
     },
     {
@@ -16184,7 +16200,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
-      "source_location": "L52",
+      "source_location": "L61",
       "weight": 1.0
     },
     {
@@ -16193,7 +16209,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
-      "source_location": "L81",
+      "source_location": "L90",
       "weight": 1.0
     },
     {
@@ -16202,7 +16218,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
-      "source_location": "L120",
+      "source_location": "L129",
       "weight": 1.0
     },
     {
@@ -16211,7 +16227,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
-      "source_location": "L152",
+      "source_location": "L161",
       "weight": 1.0
     },
     {
@@ -20846,7 +20862,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L305",
+      "source_location": "L296",
       "weight": 1.0
     },
     {
@@ -20855,7 +20871,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L306",
+      "source_location": "L297",
       "weight": 1.0
     },
     {
@@ -27726,7 +27742,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1562",
+      "source": "server_rationale_1564",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27735,7 +27751,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1572",
+      "source": "server_rationale_1574",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27744,7 +27760,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1582",
+      "source": "server_rationale_1584",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27753,7 +27769,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1616",
+      "source": "server_rationale_1618",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28023,7 +28039,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1562",
+      "source": "server_rationale_1564",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28032,7 +28048,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1572",
+      "source": "server_rationale_1574",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28041,7 +28057,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1582",
+      "source": "server_rationale_1584",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28050,7 +28066,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1616",
+      "source": "server_rationale_1618",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -30452,7 +30468,17 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1527",
+      "source_location": "L1532",
+      "weight": 1.0
+    },
+    {
+      "source": "server_get_nn_refined_zones",
+      "target": "fetcher_datafetcher_get_candles",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1628",
       "weight": 1.0
     },
     {
@@ -30462,7 +30488,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1633",
+      "source_location": "L1642",
       "weight": 1.0
     },
     {
@@ -30582,7 +30608,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartPage.jsx",
-      "source_location": "L88",
+      "source_location": "L94",
       "weight": 1.0
     },
     {

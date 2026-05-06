@@ -21,7 +21,7 @@ function isWeekendCandle(timeStr) {
 
 function detectImprovedBox(ohlc) {
   if (!ohlc || ohlc.length < 10) return null;
-  
+
   let n = ohlc.length;
   let searchingSwings = true;
   let anchorIndex = 0;
@@ -35,8 +35,8 @@ function detectImprovedBox(ohlc) {
   for (let i = 2; i < n; i++) {
     const h = ohlc[i].high, l = ohlc[i].low;
     const c = ohlc[i].close;
-    const h1 = ohlc[i-1].high, l1 = ohlc[i-1].low;
-    const h2 = ohlc[i-2].high, l2 = ohlc[i-2].low;
+    const h1 = ohlc[i - 1].high, l1 = ohlc[i - 1].low;
+    const h2 = ohlc[i - 2].high, l2 = ohlc[i - 2].low;
 
     const isSH = h1 > h2 && h1 >= h;
     const isSL = l1 < l2 && l1 <= l;
@@ -118,16 +118,16 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   let finalStart = 0, finalEnd = allFiltered.length - 1;
 
   if (meta && meta.timeStart != null && meta.timeEnd != null) {
-    const times   = allFiltered.map(c => new Date(c.time).getTime());
+    const times = allFiltered.map(c => new Date(c.time).getTime());
     const tsStart = typeof meta.timeStart === 'number' ? meta.timeStart : new Date(meta.timeStart).getTime();
-    const tsEnd   = typeof meta.timeEnd   === 'number' ? meta.timeEnd   : new Date(meta.timeEnd).getTime();
+    const tsEnd = typeof meta.timeEnd === 'number' ? meta.timeEnd : new Date(meta.timeEnd).getTime();
     const findIdx = ts => {
       let best = 0, bestDiff = Infinity;
       times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
       return best;
     };
     finalStart = findIdx(tsStart);
-    finalEnd   = findIdx(tsEnd);
+    finalEnd = findIdx(tsEnd);
   }
 
   // Detect improved box for visual reference, but don't drive windowing with it
@@ -136,38 +136,38 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   // ── 2. Apply strict 30+30 Context Windowing ───────────────────────────────
   const CONTEXT = 30;
   const winStart = Math.max(0, finalStart - CONTEXT);
-  const winEnd   = Math.min(allFiltered.length - 1, finalEnd + CONTEXT);
-  
+  const winEnd = Math.min(allFiltered.length - 1, finalEnd + CONTEXT);
+
   // Ensure we get exactly 15 if possible, but don't exceed boundaries
   const ohlc = allFiltered.slice(winStart, winEnd + 1);
 
   // Re-map indices to the new cropped window
   const relStart = finalStart - winStart;
-  const relEnd   = finalEnd   - winStart;
+  const relEnd = finalEnd - winStart;
 
-  const cw   = Math.max(2, Math.round(CW * zoom));
-  const cg   = Math.max(1, Math.round(CG * zoom));
-  
+  const cw = Math.max(2, Math.round(CW * zoom));
+  const cg = Math.max(1, Math.round(CG * zoom));
+
   const highs = ohlc.map(c => c.high).filter(isFinite);
-  const lows  = ohlc.map(c => c.low).filter(isFinite);
-  
-  const maxP  = highs.length > 0 ? Math.max(...highs) : 1.0;
-  const minP  = lows.length > 0 ? Math.min(...lows) : 0.0;
-  const rng   = Math.max(0.0001, maxP - minP);
-  
-  const cH    = H - PAD.t - PAD.b;
-  const cW    = W - PAD.l - PAD.r;
-  const midP  = (maxP + minP) / 2 + panY;
-  const halfRng = (rng / 2) / priceZoom;
-  const adjMax  = midP + halfRng;
-  const adjRng  = halfRng * 2;
+  const lows = ohlc.map(c => c.low).filter(isFinite);
 
-  const toY   = p => {
+  const maxP = highs.length > 0 ? Math.max(...highs) : 1.0;
+  const minP = lows.length > 0 ? Math.min(...lows) : 0.0;
+  const rng = Math.max(0.0001, maxP - minP);
+
+  const cH = H - PAD.t - PAD.b;
+  const cW = W - PAD.l - PAD.r;
+  const midP = (maxP + minP) / 2 + panY;
+  const halfRng = (rng / 2) / priceZoom;
+  const adjMax = midP + halfRng;
+  const adjRng = halfRng * 2;
+
+  const toY = p => {
     if (!isFinite(p)) return PAD.t + cH / 2;
     return PAD.t + ((adjMax - p) / adjRng) * cH;
   };
-  const totW  = ohlc.length * (cw + cg);
-  const sx    = PAD.l + Math.max(0, (cW - totW) / 2);
+  const totW = ohlc.length * (cw + cg);
+  const sx = PAD.l + Math.max(0, (cW - totW) / 2);
 
   // Grid
   for (let i = 0; i <= 5; i++) {
@@ -206,16 +206,16 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   if (ml2Result && ml2Result.timeStart != null && ml2Result.timeEnd != null) {
     const times = allFiltered.map(c => new Date(c.time).getTime());
     const tsStart = typeof ml2Result.timeStart === 'number' ? ml2Result.timeStart : new Date(ml2Result.timeStart).getTime();
-    const tsEnd   = typeof ml2Result.timeEnd   === 'number' ? ml2Result.timeEnd   : new Date(ml2Result.timeEnd).getTime();
-    
+    const tsEnd = typeof ml2Result.timeEnd === 'number' ? ml2Result.timeEnd : new Date(ml2Result.timeEnd).getTime();
+
     const findIdx = ts => {
       let best = 0, bestDiff = Infinity;
       times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
       return best;
     };
-    
+
     const mRelStart = findIdx(tsStart) - winStart;
-    const mRelEnd   = findIdx(tsEnd) - winStart;
+    const mRelEnd = findIdx(tsEnd) - winStart;
 
     if (mRelStart >= 0 && mRelEnd < ohlc.length) {
       const bx1 = sx + mRelStart * (cw + cg) + (cw / 2);
@@ -241,29 +241,13 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   }
 
   // Improved box reference (Teal dotted)
-  if (impFull) {
-    const isIdx = impFull.start - winStart;
-    const ieIdx = impFull.end   - winStart;
-    
-    if (isIdx >= 0 && ieIdx < ohlc.length) {
-      const ix1 = sx + isIdx * (cw + cg) + (cw / 2);
-      const ix2 = sx + ieIdx * (cw + cg) + (cw / 2) + cw;
-      const iy1 = toY(impFull.top);
-      const iy2 = toY(impFull.bottom);
-
-      ctx.save();
-      ctx.strokeStyle = 'rgba(38, 166, 154, 0.4)';
-      ctx.setLineDash([2, 2]);
-      ctx.strokeRect(Math.min(ix1, ix2), Math.min(iy1, iy2), Math.abs(ix2 - ix1), Math.abs(iy2 - iy1));
-      ctx.restore();
-    }
-  }
+  // impFull rendering removed as requested.
 
   // ── ML2 Heatmap Rendering ────────────────────────────────────────────────
   if (heatmap && heatmap.length > 0) {
-    const hH = 20; 
+    const hH = 20;
     const hY = H - PAD.b + 15; // Positioned in the 60px bottom padding zone
-    
+
     // Auto-normalize heatmap values to highlight relative peaks
     const hMin = Math.min(...heatmap);
     const hMax = Math.max(...heatmap);
@@ -280,7 +264,7 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
       const hX = sx + i * (cw + cg);
       // Normalized value for color mapping
       const nVal = (val - hMin) / hRange;
-      
+
       let r, g, b;
       if (nVal < 0.5) {
         r = Math.floor(50 + nVal * 410); g = Math.floor(nVal * 100); b = 0;
@@ -290,7 +274,7 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
       ctx.fillStyle = `rgb(${r}, ${Math.max(0, g)}, ${Math.max(0, b)})`;
       ctx.fillRect(hX, hY, cw + cg, hH);
     });
-    
+
     ctx.fillStyle = '#D1D4DC';
     ctx.font = 'bold 10px Inter, sans-serif';
     ctx.fillText(`NEURAL SEGMENTATION (REL: ${hMax.toFixed(2)})`, sx, hY - 10);
@@ -318,18 +302,18 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
     ctx.strokeStyle = '#26A69A'; ctx.lineWidth = 2;
     ctx.strokeRect(Math.min(mx1, mx2), Math.min(my1, my2), Math.abs(mx2 - mx1), Math.abs(my2 - my1));
     ctx.fillStyle = '#26A69A'; ctx.font = 'bold 10px monospace';
-    ctx.fillText(`ML2: ${Math.round(ml2Result.confidence*100)}%`, Math.min(mx1, mx2), Math.min(my1, my2) - 5);
+    ctx.fillText(`ML2: ${Math.round(ml2Result.confidence * 100)}%`, Math.min(mx1, mx2), Math.min(my1, my2) - 5);
     ctx.restore();
   }
 
   // Candles
   ohlc.forEach((c, i) => {
-    const x   = sx + i * (cw + cg);
-    const ok  = c.close >= c.open;
-    const bt  = toY(Math.max(c.open, c.close));
-    const bb  = toY(Math.min(c.open, c.close));
-    const bh  = Math.max(1, bb - bt);
-    const wx  = x + cw / 2;
+    const x = sx + i * (cw + cg);
+    const ok = c.close >= c.open;
+    const bt = toY(Math.max(c.open, c.close));
+    const bb = toY(Math.min(c.open, c.close));
+    const bh = Math.max(1, bb - bt);
+    const wx = x + cw / 2;
 
     ctx.strokeStyle = '#D1D4DC'; ctx.lineWidth = 1;
 
@@ -392,57 +376,57 @@ function crushToBullets(raw) {
 // ── Status colours ────────────────────────────────────────────────────────────
 const SC = {
   PENDING_SCREENSHOT: '#F7C948',
-  PENDING:            '#2962FF',
-  LABELED:            '#26A69A',
-  SKIPPED:            '#787B86',
-  ANALYZED:           '#9C27B0',
+  PENDING: '#2962FF',
+  LABELED: '#26A69A',
+  SKIPPED: '#787B86',
+  ANALYZED: '#9C27B0',
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const RefinementDashboard = () => {
-  const [boxes,      setBoxes]      = useState([]);
-  const [idx,        setIdx]        = useState(0);
-  const [filter,     setFilter]     = useState('');
-  const [stats,      setStats]      = useState({ total: 0, pending: 0, labeled: 0 });
-  const [drawBoxes,  setDrawBoxes]  = useState([]);   // committed array — set on mouseUp only
-  const [loading,    setLoading]    = useState(true);
-  const [saving,     setSaving]     = useState(false);
-  const [toast,      setToast]      = useState(null);
-  const [zoom,       setZoom]       = useState(1.0);
-  const [magnet,     setMagnet]     = useState(true);
-  const [lessons,    setLessons]    = useState([]);
+  const [boxes, setBoxes] = useState([]);
+  const [idx, setIdx] = useState(0);
+  const [filter, setFilter] = useState('');
+  const [stats, setStats] = useState({ total: 0, pending: 0, labeled: 0 });
+  const [drawBoxes, setDrawBoxes] = useState([]);   // committed array — set on mouseUp only
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [zoom, setZoom] = useState(1.0);
+  const [magnet, setMagnet] = useState(true);
+  const [lessons, setLessons] = useState([]);
   const [seenHashes, setSeenHashes] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('rf_seen_hashes') || '[]')); }
     catch { return new Set(); }
   });
   const [showAllInsights, setShowAllInsights] = useState(false);
-  const [lastBox,    setLastBox]    = useState(null);
+  const [lastBox, setLastBox] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  
-  // ML2 States
-  const [heatmap,    setHeatmap]    = useState([]);
-  const [ml2Result,  setMl2Result]  = useState(null);
 
-  const zoomRef               = useRef(1.0);
-  const panYRef               = useRef(0);
-  const priceZoomRef          = useRef(1.0);
-  const mouseXRef             = useRef(0);
-  const ohlcRef               = useRef(null);
-  const metaRef               = useRef(null);
+  // ML2 States
+  const [heatmap, setHeatmap] = useState([]);
+  const [ml2Result, setMl2Result] = useState(null);
+
+  const zoomRef = useRef(1.0);
+  const panYRef = useRef(0);
+  const priceZoomRef = useRef(1.0);
+  const mouseXRef = useRef(0);
+  const ohlcRef = useRef(null);
+  const metaRef = useRef(null);
 
   // ── Multi-box drag engine ─────────────────────────────────────────────────
-  const dragRef       = useRef(false);
-  const modeRef       = useRef('NONE');
-  const offRef        = useRef({ x: 0, y: 0 });
-  const drawBoxesRef  = useRef([]);      // live boxes array during drag
-  const activeIdxRef  = useRef(-1);
+  const dragRef = useRef(false);
+  const modeRef = useRef('NONE');
+  const offRef = useRef({ x: 0, y: 0 });
+  const drawBoxesRef = useRef([]);      // live boxes array during drag
+  const activeIdxRef = useRef(-1);
   const lastClickTimeRef = useRef(0);     // which box is being interacted
-  const rafRef        = useRef(null);
-  const magnetRef     = useRef(true);
+  const rafRef = useRef(null);
+  const magnetRef = useRef(true);
   const priceRangeRef = useRef({ maxP: 0, minP: 0, rng: 0.0001 });
 
-  const canvasRef     = useRef(null);
-  const overlayRef    = useRef(null);
+  const canvasRef = useRef(null);
+  const overlayRef = useRef(null);
   const dragCanvasRef = useRef(null);
   const filteredOhlcRef = useRef(null);
   const box = boxes[idx] || null;
@@ -511,10 +495,10 @@ const RefinementDashboard = () => {
   const fetchBoxes = useCallback(async () => {
     setLoading(true);
     try {
-      const qs  = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
+      const qs = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
       const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const txt  = await res.text();
+      const txt = await res.text();
       const data = JSON.parse(txt);
       if (data.status === 'ok') {
         const fetched = data.boxes || [];
@@ -534,17 +518,17 @@ const RefinementDashboard = () => {
   const fetchStats = async () => {
     try {
       const res = await fetch('http://localhost:8000/api/training/stats');
-      const d   = await res.json();
+      const d = await res.json();
       if (d.status === 'ok') setStats(d.stats);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const fetchLessons = async () => {
     try {
       const res = await fetch('http://localhost:8000/api/training/lessons');
-      const d   = await res.json();
+      const d = await res.json();
       if (d.status === 'ok') setLessons(d.lessons || []);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const handleSync = async () => {
@@ -586,21 +570,21 @@ const RefinementDashboard = () => {
     if (!hashes.length) return;
     setSeenHashes(prev => {
       const next = new Set([...prev, ...hashes]);
-      try { localStorage.setItem('rf_seen_hashes', JSON.stringify([...next])); } catch (_) {}
+      try { localStorage.setItem('rf_seen_hashes', JSON.stringify([...next])); } catch (_) { }
       return next;
     });
   }, []);
 
-  useEffect(() => { 
+  useEffect(() => {
     let active = true;
-    fetchBoxes(); 
-    fetchStats(); 
-    fetchLessons(); 
+    fetchBoxes();
+    fetchStats();
+    fetchLessons();
 
     const poll = async () => {
       if (!active || saving) return;
       try {
-        const qs  = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
+        const qs = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
         const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
         if (!res.ok) return;
         const data = JSON.parse(await res.text());
@@ -619,7 +603,7 @@ const RefinementDashboard = () => {
           fetchStats();
           fetchLessons();
         }
-      } catch (_) {}
+      } catch (_) { }
     };
 
     const iv = setInterval(poll, 5000);
@@ -642,10 +626,10 @@ const RefinementDashboard = () => {
     console.log("Fetching ML2 prediction for box:", box.box_id);
     const getPrediction = async () => {
       try {
-        const ohlc = typeof box.ohlc_context === 'string' 
-          ? JSON.parse(box.ohlc_context) 
+        const ohlc = typeof box.ohlc_context === 'string'
+          ? JSON.parse(box.ohlc_context)
           : (box.ohlc_context || []);
-        
+
         const body = JSON.stringify(ohlc);
         console.log("Sending prediction request, payload length:", body.length);
         const res = await fetch('http://localhost:8000/api/ml/predict_v2', {
@@ -695,19 +679,19 @@ const RefinementDashboard = () => {
       const ohlc = typeof box.ohlc_context === 'string'
         ? JSON.parse(box.ohlc_context)
         : (box.ohlc_context || []);
-      const raw  = typeof box.original_meta === 'string'
+      const raw = typeof box.original_meta === 'string'
         ? JSON.parse(box.original_meta)
         : (box.original_meta || {});
       const meta = {
-        timeStart:  raw.timeStart  ?? null,
-        timeEnd:    raw.timeEnd    ?? null,
-        priceHigh:  raw.priceHigh  ?? box.price_high,
-        priceLow:   raw.priceLow   ?? box.price_low,
-        nn_box:     box.nn_box     ?? null,
+        timeStart: raw.timeStart ?? null,
+        timeEnd: raw.timeEnd ?? null,
+        priceHigh: raw.priceHigh ?? box.price_high,
+        priceLow: raw.priceLow ?? box.price_low,
+        nn_box: box.nn_box ?? null,
       };
-      ohlcRef.current      = ohlc;
-      metaRef.current      = meta;
-      panYRef.current      = 0;
+      ohlcRef.current = ohlc;
+      metaRef.current = meta;
+      panYRef.current = 0;
       priceZoomRef.current = 1.0;
       try {
         const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0, heatmap, ml2Result);
@@ -715,9 +699,9 @@ const RefinementDashboard = () => {
           filteredOhlcRef.current = filtered;
           // Precompute price range for O(1) magnet snapping
           const highs = filtered.map(c => c.high);
-          const lows  = filtered.map(c => c.low);
-          const maxP  = Math.max(...highs);
-          const minP  = Math.min(...lows);
+          const lows = filtered.map(c => c.low);
+          const maxP = Math.max(...highs);
+          const minP = Math.min(...lows);
           priceRangeRef.current = { maxP, minP, rng: maxP - minP || 0.0001 };
         }
       } catch (err) {
@@ -762,13 +746,13 @@ const RefinementDashboard = () => {
   // ── Keyboard shortcuts ─────────────────────────────────────────────────────
   useEffect(() => {
     const onKey = e => {
-      if (e.key === 'Enter')                        { e.preventDefault(); handleSave(); }
-      else if (e.key === 's' || e.key === 'S')      { e.preventDefault(); handleSkip(); }
-      else if (e.key === 'Escape')                  { clearDrawing(); }
-      else if (e.key === 'ArrowRight')              setIdx(i => Math.min(i + 1, boxes.length - 1));
-      else if (e.key === 'ArrowLeft')               setIdx(i => Math.max(i - 1, 0));
-      else if (e.key === 'v' || e.key === 'V')      { e.preventDefault(); handleValidate(); }
-      else if (e.ctrlKey && e.key === 'z')          { e.preventDefault(); handleUndo(); }
+      if (e.key === 'Enter') { e.preventDefault(); handleSave(); }
+      else if (e.key === 's' || e.key === 'S') { e.preventDefault(); handleSkip(); }
+      else if (e.key === 'Escape') { clearDrawing(); }
+      else if (e.key === 'ArrowRight') setIdx(i => Math.min(i + 1, boxes.length - 1));
+      else if (e.key === 'ArrowLeft') setIdx(i => Math.max(i - 1, 0));
+      else if (e.key === 'v' || e.key === 'V') { e.preventDefault(); handleValidate(); }
+      else if (e.ctrlKey && e.key === 'z') { e.preventDefault(); handleUndo(); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -803,7 +787,7 @@ const RefinementDashboard = () => {
       ctx.strokeStyle = isActive ? '#2962FF' : '#2962FF88';
       ctx.lineWidth = isActive ? 1.5 : 1;
       ctx.strokeRect(lx + 0.5, ly + 0.5, lw - 1, lh - 1);
-      
+
       ctx.fillStyle = isActive ? '#2962FF' : '#2962FF88';
       ctx.font = 'bold 10px monospace';
       ctx.fillText(`#${i + 1}`, lx + 4, ly + 12);
@@ -848,12 +832,12 @@ const RefinementDashboard = () => {
     let smy = my;
     if (candle) {
       const { maxP, minP, rng } = priceRangeRef.current;
-      const midP    = (maxP + minP) / 2 + panYRef.current;
+      const midP = (maxP + minP) / 2 + panYRef.current;
       const halfRng = (rng / 2) / priceZoomRef.current;
-      const adjMax  = midP + halfRng;
-      const adjRng  = halfRng * 2;
+      const adjMax = midP + halfRng;
+      const adjRng = halfRng * 2;
       const yH = PAD.t + ((adjMax - candle.high) / adjRng) * cH;
-      const yL = PAD.t + ((adjMax - candle.low)  / adjRng) * cH;
+      const yL = PAD.t + ((adjMax - candle.low) / adjRng) * cH;
       if (Math.abs(my - yH) < 30 || Math.abs(my - yL) < 30) {
         smy = Math.abs(my - yH) < Math.abs(my - yL) ? yH : yL;
       }
@@ -869,7 +853,7 @@ const RefinementDashboard = () => {
     const ratioX = W / rect.width;
     const ratioY = H / rect.height;
     const mx = (e.clientX - rect.left) * ratioX;
-    const my = (e.clientY - rect.top)  * ratioY;
+    const my = (e.clientY - rect.top) * ratioY;
     if (mx > W - PAD.r) return;
 
     const hs = 10;
@@ -878,7 +862,7 @@ const RefinementDashboard = () => {
     for (let i = bxs.length - 1; i >= 0; i--) {
       const b = bxs[i];
       if (!b) continue;
-      
+
       const p1 = getPixelCoords(b.i1, b.p1);
       const p2 = getPixelCoords(b.i2, b.p2);
       const { pxX: x1, pxY: y1 } = p1;
@@ -898,14 +882,14 @@ const RefinementDashboard = () => {
       if (checkHandle(x2, y1, 'TR')) return;
       if (checkHandle(x1, y2, 'BL')) return;
       if (checkHandle(x2, y2, 'BR')) return;
-      if (checkHandle((x1+x2)/2, y1, 'T')) return;
-      if (checkHandle((x1+x2)/2, y2, 'B')) return;
-      if (checkHandle(x1, (y1+y2)/2, 'L')) return;
-      if (checkHandle(x2, (y1+y2)/2, 'R')) return;
+      if (checkHandle((x1 + x2) / 2, y1, 'T')) return;
+      if (checkHandle((x1 + x2) / 2, y2, 'B')) return;
+      if (checkHandle(x1, (y1 + y2) / 2, 'L')) return;
+      if (checkHandle(x2, (y1 + y2) / 2, 'R')) return;
 
-      const mnX=Math.min(x1,x2), mxX=Math.max(x1,x2);
-      const mnY=Math.min(y1,y2), mxY=Math.max(y1,y2);
-      if (mx>mnX && mx<mxX && my>mnY && my<mxY) {
+      const mnX = Math.min(x1, x2), mxX = Math.max(x1, x2);
+      const mnY = Math.min(y1, y2), mxY = Math.max(y1, y2);
+      if (mx > mnX && mx < mxX && my > mnY && my < mxY) {
         activeIdxRef.current = i;
         modeRef.current = 'MOVE';
         offRef.current = { x: mx, y: my, i1: b.i1, p1: b.p1, i2: b.i2, p2: b.p2 };
@@ -930,12 +914,12 @@ const RefinementDashboard = () => {
       if (!dragRef.current) return;
       const rect = overlayRef.current?.getBoundingClientRect();
       if (!rect) return;
-      const W = canvasRef.current?.width  || 900;
+      const W = canvasRef.current?.width || 900;
       const H = canvasRef.current?.height || 500;
       const ratioX = W / rect.width;
       const ratioY = H / rect.height;
       const mx = (e.clientX - rect.left) * ratioX;
-      const my = (e.clientY - rect.top)  * ratioY;
+      const my = (e.clientY - rect.top) * ratioY;
 
       const { smx, smy } = snapToCandle(mx, my, W, H);
       const { idx: sIdx, price: sPrice } = getChartCoords(smx, smy);
@@ -961,10 +945,10 @@ const RefinementDashboard = () => {
         case 'TR': updated = { ...b, i2: sIdx, p1: sPrice }; break;
         case 'BL': updated = { ...b, i1: sIdx, p2: sPrice }; break;
         case 'BR': updated = { ...b, i2: sIdx, p2: sPrice }; break;
-        case 'T':  updated = { ...b, p1: sPrice }; break;
-        case 'B':  updated = { ...b, p2: sPrice }; break;
-        case 'L':  updated = { ...b, i1: sIdx }; break;
-        case 'R':  updated = { ...b, i2: sIdx }; break;
+        case 'T': updated = { ...b, p1: sPrice }; break;
+        case 'B': updated = { ...b, p2: sPrice }; break;
+        case 'L': updated = { ...b, i1: sIdx }; break;
+        case 'R': updated = { ...b, i2: sIdx }; break;
         default: return;
       }
       const next = [...bxs];
@@ -1000,7 +984,7 @@ const RefinementDashboard = () => {
     setDrawBoxes([]);
     drawBoxesRef.current = [];
     if (dragCanvasRef.current) {
-      dragCanvasRef.current.getContext('2d').clearRect(0,0,dragCanvasRef.current.width,dragCanvasRef.current.height);
+      dragCanvasRef.current.getContext('2d').clearRect(0, 0, dragCanvasRef.current.width, dragCanvasRef.current.height);
     }
     fetchStats();
     fetchLessons();
@@ -1030,11 +1014,11 @@ const RefinementDashboard = () => {
     try {
       const payload = {
         box_id: box.box_id,
-        user_box: { 
-          timeStart: box.time_start_ms || box.timeStart, 
-          timeEnd: box.time_end_ms || box.timeEnd, 
-          priceHigh: box.price_high || box.priceHigh, 
-          priceLow: box.price_low || box.priceLow 
+        user_box: {
+          timeStart: box.time_start_ms || box.timeStart,
+          timeEnd: box.time_end_ms || box.timeEnd,
+          priceHigh: box.price_high || box.priceHigh,
+          priceLow: box.price_low || box.priceLow
         }
       };
       const res = await fetch('http://localhost:8000/api/training/label', {
@@ -1064,27 +1048,27 @@ const RefinementDashboard = () => {
       const zoom = zoomRef.current;
       const { maxP, minP, rng } = priceRangeRef.current;
 
-      const cw   = Math.max(2, Math.round(CW * zoom));
-      const cg   = Math.max(1, Math.round(CG * zoom));
-      const cH   = H - PAD.t - PAD.b;
-      const cW   = W - PAD.l - PAD.r;
+      const cw = Math.max(2, Math.round(CW * zoom));
+      const cg = Math.max(1, Math.round(CG * zoom));
+      const cH = H - PAD.t - PAD.b;
+      const cW = W - PAD.l - PAD.r;
       const totW = ohlc.length * (cw + cg);
-      const sx   = PAD.l + Math.max(0, (cW - totW) / 2);
+      const sx = PAD.l + Math.max(0, (cW - totW) / 2);
 
-      const midP    = (maxP + minP) / 2 + panYRef.current;
+      const midP = (maxP + minP) / 2 + panYRef.current;
       const halfRng = (rng / 2) * 1.2 / priceZoomRef.current; // Synchronized 1.2x buffer
-      const adjMax  = midP + halfRng;
-      const adjRng  = halfRng * 2;
+      const adjMax = midP + halfRng;
+      const adjRng = halfRng * 2;
 
       const userBoxes = bxs.filter(Boolean).map(b => {
         const startIdx = Math.max(0, Math.min(ohlc.length - 1, Math.min(b.i1, b.i2)));
-        const endIdx   = Math.min(ohlc.length - 1, Math.max(b.i1, b.i2));
+        const endIdx = Math.min(ohlc.length - 1, Math.max(b.i1, b.i2));
 
         const timeStart = ohlc[startIdx]?.time || ohlc[0].time;
-        const timeEnd   = ohlc[endIdx]?.time || ohlc[ohlc.length - 1].time;
+        const timeEnd = ohlc[endIdx]?.time || ohlc[ohlc.length - 1].time;
 
         const priceHigh = Math.max(b.p1, b.p2);
-        const priceLow  = Math.min(b.p1, b.p2);
+        const priceLow = Math.min(b.p1, b.p2);
 
         return { timeStart, timeEnd, priceHigh, priceLow };
       });
@@ -1093,7 +1077,7 @@ const RefinementDashboard = () => {
         box_id: box.box_id,
         user_box: userBoxes.length === 1 ? userBoxes[0] : userBoxes
       };
-      
+
       const res = await fetch('http://localhost:8000/api/training/label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1131,8 +1115,8 @@ const RefinementDashboard = () => {
 
   const clearDrawing = useCallback(() => {
     drawBoxesRef.current = [];
-    dragRef.current    = false;
-    modeRef.current    = 'NONE';
+    dragRef.current = false;
+    modeRef.current = 'NONE';
     activeIdxRef.current = -1;
     setDrawBoxes([]);
     if (dragCanvasRef.current) {
@@ -1142,7 +1126,7 @@ const RefinementDashboard = () => {
   }, []);
 
   const nav = d => {
-    setIdx(i => Math.max(0, Math.min(boxes.length-1, i+d)));
+    setIdx(i => Math.max(0, Math.min(boxes.length - 1, i + d)));
     clearDrawing();
   };
 
@@ -1170,16 +1154,16 @@ const RefinementDashboard = () => {
 
           {/* Filter pills */}
           <div className="flex gap-2 flex-wrap">
-            {[['ALL',''],['LABELED','LABELED'],['SKIPPED','SKIPPED'],['NEEDS SHOT','PENDING_SCREENSHOT']].map(([lbl, val]) => (
+            {[['ALL', ''], ['LABELED', 'LABELED'], ['SKIPPED', 'SKIPPED'], ['NEEDS SHOT', 'PENDING_SCREENSHOT']].map(([lbl, val]) => (
               <button key={lbl} onClick={() => setFilter(val)}
                 className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all
-                  ${filter===val ? 'border-[#2962FF] text-[#2962FF] bg-[#2962FF15]' : 'border-[#2A2E39] text-[#787B86] hover:text-white'}`}>
+                  ${filter === val ? 'border-[#2962FF] text-[#2962FF] bg-[#2962FF15]' : 'border-[#2A2E39] text-[#787B86] hover:text-white'}`}>
                 {lbl}
               </button>
             ))}
-            
+
             <div className="w-[1px] h-6 bg-[#2A2E39] mx-1 self-center" />
-            
+
             <button onClick={handleSync}
               className="text-[11px] font-bold px-3 py-1.5 rounded-lg border border-[#2962FF30] text-[#2962FF] hover:bg-[#2962FF10] transition-all flex items-center gap-2">
               Sync Live
@@ -1194,7 +1178,7 @@ const RefinementDashboard = () => {
 
           {/* Stats */}
           <div className="flex gap-3">
-            {[['Labeled', stats.labeled||0, '#26A69A']].map(([l,v,c]) => (
+            {[['Labeled', stats.labeled || 0, '#26A69A']].map(([l, v, c]) => (
               <div key={l} className="bg-[#131722] px-4 py-2 rounded-xl border border-[#2A2E39] text-center">
                 <div className="text-[10px] text-[#787B86] uppercase tracking-widest">{l}</div>
                 <div className="text-xl font-bold" style={{ color: c }}>{v}</div>
@@ -1221,13 +1205,13 @@ const RefinementDashboard = () => {
             <div className="lg:col-span-3 space-y-3">
               {/* Progress bar */}
               <div className="flex items-center justify-between text-xs text-[#787B86]">
-                <span className="font-mono">{idx+1} / {boxes.length}</span>
+                <span className="font-mono">{idx + 1} / {boxes.length}</span>
                 <div className="flex items-center gap-3">
                   <span style={{ color: SC[box.status] || '#fff' }}
                     className="font-bold uppercase text-[10px] bg-[#1E222D] px-2 py-1 rounded">
                     {box.status}
                   </span>
-                  <span className="font-mono">{box.symbol} · {(box.timeframe||'').toUpperCase()}</span>
+                  <span className="font-mono">{box.symbol} · {(box.timeframe || '').toUpperCase()}</span>
                 </div>
               </div>
 
@@ -1283,7 +1267,7 @@ const RefinementDashboard = () => {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 {/* Group 1: Navigation & Undo */}
                 <div className="flex items-center gap-2">
-                  <button onClick={() => nav(-1)} disabled={idx===0}
+                  <button onClick={() => nav(-1)} disabled={idx === 0}
                     className="w-12 h-12 bg-[#1E222D] hover:bg-[#2A2E39] disabled:opacity-30 text-white rounded-xl font-bold border border-[#363A45] transition-all flex items-center justify-center">
                     ◀
                   </button>
@@ -1293,7 +1277,7 @@ const RefinementDashboard = () => {
                     <span className="text-lg">↩</span>
                     <span className="text-[10px] uppercase tracking-wider">Undo</span>
                   </button>
-                  <button onClick={() => nav(1)} disabled={idx===boxes.length-1}
+                  <button onClick={() => nav(1)} disabled={idx === boxes.length - 1}
                     className="w-12 h-12 bg-[#1E222D] hover:bg-[#2A2E39] disabled:opacity-30 text-white rounded-xl font-bold border border-[#363A45] transition-all flex items-center justify-center">
                     ▶
                   </button>
@@ -1334,30 +1318,30 @@ const RefinementDashboard = () => {
                 <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3">Box Details</h3>
                 {(() => {
                   let metaRaw = {};
-                  try { metaRaw = typeof box.original_meta === 'string' ? JSON.parse(box.original_meta) : (box.original_meta || {}); } catch(e){}
+                  try { metaRaw = typeof box.original_meta === 'string' ? JSON.parse(box.original_meta) : (box.original_meta || {}); } catch (e) { }
                   const startT = box.time_start_ms || box.timeStart || metaRaw.timeStart;
                   const endT = box.time_end_ms || box.timeEnd || metaRaw.timeEnd;
                   const fmt = t => {
                     if (!t) return 'N/A';
                     const dt = new Date(t);
-                    return dt.toLocaleString('en-IN', { 
+                    return dt.toLocaleString('en-IN', {
                       timeZone: 'Asia/Kolkata',
                       year: 'numeric', month: '2-digit', day: '2-digit',
-                      hour: '2-digit', minute: '2-digit', hour12: false 
+                      hour: '2-digit', minute: '2-digit', hour12: false
                     }) + ' IST';
                   };
                   return [
-                    ['ID',      box.box_id],
-                    ['Symbol',  box.symbol],
-                    ['TF',      (box.timeframe||'').toUpperCase()],
-                    ['Start',   fmt(startT)],
-                    ['End',     fmt(endT)],
-                    ['High',    box.price_high?.toFixed(5)],
-                    ['Low',     box.price_low?.toFixed(5)],
-                    ['Status',  box.status],
-                    ['Created', (box.created_at||'').slice(0,16)],
+                    ['ID', box.box_id],
+                    ['Symbol', box.symbol],
+                    ['TF', (box.timeframe || '').toUpperCase()],
+                    ['Start', fmt(startT)],
+                    ['End', fmt(endT)],
+                    ['High', box.price_high?.toFixed(5)],
+                    ['Low', box.price_low?.toFixed(5)],
+                    ['Status', box.status],
+                    ['Created', (box.created_at || '').slice(0, 16)],
                   ];
-                })().map(([l,v]) => (
+                })().map(([l, v]) => (
                   <div key={l} className="mb-2">
                     <div className="text-[10px] text-[#434651] uppercase">{l}</div>
                     <div className="text-sm font-mono text-white truncate" title={v}>{v}</div>
@@ -1367,7 +1351,7 @@ const RefinementDashboard = () => {
 
               <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
                 <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3">Shortcuts</h3>
-                {[['Confirm','Enter'],['Skip','S'],['Clear','Esc'],['Navigate','← →']].map(([a,k]) => (
+                {[['Confirm', 'Enter'], ['Skip', 'S'], ['Clear', 'Esc'], ['Navigate', '← →']].map(([a, k]) => (
                   <div key={a} className="flex justify-between text-xs mb-2">
                     <span className="text-[#787B86]">{a}</span>
                     <span className="font-mono text-[#2962FF]">{k}</span>
@@ -1378,11 +1362,11 @@ const RefinementDashboard = () => {
               <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
                 <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3">Legend</h3>
                 <div className="space-y-2 text-xs">
-                  <div className="flex items-center gap-2"><div className="w-8 h-0 border-t-2 border-dashed border-[#F7C948]"/><span>Machine box</span></div>
-                  <div className="flex items-center gap-2"><div className="w-8 h-0 border-t-2 border-[#2962FF]"/><span>Your box</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#2962FF] opacity-40"/><span>5-candle buffer</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#26A69A]"/><span>Bull candle</span></div>
-                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#EF5350]"/><span>Bear candle</span></div>
+                  <div className="flex items-center gap-2"><div className="w-8 h-0 border-t-2 border-dashed border-[#F7C948]" /><span>Machine box</span></div>
+                  <div className="flex items-center gap-2"><div className="w-8 h-0 border-t-2 border-[#2962FF]" /><span>Your box</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#2962FF] opacity-40" /><span>5-candle buffer</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#26A69A]" /><span>Bull candle</span></div>
+                  <div className="flex items-center gap-2"><div className="w-3 h-3 rounded bg-[#EF5350]" /><span>Bear candle</span></div>
                 </div>
               </div>
 
