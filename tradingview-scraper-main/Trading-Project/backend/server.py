@@ -40,7 +40,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 
 # ── Package path setup ────────────────────────────────────────────────────────
@@ -58,6 +58,8 @@ from pipeline.main import pipeline
 from pipeline.data.storage import storage
 from pipeline.data.db import candle_db          # ← SQLite layer
 from indicators.consolidation import consolidation_boxes  # PROJECT path active now
+from indicators.user_style_learner import UserStyleLearner
+from indicators.adaptive_consolidation import adaptive_consolidation_boxes
 
 # ── ML imports ────────────────────────────────────────────────────────────────
 import hashlib
@@ -974,6 +976,46 @@ def get_consolidation(
     boxes_df = consolidation_boxes(df)
     return {"status": "success", "boxes": boxes_df.to_dict(orient="records")}
 
+@app.get("/api/adaptive_consolidation")
+def get_adaptive_consolidation(
+    exchange: str = Query("OANDA"),
+    symbol:   str = Query("EURUSD"),
+    timeframe: str = Query("1d"),
+    candles:  int = Query(500, ge=10, le=100000),
+    end_time: Optional[str] = Query(None),
+):
+    """Return adaptive consolidation boxes for given series."""
+    use_timestamp = timeframe in ["1m", "5m", "15m", "1h", "4h"]
+    parsed_end = int(end_time) if end_time and use_timestamp else end_time
+    stored = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
+    if not stored:
+        raise HTTPException(404, "No candle data available for consolidation")
+    df = pd.DataFrame(stored)
+    if use_timestamp:
+        df.set_index(pd.to_datetime(df["time"], unit='s'), inplace=True)
+    else:
+        df.set_index(pd.to_datetime(df["time"]).dt.date, inplace=True)
+    boxes_df = adaptive_consolidation_boxes(df)
+    return {"status": "success", "boxes": boxes_df.to_dict(orient="records"), "candles": stored}
+
+@app.post("/api/adaptive_consolidation/context")
+def get_adaptive_consolidation_context(candles: list = Body(...)):
+    """Return adaptive consolidation boxes for given candles."""
+    if not candles:
+        raise HTTPException(400, "No candles provided")
+    df = pd.DataFrame(candles)
+    if "time" in df.columns:
+        try:
+            if isinstance(df["time"].iloc[0], (int, float, np.integer)):
+                df.set_index(pd.to_datetime(df["time"], unit='s'), inplace=True)
+            else:
+                df.set_index(pd.to_datetime(df["time"]), inplace=True)
+        except Exception as e:
+            print("Error setting index in adaptive context:", e)
+    
+    boxes_df = adaptive_consolidation_boxes(df)
+    return {"status": "success", "boxes": boxes_df.to_dict(orient="records")}
+
 
 @app.get("/consolidations")
 def get_consolidations_all():
@@ -1527,6 +1569,50 @@ async def submit_training_label(data: dict):
             
             
         count = training_db.update_label(box_id, user_box)
+        
+        # AI Rule Evolution Agent Hook
+        try:
+            import sqlite3
+            with sqlite3.connect("training_set.db", timeout=30.0) as conn:
+                conn.row_factory = sqlite3.Row
+                cursor = conn.cursor()
+                cursor.execute("SELECT symbol, timeframe, original_meta FROM review_queue WHERE box_id=?", (box_id,))
+                row = cursor.fetchone()
+                if row:
+                    import json
+                    orig_meta = json.loads(row["original_meta"]) if row["original_meta"] else {}
+                    
+                    original_box = {
+                        "start": orig_meta.get("start", 0),
+                        "end": orig_meta.get("end", 0),
+                        "top": float(orig_meta.get("priceHigh", 0)),
+                        "bottom": float(orig_meta.get("priceLow", 0)),
+                        "type": orig_meta.get("type", "LOOSE"),
+                        "score": float(orig_meta.get("score", 0.0))
+                    }
+                    
+                    user_box_mapped = None
+                    if user_box and len(user_box) > 0:
+                        u_box = user_box[0]
+                        user_box_mapped = {
+                            "start": u_box.get("start", original_box["start"]),
+                            "end": u_box.get("end", original_box["end"]),
+                            "top": float(u_box.get("priceHigh", original_box["top"])),
+                            "bottom": float(u_box.get("priceLow", original_box["bottom"]))
+                        }
+                        
+                    status = 'edited' if user_box_mapped else 'validated'
+                    
+                    learner = UserStyleLearner()
+                    learner.record_feedback(
+                        symbol=row["symbol"],
+                        timeframe=row["timeframe"],
+                        original_box=original_box,
+                        user_box=user_box_mapped,
+                        status=status
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to record feedback for rule evolution: {e}")
         
         # Trigger Gemini Analysis in background
         threading.Thread(target=gemini_trainer.process_and_save, args=(box_id,), daemon=True).start()

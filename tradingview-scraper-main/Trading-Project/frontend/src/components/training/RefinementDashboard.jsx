@@ -89,7 +89,7 @@ function detectImprovedBox(ohlc) {
   return activeBox;
 }
 
-function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, heatmap = [], ml2Result = null) {
+function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, heatmap = [], ml2Result = null, hideNeural = false, adaptiveBoxes = []) {
   if (!canvas || !ohlcRaw || ohlcRaw.length === 0) return;
 
   // Filter ghost candles and weekends
@@ -203,7 +203,7 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   }
 
   // ML2 Prediction Box (Light Blue dashed)
-  if (ml2Result && ml2Result.timeStart != null && ml2Result.timeEnd != null) {
+  if (!hideNeural && ml2Result && ml2Result.timeStart != null && ml2Result.timeEnd != null) {
     const times = allFiltered.map(c => new Date(c.time).getTime());
     const tsStart = typeof ml2Result.timeStart === 'number' ? ml2Result.timeStart : new Date(ml2Result.timeStart).getTime();
     const tsEnd = typeof ml2Result.timeEnd === 'number' ? ml2Result.timeEnd : new Date(ml2Result.timeEnd).getTime();
@@ -244,7 +244,7 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   // impFull rendering removed as requested.
 
   // ── ML2 Heatmap Rendering ────────────────────────────────────────────────
-  if (heatmap && heatmap.length > 0) {
+  if (!hideNeural && heatmap && heatmap.length > 0) {
     const hH = 20;
     const hY = H - PAD.b + 15; // Positioned in the 60px bottom padding zone
 
@@ -281,7 +281,7 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   }
 
   // ── ML2 Refinement Box ───────────────────────────────────────────────────
-  if (ml2Result && ml2Result.confidence > 0.3) {
+  if (!hideNeural && ml2Result && ml2Result.confidence > 0.3) {
     const times = allFiltered.map(c => new Date(c.time).getTime());
     const tsStart = new Date(ml2Result.timeStart).getTime();
     const tsEnd = new Date(ml2Result.timeEnd).getTime();
@@ -304,6 +304,54 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
     ctx.fillStyle = '#26A69A'; ctx.font = 'bold 10px monospace';
     ctx.fillText(`ML2: ${Math.round(ml2Result.confidence * 100)}%`, Math.min(mx1, mx2), Math.min(my1, my2) - 5);
     ctx.restore();
+  }
+
+  // Adaptive Boxes (Red dotted)
+  if (adaptiveBoxes && adaptiveBoxes.length > 0) {
+    const times = allFiltered.map(c => new Date(c.time).getTime());
+    adaptiveBoxes.forEach(ab => {
+      const tsStart = typeof ab.time_start === 'number' ? ab.time_start : new Date(ab.time_start).getTime();
+      const tsEnd = typeof ab.time_end === 'number' ? ab.time_end : new Date(ab.time_end).getTime();
+      
+      if (isNaN(tsStart) || isNaN(tsEnd)) return;
+      
+      const findIdx = ts => {
+        let best = 0, bestDiff = Infinity;
+        times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
+        return best;
+      };
+      
+      const sIdx = findIdx(tsStart) - winStart;
+      const eIdx = findIdx(tsEnd) - winStart;
+      
+      // Skip if zero width to prevent stacking vertical lines
+      if (sIdx === eIdx) return;
+      
+      if (sIdx >= 0 && eIdx < ohlc.length) {
+        const bx1 = sx + sIdx * (cw + cg) + (cw / 2);
+        const bx2 = sx + eIdx * (cw + cg) + (cw / 2) + cw;
+        const by1 = toY(ab.price_high);
+        const by2 = toY(ab.price_low);
+        
+        const bx = Math.min(bx1, bx2);
+        const bw = Math.abs(bx2 - bx1);
+        const by = Math.min(by1, by2);
+        const bh = Math.abs(by2 - by1);
+        
+        ctx.save();
+        ctx.strokeStyle = '#EF5350'; // Red
+        ctx.lineWidth = 2.0;
+        ctx.setLineDash([2, 4]); // Dotted
+        ctx.strokeRect(bx, by, bw, bh);
+        ctx.fillStyle = 'rgba(239,83,80,0.02)';
+        ctx.fillRect(bx, by, bw, bh);
+        
+        ctx.fillStyle = '#EF5350';
+        ctx.font = 'bold 10px monospace';
+        ctx.fillText('RULE EVOLVER', bx, by - 5);
+        ctx.restore();
+      }
+    });
   }
 
   // Candles
@@ -394,6 +442,8 @@ const RefinementDashboard = () => {
   const [toast, setToast] = useState(null);
   const [zoom, setZoom] = useState(1.0);
   const [magnet, setMagnet] = useState(true);
+  const [hideNeural, setHideNeural] = useState(false);
+  const [adaptiveBoxes, setAdaptiveBoxes] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [seenHashes, setSeenHashes] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('rf_seen_hashes') || '[]')); }
@@ -651,12 +701,42 @@ const RefinementDashboard = () => {
     getPrediction();
   }, [box]);
 
+  // ── Fetch Adaptive Consolidation Boxes ───────────────────────────────────
+  useEffect(() => {
+    if (!box) {
+      setAdaptiveBoxes([]);
+      return;
+    }
+    setAdaptiveBoxes([]); // Clear stale boxes immediately when switching
+    const fetchAdaptive = async () => {
+      try {
+        const raw = typeof box.original_meta === 'string'
+          ? JSON.parse(box.original_meta)
+          : (box.original_meta || {});
+        const tsEnd = typeof raw.timeEnd === 'number' ? raw.timeEnd : new Date(raw.timeEnd).getTime();
+        const endSeconds = Math.floor(tsEnd / 1000);
+
+        // Fetch 500 candles ending at the box's end time to provide enough history
+        const res = await fetch(`http://localhost:8000/api/adaptive_consolidation?symbol=${box.symbol}&timeframe=${box.timeframe.toLowerCase()}&candles=500&end_time=${endSeconds}`);
+        if (!res.ok) throw new Error('Failed to fetch adaptive boxes');
+        const data = await res.json();
+        if (data.status === 'success') {
+          setAdaptiveBoxes(data.boxes || []);
+        }
+      } catch (e) {
+        console.error("Adaptive fetch error:", e);
+        setAdaptiveBoxes([]);
+      }
+    };
+    fetchAdaptive();
+  }, [box]);
+
   // ── Draw chart on box or zoom change ─────────────────────────────────────
   const redraw = useCallback((z, py, pz) => {
     if (!canvasRef.current || !ohlcRef.current) return;
     const pY = py !== undefined ? py : panYRef.current;
     const pZ = pz !== undefined ? pz : priceZoomRef.current;
-    const filtered = renderChart(canvasRef.current, ohlcRef.current, metaRef.current, z, pY, pZ, heatmap, ml2Result);
+    const filtered = renderChart(canvasRef.current, ohlcRef.current, metaRef.current, z, pY, pZ, heatmap, ml2Result, hideNeural, adaptiveBoxes);
     if (filtered) {
       filteredOhlcRef.current = filtered;
       if (paintDragCanvasRef.current) {
@@ -664,7 +744,7 @@ const RefinementDashboard = () => {
         rafRef.current = requestAnimationFrame(paintDragCanvasRef.current);
       }
     }
-  }, [heatmap, ml2Result]);
+  }, [heatmap, ml2Result, hideNeural, adaptiveBoxes]);
 
   useEffect(() => {
     if (!box || !canvasRef.current) return;
@@ -694,7 +774,7 @@ const RefinementDashboard = () => {
       panYRef.current = 0;
       priceZoomRef.current = 1.0;
       try {
-        const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0, heatmap, ml2Result);
+        const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0, heatmap, ml2Result, hideNeural, adaptiveBoxes);
         if (filtered) {
           filteredOhlcRef.current = filtered;
           // Precompute price range for O(1) magnet snapping
@@ -1247,6 +1327,11 @@ const RefinementDashboard = () => {
 
               {/* Zoom + Pan controls */}
               <div className="flex items-center justify-end gap-2 mb-1">
+                <button onClick={() => setHideNeural(!hideNeural)}
+                  className={`flex items-center gap-1.5 px-2.5 h-7 rounded border transition-all font-mono text-[10px] ${hideNeural ? 'bg-[#EF535020] border-[#EF5350] text-[#EF5350]' : 'bg-[#1E222D] border-[#363A45] text-[#787B86]'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${hideNeural ? 'bg-[#EF5350] animate-pulse' : 'bg-[#787B86]'}`} />
+                  HIDE NEURAL
+                </button>
                 <button onClick={() => setMagnet(!magnet)}
                   className={`flex items-center gap-1.5 px-2.5 h-7 rounded border transition-all font-mono text-[10px] ${magnet ? 'bg-[#2962FF20] border-[#2962FF] text-[#2962FF]' : 'bg-[#1E222D] border-[#363A45] text-[#787B86]'}`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${magnet ? 'bg-[#2962FF] animate-pulse' : 'bg-[#787B86]'}`} />
