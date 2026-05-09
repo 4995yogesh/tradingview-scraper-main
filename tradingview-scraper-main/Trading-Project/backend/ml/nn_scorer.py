@@ -11,29 +11,7 @@ MODEL_VERSION = "nn_v1"
 _nn_model = None
 _nn_lock = threading.RLock()
 
-class ConsolidationCNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv1d(5, 32, kernel_size=3, padding=1),
-            nn.BatchNorm1d(32), nn.ReLU(),
-            nn.Conv1d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm1d(64), nn.ReLU()
-        )
-        self.fc = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(64 * 100, 128),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(64, 4)
-        )
-    def forward(self, x):
-        x = x.transpose(1, 2)  # (N, 4, seq_len)
-        x = self.conv(x)        # (N, 64, seq_len)
-        return self.fc(x)       # (N, 4)
+from ml.shared_models import ConsolidationCNN
 
 def load_nn_model() -> None:
     global _nn_model
@@ -50,6 +28,7 @@ def predict_box(ohlc_candles: list) -> dict | None:
             return None
         if len(ohlc_candles) == 0:
             return None
+            
         sequence_length = 100
         if len(ohlc_candles) >= sequence_length:
             candles = ohlc_candles[-sequence_length:]
@@ -74,30 +53,62 @@ def predict_box(ohlc_candles: list) -> dict | None:
         
         with torch.no_grad():
             input_tensor = torch.tensor(candles_np, dtype=torch.float32)
-            output = _nn_model(input_tensor)
-            output = output.numpy()[0]
-            print(f"DEBUG NN post-fix: raw_out={output}")
+            heatmap_logits, prices_norm = _nn_model(input_tensor)
             
-        start_idx_norm, end_idx_norm, price_high_norm, price_low_norm = output
-        print(f"DEBUG NN: raw_out={output}, seq_len={sequence_length}")
-        
-        start_idx = max(0, min(int(round(start_idx_norm * sequence_length)), sequence_length - 1))
-        end_idx = max(0, min(int(round(end_idx_norm * sequence_length)), sequence_length - 1))
-        
-        price_high = float((price_high_norm * window_range) + window_min)
-        price_low = float((price_low_norm * window_range) + window_min)
-        confidence = float(1 / (1 + abs(price_high - price_low)))
-        confidence = max(0.0, min(1.0, confidence))
-        time_start = candles[start_idx]['time']
-        time_end = candles[end_idx]['time']
-        return {
-            'timeStart': time_start,
-            'timeEnd': time_end,
-            'priceHigh': price_high,
-            'priceLow': price_low,
-            'score': 1.0,
-            'model_version': MODEL_VERSION
-        }
+            # 1. Process Heatmap (Segmentation)
+            heatmap = torch.sigmoid(heatmap_logits).numpy()[0] # (100,)
+            print(f"DEBUG NN heatmap: max={heatmap.max():.4f}, mean={heatmap.mean():.4f}, thresholded={np.sum(heatmap > 0.5)}")
+            
+            # Find largest contiguous block > 0.5
+            threshold = 0.5
+            binary_mask = (heatmap > threshold).astype(np.int32)
+            
+            best_start, best_end = 0, 0
+            current_start = -1
+            max_len = 0
+            
+            for i in range(len(binary_mask)):
+                if binary_mask[i] == 1:
+                    if current_start == -1:
+                        current_start = i
+                else:
+                    if current_start != -1:
+                        length = i - current_start
+                        if length > max_len:
+                            max_len = length
+                            best_start = current_start
+                            best_end = i - 1
+                        current_start = -1
+            if current_start != -1: # check last block
+                length = len(binary_mask) - current_start
+                if length > max_len:
+                    best_start = current_start
+                    best_end = len(binary_mask) - 1
+            
+            # 2. Process Prices (Regression)
+            prices = prices_norm.numpy()[0]
+            y_high_norm, y_low_norm = prices[0], prices[1]
+            
+            # Inverse scaling
+            price_high = float(y_high_norm * window_range + window_min)
+            price_low  = float(y_low_norm * window_range + window_min)
+            
+            # Map indices back to timestamps
+            time_start = candles[best_start]['time']
+            time_end   = candles[best_end]['time']
+
+            return {
+                "timeStart": time_start,
+                "timeEnd":   time_end,
+                "priceHigh": price_high,
+                "priceLow":  price_low,
+                "score":     float(np.mean(heatmap[best_start : best_end+1]) if best_end > best_start else 0.0),
+                "model_version": "nn_v2_segmentation"
+            }
+
+    except Exception as e:
+        logging.error(f"Error in predict_box: {e}")
+        return None
     except Exception as e:
         logging.error(f"Error in predict_box: {e}")
         return None

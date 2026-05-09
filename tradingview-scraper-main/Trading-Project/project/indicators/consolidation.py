@@ -6,25 +6,7 @@ import torch.nn as nn
 from typing import Optional
 
 # ── Neural Network Architecture (Must match ml/train_nn.py) ──────────────────
-class ConsolidationCNN(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv = nn.Sequential(
-            nn.Conv1d(4, 32, kernel_size=3, padding=1),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            nn.Conv1d(32, 64, kernel_size=3, padding=1),
-            nn.BatchNorm1d(64),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool1d(1)
-        )
-        self.fc = nn.Linear(64, 4)
-
-    def forward(self, x):
-        x = x.transpose(1, 2) # (N, 4, 100)
-        x = self.conv(x)      # (N, 64, 1)
-        x = x.squeeze(-1)     # (N, 64)
-        return self.fc(x)     # (N, 4)
+from ml.shared_models import ConsolidationCNN
 
 class NNPredictor:
     _instance = None
@@ -39,10 +21,10 @@ class NNPredictor:
 
     def _load_model(self):
         # Path relative to project root (Trading-Project)
-        path = "backend/models/consolidation_nn.pt"
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data", "models", "consolidation_nn.pt"))
         if os.path.exists(path):
             try:
-                self._model = ConsolidationCNN()
+                self._model = ConsolidationCNN(sequence_length=100)
                 self._model.load_state_dict(torch.load(path, map_location='cpu'))
                 self._model.eval()
                 print(f"[NN] Loaded model from {path}")
@@ -50,39 +32,56 @@ class NNPredictor:
                 print(f"[NN] Error loading model: {e}")
                 self._model = None
 
-    def predict(self, df: pd.DataFrame) -> Optional[dict]:
-        if self._model is None or len(df) < 100:
+    def predict(self, df: pd.DataFrame, window_size: int = 100) -> Optional[dict]:
+        """
+        Unified prediction logic with Min-Max normalization.
+        DEPRECATED: Global chart prediction is unreliable for localization.
+        Use per-zone refinement instead.
+        """
+        if self._model is None or len(df) < window_size:
             return None
         
         try:
-            # Prepare last 100 candles
-            last_100 = df.iloc[-100:]
-            feat = np.array([[c['open'], c['high'], c['low'], c['close']] for _, c in last_100.iterrows()])
-            first_close = feat[0, 3]
-            feat = (feat - first_close) / first_close # Normalize
+            # Prepare last 100 candles (only for legacy support)
+            last_n = df.iloc[-window_size:]
+            candles_np = np.array([[c['open'], c['high'], c['low'], c['close']] for _, c in last_n.iterrows()])
+            
+            # Min-Max Normalization (matches train_nn.py)
+            window_min = np.min(candles_np)
+            window_max = np.max(candles_np)
+            window_range = max(1e-9, window_max - window_min)
+            feat = (candles_np - window_min) / window_range
+            
+            # Add Positional Encoding (matches train_nn.py)
+            pos = np.linspace(0, 1, window_size).reshape(-1, 1)
+            feat = np.hstack([feat, pos]) # (100, 5)
             
             X_t = torch.tensor([feat], dtype=torch.float32)
             with torch.no_grad():
                 pred = self._model(X_t).numpy()[0]
             
             # pred: [start_idx_pct, end_idx_pct, y_high, y_low]
-            s_idx = int(pred[0] * 100)
-            e_idx = int(pred[1] * 100)
-            p_hi = pred[2] * first_close + first_close
-            p_lo = pred[3] * first_close + first_close
+            s_idx = int(round(pred[0] * window_size))
+            e_idx = int(round(pred[1] * window_size))
+            s_idx = max(0, min(window_size - 1, s_idx))
+            e_idx = max(0, min(window_size - 1, e_idx))
+            
+            p_hi = float((pred[2] * window_range) + window_min)
+            p_lo = float((pred[3] * window_range) + window_min)
             
             # Global index in original df
-            base_idx = len(df) - 100
+            base_idx = len(df) - window_size
             
             return {
                 "start": base_idx + s_idx,
                 "end":   base_idx + e_idx,
                 "top":   p_hi,
                 "bottom": p_lo,
-                "type": "NEURAL",
-                "score": 0.99 # Placeholder confidence
+                "type": "NEURAL_REFINED",
+                "score": 1.0
             }
-        except Exception:
+        except Exception as e:
+            print(f"[NN] Prediction failed: {e}")
             return None
 
 
@@ -291,17 +290,9 @@ def consolidation_boxes(
 
 
 
-    # ── Neural Network Refinement / Overlay ──
-    try:
-        predictor = NNPredictor.get_instance()
-        nn_box = predictor.predict(df)
-        if nn_box:
-            # Validate indices
-            nn_box["start"] = max(0, min(n-1, nn_box["start"]))
-            nn_box["end"]   = max(0, min(n-1, nn_box["end"]))
-            if nn_box["end"] > nn_box["start"] and nn_box["top"] > nn_box["bottom"]:
-                boxes.append(nn_box)
-    except Exception:
-        pass
+    # ── Neural Network Refinement / Overlay (DEPRECATED) ──
+    # Global chart-wide prediction is disabled here to prevent right-side anchoring bugs.
+    # Localization is now handled via the dedicated /api/nn/refined_zones pipeline.
+    pass
 
     return pd.DataFrame(boxes)

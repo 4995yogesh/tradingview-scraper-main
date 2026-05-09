@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from feature_engine_v3 import build_features
+from feature_engine_v4 import build_features
 from model_a import SegmentationModel, predict_heatmap
 from model_b import extract_box
 from model_c import RefinementModel, refine_predict
@@ -100,7 +100,7 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
         res = {
             'heatmap': heatmap,
             'confidence': float(quality) if is_valid else 0.05,
-            'model_version': 'v3-scale-invariant'
+            'model_version': 'v4-temporal-structure'
         }
         
         if final_box:

@@ -1,0 +1,1750 @@
+[
+  {
+    "timestamp": "2026-05-06T20:24:59.000464",
+    "symbol": "USDJPY",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 516,
+          "end_idx": 527,
+          "priceHigh": 156.458,
+          "priceLow": 156.31
+        },
+        "ml_refined": {
+          "timeStart": 1778030400.0,
+          "timeEnd": 1778030100.0,
+          "priceHigh": 156.61283555018903,
+          "priceLow": 155.97439915794135,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 537,
+          "end_idx": 571,
+          "priceHigh": 156.294,
+          "priceLow": 155.732
+        },
+        "ml_refined": {
+          "timeStart": 1778043600.0,
+          "timeEnd": 1778043300.0,
+          "priceHigh": 156.34198634278775,
+          "priceLow": 156.0314091835022,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 573,
+          "end_idx": 581,
+          "priceHigh": 155.953,
+          "priceLow": 155.615
+        },
+        "ml_refined": {
+          "timeStart": 1778046600.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 156.36699694776536,
+          "priceLow": 156.17085161066055,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 591,
+          "end_idx": 596,
+          "priceHigh": 156.208,
+          "priceLow": 156.11
+        },
+        "ml_refined": {
+          "timeStart": 1778049000.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 156.17497953891754,
+          "priceLow": 155.98407075858117,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 598,
+          "end_idx": 603,
+          "priceHigh": 156.318,
+          "priceLow": 156.164
+        },
+        "ml_refined": {
+          "timeStart": 1778049000.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 156.17497953891754,
+          "priceLow": 155.98407075858117,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:24:59.277671",
+    "symbol": "USDJPY",
+    "timeframe": "15m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 848,
+          "end_idx": 863,
+          "priceHigh": 157.278,
+          "priceLow": 157.17
+        },
+        "ml_refined": {
+          "timeStart": 1777893300.0,
+          "timeEnd": 1777892400.0,
+          "priceHigh": 157.67286731147766,
+          "priceLow": 157.36508784693478,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 867,
+          "end_idx": 872,
+          "priceHigh": 157.3,
+          "priceLow": 157.196
+        },
+        "ml_refined": {
+          "timeStart": 1777900500.0,
+          "timeEnd": 1777900500.0,
+          "priceHigh": 158.09623497223853,
+          "priceLow": 157.79628582280873,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 883,
+          "end_idx": 888,
+          "priceHigh": 157.672,
+          "priceLow": 157.104
+        },
+        "ml_refined": {
+          "timeStart": 1777914900.0,
+          "timeEnd": 1777915800.0,
+          "priceHigh": 158.33554071176053,
+          "priceLow": 158.01142247247697,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 890,
+          "end_idx": 912,
+          "priceHigh": 157.841,
+          "priceLow": 157.608
+        },
+        "ml_refined": {
+          "timeStart": 1777937400.0,
+          "timeEnd": 1777936500.0,
+          "priceHigh": 157.8737098007202,
+          "priceLow": 157.6983178958893,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 974,
+          "end_idx": 983,
+          "priceHigh": 156.294,
+          "priceLow": 155.816
+        },
+        "ml_refined": {
+          "timeStart": 1777988700.0,
+          "timeEnd": 1777987800.0,
+          "priceHigh": 156.58458178544043,
+          "priceLow": 155.9683820575476,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:32:02.232038",
+    "symbol": "USDJPY",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 516,
+          "end_idx": 527,
+          "priceHigh": 156.458,
+          "priceLow": 156.31
+        },
+        "ml_refined": {
+          "timeStart": 1778030400.0,
+          "timeEnd": 1778030100.0,
+          "priceHigh": 156.45048392224314,
+          "priceLow": 155.70113566809894,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 537,
+          "end_idx": 571,
+          "priceHigh": 156.294,
+          "priceLow": 155.732
+        },
+        "ml_refined": {
+          "timeStart": 1778043300.0,
+          "timeEnd": 1778043300.0,
+          "priceHigh": 156.03986315286159,
+          "priceLow": 155.7410745715499,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 573,
+          "end_idx": 581,
+          "priceHigh": 155.953,
+          "priceLow": 155.615
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 156.33483273363115,
+          "priceLow": 156.07658944654466,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 591,
+          "end_idx": 596,
+          "priceHigh": 156.208,
+          "priceLow": 156.11
+        },
+        "ml_refined": {
+          "timeStart": 1778048400.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 156.1853783183098,
+          "priceLow": 155.94721756362915,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 598,
+          "end_idx": 603,
+          "priceHigh": 156.318,
+          "priceLow": 156.164
+        },
+        "ml_refined": {
+          "timeStart": 1778048400.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 156.1853783183098,
+          "priceLow": 155.94721756362915,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:32:03.132481",
+    "symbol": "USDJPY",
+    "timeframe": "15m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 848,
+          "end_idx": 863,
+          "priceHigh": 157.278,
+          "priceLow": 157.17
+        },
+        "ml_refined": {
+          "timeStart": 1777892400.0,
+          "timeEnd": 1777892400.0,
+          "priceHigh": 157.5319099459052,
+          "priceLow": 157.17737012273074,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 867,
+          "end_idx": 872,
+          "priceHigh": 157.3,
+          "priceLow": 157.196
+        },
+        "ml_refined": {
+          "timeStart": 1777900500.0,
+          "timeEnd": 1777900500.0,
+          "priceHigh": 157.92193691265584,
+          "priceLow": 157.5441980793476,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 883,
+          "end_idx": 888,
+          "priceHigh": 157.672,
+          "priceLow": 157.104
+        },
+        "ml_refined": {
+          "timeStart": 1777914900.0,
+          "timeEnd": 1777914900.0,
+          "priceHigh": 157.95255462539197,
+          "priceLow": 157.5921724690795,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 890,
+          "end_idx": 912,
+          "priceHigh": 157.841,
+          "priceLow": 157.608
+        },
+        "ml_refined": {
+          "timeStart": 1777936500.0,
+          "timeEnd": 1777936500.0,
+          "priceHigh": 157.87640023231506,
+          "priceLow": 157.6688115711212,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 974,
+          "end_idx": 983,
+          "priceHigh": 156.294,
+          "priceLow": 155.816
+        },
+        "ml_refined": {
+          "timeStart": 1777987800.0,
+          "timeEnd": 1777987800.0,
+          "priceHigh": 156.37248554861546,
+          "priceLow": 155.69865982019903,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:32:40.610377",
+    "symbol": "EURUSD",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 887,
+          "end_idx": 898,
+          "priceHigh": 1.17352,
+          "priceLow": 1.17301
+        },
+        "ml_refined": {
+          "timeStart": 1778027100.0,
+          "timeEnd": 1778027100.0,
+          "priceHigh": 1.1739739431607723,
+          "priceLow": 1.1730624421417715,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 931,
+          "end_idx": 936,
+          "priceHigh": 1.17698,
+          "priceLow": 1.17562
+        },
+        "ml_refined": {
+          "timeStart": 1778038500.0,
+          "timeEnd": 1778038500.0,
+          "priceHigh": 1.178441633413434,
+          "priceLow": 1.1764830941569806,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 953,
+          "end_idx": 962,
+          "priceHigh": 1.17967,
+          "priceLow": 1.17822
+        },
+        "ml_refined": {
+          "timeStart": 1778046900.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 1.1752103204554318,
+          "priceLow": 1.173717667991072,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 971,
+          "end_idx": 977,
+          "priceHigh": 1.17641,
+          "priceLow": 1.17545
+        },
+        "ml_refined": {
+          "timeStart": 1778049000.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 1.1758361706659197,
+          "priceLow": 1.1739826493370533,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 979,
+          "end_idx": 998,
+          "priceHigh": 1.17592,
+          "priceLow": 1.1745
+        },
+        "ml_refined": {
+          "timeStart": 1778049000.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 1.1758361706659197,
+          "priceLow": 1.1739826493370533,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:32:40.708471",
+    "symbol": "USDJPY",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 516,
+          "end_idx": 527,
+          "priceHigh": 156.458,
+          "priceLow": 156.31
+        },
+        "ml_refined": {
+          "timeStart": 1778030400.0,
+          "timeEnd": 1778030100.0,
+          "priceHigh": 156.45048392224314,
+          "priceLow": 155.70113566809894,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 537,
+          "end_idx": 571,
+          "priceHigh": 156.294,
+          "priceLow": 155.732
+        },
+        "ml_refined": {
+          "timeStart": 1778043300.0,
+          "timeEnd": 1778043300.0,
+          "priceHigh": 156.03986315286159,
+          "priceLow": 155.7410745715499,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 573,
+          "end_idx": 581,
+          "priceHigh": 155.953,
+          "priceLow": 155.615
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 156.33483273363115,
+          "priceLow": 156.07658944654466,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 591,
+          "end_idx": 596,
+          "priceHigh": 156.208,
+          "priceLow": 156.11
+        },
+        "ml_refined": {
+          "timeStart": 1778048400.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 156.1853783183098,
+          "priceLow": 155.94721756362915,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 598,
+          "end_idx": 603,
+          "priceHigh": 156.318,
+          "priceLow": 156.164
+        },
+        "ml_refined": {
+          "timeStart": 1778048400.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 156.1853783183098,
+          "priceLow": 155.94721756362915,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:32:40.872065",
+    "symbol": "USDJPY",
+    "timeframe": "15m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 848,
+          "end_idx": 863,
+          "priceHigh": 157.278,
+          "priceLow": 157.17
+        },
+        "ml_refined": {
+          "timeStart": 1777892400.0,
+          "timeEnd": 1777892400.0,
+          "priceHigh": 157.5319099459052,
+          "priceLow": 157.17737012273074,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 867,
+          "end_idx": 872,
+          "priceHigh": 157.3,
+          "priceLow": 157.196
+        },
+        "ml_refined": {
+          "timeStart": 1777900500.0,
+          "timeEnd": 1777900500.0,
+          "priceHigh": 157.92193691265584,
+          "priceLow": 157.5441980793476,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 883,
+          "end_idx": 888,
+          "priceHigh": 157.672,
+          "priceLow": 157.104
+        },
+        "ml_refined": {
+          "timeStart": 1777914900.0,
+          "timeEnd": 1777914900.0,
+          "priceHigh": 157.95255462539197,
+          "priceLow": 157.5921724690795,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 890,
+          "end_idx": 912,
+          "priceHigh": 157.841,
+          "priceLow": 157.608
+        },
+        "ml_refined": {
+          "timeStart": 1777936500.0,
+          "timeEnd": 1777936500.0,
+          "priceHigh": 157.87640023231506,
+          "priceLow": 157.6688115711212,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 974,
+          "end_idx": 983,
+          "priceHigh": 156.294,
+          "priceLow": 155.816
+        },
+        "ml_refined": {
+          "timeStart": 1777987800.0,
+          "timeEnd": 1777987800.0,
+          "priceHigh": 156.37248554861546,
+          "priceLow": 155.69865982019903,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:34:14.641289",
+    "symbol": "EURUSD",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 887,
+          "end_idx": 898,
+          "priceHigh": 1.17352,
+          "priceLow": 1.17301
+        },
+        "ml_refined": {
+          "timeStart": 1778027100.0,
+          "timeEnd": 1778027100.0,
+          "priceHigh": 1.1739739431607723,
+          "priceLow": 1.1730624421417715,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 931,
+          "end_idx": 936,
+          "priceHigh": 1.17698,
+          "priceLow": 1.17562
+        },
+        "ml_refined": {
+          "timeStart": 1778038500.0,
+          "timeEnd": 1778038500.0,
+          "priceHigh": 1.178441633413434,
+          "priceLow": 1.1764830941569806,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 953,
+          "end_idx": 962,
+          "priceHigh": 1.17967,
+          "priceLow": 1.17822
+        },
+        "ml_refined": {
+          "timeStart": 1778046900.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 1.1752103204554318,
+          "priceLow": 1.173717667991072,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 971,
+          "end_idx": 977,
+          "priceHigh": 1.17641,
+          "priceLow": 1.17545
+        },
+        "ml_refined": {
+          "timeStart": 1778049000.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 1.1758361706659197,
+          "priceLow": 1.1739826493370533,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 979,
+          "end_idx": 998,
+          "priceHigh": 1.17592,
+          "priceLow": 1.1745
+        },
+        "ml_refined": {
+          "timeStart": 1778049000.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 1.1758361706659197,
+          "priceLow": 1.1739826493370533,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:34:15.394606",
+    "symbol": "USDJPY",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 516,
+          "end_idx": 527,
+          "priceHigh": 156.458,
+          "priceLow": 156.31
+        },
+        "ml_refined": {
+          "timeStart": 1778030400.0,
+          "timeEnd": 1778030100.0,
+          "priceHigh": 156.45048392224314,
+          "priceLow": 155.70113566809894,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 537,
+          "end_idx": 571,
+          "priceHigh": 156.294,
+          "priceLow": 155.732
+        },
+        "ml_refined": {
+          "timeStart": 1778043300.0,
+          "timeEnd": 1778043300.0,
+          "priceHigh": 156.03986315286159,
+          "priceLow": 155.7410745715499,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 573,
+          "end_idx": 581,
+          "priceHigh": 155.953,
+          "priceLow": 155.615
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 156.33483273363115,
+          "priceLow": 156.07658944654466,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 591,
+          "end_idx": 596,
+          "priceHigh": 156.208,
+          "priceLow": 156.11
+        },
+        "ml_refined": {
+          "timeStart": 1778048400.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 156.1853783183098,
+          "priceLow": 155.94721756362915,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 598,
+          "end_idx": 603,
+          "priceHigh": 156.318,
+          "priceLow": 156.164
+        },
+        "ml_refined": {
+          "timeStart": 1778048400.0,
+          "timeEnd": 1778048400.0,
+          "priceHigh": 156.1853783183098,
+          "priceLow": 155.94721756362915,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T20:34:16.392392",
+    "symbol": "USDJPY",
+    "timeframe": "15m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 848,
+          "end_idx": 863,
+          "priceHigh": 157.278,
+          "priceLow": 157.17
+        },
+        "ml_refined": {
+          "timeStart": 1777892400.0,
+          "timeEnd": 1777892400.0,
+          "priceHigh": 157.5319099459052,
+          "priceLow": 157.17737012273074,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 867,
+          "end_idx": 872,
+          "priceHigh": 157.3,
+          "priceLow": 157.196
+        },
+        "ml_refined": {
+          "timeStart": 1777900500.0,
+          "timeEnd": 1777900500.0,
+          "priceHigh": 157.92193691265584,
+          "priceLow": 157.5441980793476,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 883,
+          "end_idx": 888,
+          "priceHigh": 157.672,
+          "priceLow": 157.104
+        },
+        "ml_refined": {
+          "timeStart": 1777914900.0,
+          "timeEnd": 1777914900.0,
+          "priceHigh": 157.95255462539197,
+          "priceLow": 157.5921724690795,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 890,
+          "end_idx": 912,
+          "priceHigh": 157.841,
+          "priceLow": 157.608
+        },
+        "ml_refined": {
+          "timeStart": 1777936500.0,
+          "timeEnd": 1777936500.0,
+          "priceHigh": 157.87640023231506,
+          "priceLow": 157.6688115711212,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 974,
+          "end_idx": 983,
+          "priceHigh": 156.294,
+          "priceLow": 155.816
+        },
+        "ml_refined": {
+          "timeStart": 1777987800.0,
+          "timeEnd": 1777987800.0,
+          "priceHigh": 156.37248554861546,
+          "priceLow": 155.69865982019903,
+          "score": 1.0,
+          "model_version": "nn_v1"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:21:44.010311",
+    "symbol": "EURUSD",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 874,
+          "end_idx": 885,
+          "priceHigh": 1.17352,
+          "priceLow": 1.17301
+        },
+        "ml_refined": {
+          "timeStart": 1778027100.0,
+          "timeEnd": 1778027100.0,
+          "priceHigh": 1.1733264769411087,
+          "priceLow": 1.1726664591795206,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 918,
+          "end_idx": 923,
+          "priceHigh": 1.17698,
+          "priceLow": 1.17562
+        },
+        "ml_refined": {
+          "timeStart": 1778038500.0,
+          "timeEnd": 1778038500.0,
+          "priceHigh": 1.1777454370927811,
+          "priceLow": 1.1760698120844364,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 940,
+          "end_idx": 949,
+          "priceHigh": 1.17967,
+          "priceLow": 1.17822
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 1.1756204055419563,
+          "priceLow": 1.174653442876041,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 958,
+          "end_idx": 964,
+          "priceHigh": 1.17641,
+          "priceLow": 1.17545
+        },
+        "ml_refined": {
+          "timeStart": 1778050800.0,
+          "timeEnd": 1778050800.0,
+          "priceHigh": 1.1759809892308712,
+          "priceLow": 1.1751317671310901,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 966,
+          "end_idx": 985,
+          "priceHigh": 1.17592,
+          "priceLow": 1.1745
+        },
+        "ml_refined": {
+          "timeStart": 1778052300.0,
+          "timeEnd": 1778052300.0,
+          "priceHigh": 1.176374124738574,
+          "priceLow": 1.1756248675110936,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:21:45.418889",
+    "symbol": "USDJPY",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 537,
+          "end_idx": 571,
+          "priceHigh": 156.294,
+          "priceLow": 155.732
+        },
+        "ml_refined": {
+          "timeStart": 1778043300.0,
+          "timeEnd": 1778043300.0,
+          "priceHigh": 156.19734747242927,
+          "priceLow": 155.8397467969656,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 573,
+          "end_idx": 581,
+          "priceHigh": 155.953,
+          "priceLow": 155.615
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 156.21921584510804,
+          "priceLow": 156.0480001373291,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 591,
+          "end_idx": 596,
+          "priceHigh": 156.208,
+          "priceLow": 156.11
+        },
+        "ml_refined": {
+          "timeStart": 1778050800.0,
+          "timeEnd": 1778050800.0,
+          "priceHigh": 156.18405204963685,
+          "priceLow": 156.0025751373768,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 598,
+          "end_idx": 603,
+          "priceHigh": 156.318,
+          "priceLow": 156.164
+        },
+        "ml_refined": {
+          "timeStart": 1778052300.0,
+          "timeEnd": 1778052300.0,
+          "priceHigh": 156.34250507187843,
+          "priceLow": 156.17148671090604,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 607,
+          "end_idx": 620,
+          "priceHigh": 156.24,
+          "priceLow": 156.05
+        },
+        "ml_refined": {
+          "timeStart": 1778052300.0,
+          "timeEnd": 1778052300.0,
+          "priceHigh": 156.34250507187843,
+          "priceLow": 156.17148671090604,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:21:46.937551",
+    "symbol": "USDJPY",
+    "timeframe": "15m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 844,
+          "end_idx": 859,
+          "priceHigh": 157.278,
+          "priceLow": 157.17
+        },
+        "ml_refined": {
+          "timeStart": 1777892400.0,
+          "timeEnd": 1777892400.0,
+          "priceHigh": 157.83681699383257,
+          "priceLow": 157.6661982049346,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 863,
+          "end_idx": 868,
+          "priceHigh": 157.3,
+          "priceLow": 157.196
+        },
+        "ml_refined": {
+          "timeStart": 1777900500.0,
+          "timeEnd": 1777900500.0,
+          "priceHigh": 158.11684592032432,
+          "priceLow": 157.90999160146714,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 879,
+          "end_idx": 884,
+          "priceHigh": 157.672,
+          "priceLow": 157.104
+        },
+        "ml_refined": {
+          "timeStart": 1777914900.0,
+          "timeEnd": 1777914900.0,
+          "priceHigh": 158.17837682938577,
+          "priceLow": 157.9691146095991,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 886,
+          "end_idx": 908,
+          "priceHigh": 157.841,
+          "priceLow": 157.608
+        },
+        "ml_refined": {
+          "timeStart": 1777936500.0,
+          "timeEnd": 1777936500.0,
+          "priceHigh": 157.860785861969,
+          "priceLow": 157.68206607818604,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 970,
+          "end_idx": 979,
+          "priceHigh": 156.294,
+          "priceLow": 155.816
+        },
+        "ml_refined": {
+          "timeStart": 1777991400.0,
+          "timeEnd": 1777991400.0,
+          "priceHigh": 156.03914727532865,
+          "priceLow": 155.48446390336753,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:22:24.452316",
+    "symbol": "EURUSD",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 874,
+          "end_idx": 885,
+          "priceHigh": 1.17352,
+          "priceLow": 1.17301
+        },
+        "ml_refined": {
+          "timeStart": 1778027100.0,
+          "timeEnd": 1778027100.0,
+          "priceHigh": 1.1733264769411087,
+          "priceLow": 1.1726664591795206,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 918,
+          "end_idx": 923,
+          "priceHigh": 1.17698,
+          "priceLow": 1.17562
+        },
+        "ml_refined": {
+          "timeStart": 1778038500.0,
+          "timeEnd": 1778038500.0,
+          "priceHigh": 1.1777454370927811,
+          "priceLow": 1.1760698120844364,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 940,
+          "end_idx": 949,
+          "priceHigh": 1.17967,
+          "priceLow": 1.17822
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 1.1756204055419563,
+          "priceLow": 1.174653442876041,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 958,
+          "end_idx": 964,
+          "priceHigh": 1.17641,
+          "priceLow": 1.17545
+        },
+        "ml_refined": {
+          "timeStart": 1778050800.0,
+          "timeEnd": 1778050800.0,
+          "priceHigh": 1.1759809892308712,
+          "priceLow": 1.1751317671310901,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 966,
+          "end_idx": 985,
+          "priceHigh": 1.17592,
+          "priceLow": 1.1745
+        },
+        "ml_refined": {
+          "timeStart": 1778052300.0,
+          "timeEnd": 1778052300.0,
+          "priceHigh": 1.176374124738574,
+          "priceLow": 1.1756248675110936,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:22:24.563111",
+    "symbol": "USDJPY",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 537,
+          "end_idx": 571,
+          "priceHigh": 156.294,
+          "priceLow": 155.732
+        },
+        "ml_refined": {
+          "timeStart": 1778043300.0,
+          "timeEnd": 1778043300.0,
+          "priceHigh": 156.19734747242927,
+          "priceLow": 155.8397467969656,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 573,
+          "end_idx": 581,
+          "priceHigh": 155.953,
+          "priceLow": 155.615
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 156.21921584510804,
+          "priceLow": 156.0480001373291,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 591,
+          "end_idx": 596,
+          "priceHigh": 156.208,
+          "priceLow": 156.11
+        },
+        "ml_refined": {
+          "timeStart": 1778050800.0,
+          "timeEnd": 1778050800.0,
+          "priceHigh": 156.18405204963685,
+          "priceLow": 156.0025751373768,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 598,
+          "end_idx": 603,
+          "priceHigh": 156.318,
+          "priceLow": 156.164
+        },
+        "ml_refined": {
+          "timeStart": 1778052300.0,
+          "timeEnd": 1778052300.0,
+          "priceHigh": 156.34250507187843,
+          "priceLow": 156.17148671090604,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 607,
+          "end_idx": 620,
+          "priceHigh": 156.24,
+          "priceLow": 156.05
+        },
+        "ml_refined": {
+          "timeStart": 1778052300.0,
+          "timeEnd": 1778052300.0,
+          "priceHigh": 156.34250507187843,
+          "priceLow": 156.17148671090604,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:22:24.735790",
+    "symbol": "USDJPY",
+    "timeframe": "15m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 844,
+          "end_idx": 859,
+          "priceHigh": 157.278,
+          "priceLow": 157.17
+        },
+        "ml_refined": {
+          "timeStart": 1777892400.0,
+          "timeEnd": 1777892400.0,
+          "priceHigh": 157.8404715064764,
+          "priceLow": 157.66992481428383,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 863,
+          "end_idx": 868,
+          "priceHigh": 157.3,
+          "priceLow": 157.196
+        },
+        "ml_refined": {
+          "timeStart": 1777900500.0,
+          "timeEnd": 1777900500.0,
+          "priceHigh": 158.1208693035841,
+          "priceLow": 157.91394821059703,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 879,
+          "end_idx": 884,
+          "priceHigh": 157.672,
+          "priceLow": 157.104
+        },
+        "ml_refined": {
+          "timeStart": 1777914900.0,
+          "timeEnd": 1777914900.0,
+          "priceHigh": 158.17837682938577,
+          "priceLow": 157.9691146095991,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 886,
+          "end_idx": 908,
+          "priceHigh": 157.841,
+          "priceLow": 157.608
+        },
+        "ml_refined": {
+          "timeStart": 1777936500.0,
+          "timeEnd": 1777936500.0,
+          "priceHigh": 157.860785861969,
+          "priceLow": 157.68206607818604,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 970,
+          "end_idx": 979,
+          "priceHigh": 156.294,
+          "priceLow": 155.816
+        },
+        "ml_refined": {
+          "timeStart": 1777991400.0,
+          "timeEnd": 1777991400.0,
+          "priceHigh": 156.03914727532865,
+          "priceLow": 155.48446390336753,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:51:21.663858",
+    "symbol": "EURUSD",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 868,
+          "end_idx": 879,
+          "priceHigh": 1.17352,
+          "priceLow": 1.17301
+        },
+        "ml_refined": {
+          "timeStart": 1778027100.0,
+          "timeEnd": 1778027100.0,
+          "priceHigh": 1.1726174622750283,
+          "priceLow": 1.1719406910577417,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 912,
+          "end_idx": 917,
+          "priceHigh": 1.17698,
+          "priceLow": 1.17562
+        },
+        "ml_refined": {
+          "timeStart": 1778038500.0,
+          "timeEnd": 1778038500.0,
+          "priceHigh": 1.1769824022096396,
+          "priceLow": 1.1756238268581034,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 934,
+          "end_idx": 943,
+          "priceHigh": 1.17967,
+          "priceLow": 1.17822
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 1.174843963011205,
+          "priceLow": 1.1735614670738577,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 952,
+          "end_idx": 958,
+          "priceHigh": 1.17641,
+          "priceLow": 1.17545
+        },
+        "ml_refined": {
+          "timeStart": 1778050800.0,
+          "timeEnd": 1778050800.0,
+          "priceHigh": 1.1747714180898665,
+          "priceLow": 1.173672878616452,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 960,
+          "end_idx": 979,
+          "priceHigh": 1.17592,
+          "priceLow": 1.1745
+        },
+        "ml_refined": {
+          "timeStart": 1778054100.0,
+          "timeEnd": 1778054100.0,
+          "priceHigh": 1.176284263460338,
+          "priceLow": 1.1750833864977956,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:51:23.011785",
+    "symbol": "USDJPY",
+    "timeframe": "5m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 537,
+          "end_idx": 571,
+          "priceHigh": 156.294,
+          "priceLow": 155.732
+        },
+        "ml_refined": {
+          "timeStart": 1778043300.0,
+          "timeEnd": 1778043300.0,
+          "priceHigh": 156.10411295616626,
+          "priceLow": 155.79529285269976,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 573,
+          "end_idx": 581,
+          "priceHigh": 155.953,
+          "priceLow": 155.615
+        },
+        "ml_refined": {
+          "timeStart": 1778046300.0,
+          "timeEnd": 1778046300.0,
+          "priceHigh": 156.29214172649384,
+          "priceLow": 156.09003952908517,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 591,
+          "end_idx": 596,
+          "priceHigh": 156.208,
+          "priceLow": 156.11
+        },
+        "ml_refined": {
+          "timeStart": 1778050800.0,
+          "timeEnd": 1778050800.0,
+          "priceHigh": 156.2065081677437,
+          "priceLow": 156.0266029970646,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 598,
+          "end_idx": 603,
+          "priceHigh": 156.318,
+          "priceLow": 156.164
+        },
+        "ml_refined": {
+          "timeStart": 1778052900.0,
+          "timeEnd": 1778052900.0,
+          "priceHigh": 156.31186858403683,
+          "priceLow": 156.12117563599347,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 607,
+          "end_idx": 620,
+          "priceHigh": 156.24,
+          "priceLow": 156.05
+        },
+        "ml_refined": {
+          "timeStart": 1778054100.0,
+          "timeEnd": 1778054100.0,
+          "priceHigh": 156.3443872088194,
+          "priceLow": 156.15385579109193,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  },
+  {
+    "timestamp": "2026-05-06T21:51:24.245000",
+    "symbol": "USDJPY",
+    "timeframe": "15m",
+    "results": [
+      {
+        "zone_index": 0,
+        "heuristic": {
+          "start_idx": 842,
+          "end_idx": 857,
+          "priceHigh": 157.278,
+          "priceLow": 157.17
+        },
+        "ml_refined": {
+          "timeStart": 1777892400.0,
+          "timeEnd": 1777892400.0,
+          "priceHigh": 157.66578756016492,
+          "priceLow": 157.4610509005785,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 1,
+        "heuristic": {
+          "start_idx": 861,
+          "end_idx": 866,
+          "priceHigh": 157.3,
+          "priceLow": 157.196
+        },
+        "ml_refined": {
+          "timeStart": 1777900500.0,
+          "timeEnd": 1777900500.0,
+          "priceHigh": 157.84357376158238,
+          "priceLow": 157.5434664671421,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 2,
+        "heuristic": {
+          "start_idx": 877,
+          "end_idx": 882,
+          "priceHigh": 157.672,
+          "priceLow": 157.104
+        },
+        "ml_refined": {
+          "timeStart": 1777914900.0,
+          "timeEnd": 1777914900.0,
+          "priceHigh": 157.85714826476573,
+          "priceLow": 157.50072416919468,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 3,
+        "heuristic": {
+          "start_idx": 884,
+          "end_idx": 906,
+          "priceHigh": 157.841,
+          "priceLow": 157.608
+        },
+        "ml_refined": {
+          "timeStart": 1777936500.0,
+          "timeEnd": 1777936500.0,
+          "priceHigh": 157.54547817611694,
+          "priceLow": 157.38205123233794,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      },
+      {
+        "zone_index": 4,
+        "heuristic": {
+          "start_idx": 968,
+          "end_idx": 977,
+          "priceHigh": 156.294,
+          "priceLow": 155.816
+        },
+        "ml_refined": {
+          "timeStart": 1777993200.0,
+          "timeEnd": 1777993200.0,
+          "priceHigh": 156.56406277036666,
+          "priceLow": 156.0712198820114,
+          "score": 0.0,
+          "model_version": "nn_v2_segmentation"
+        }
+      }
+    ]
+  }
+]

@@ -36,6 +36,28 @@ def _log_msg(msg: str):
     if len(TRAINING_STATE["logs"]) > 200:
         TRAINING_STATE["logs"].pop(0)
 
+def _t_u(t):
+    """Convert time to unix timestamp in seconds."""
+    if t is None: return 0
+    val = 0
+    if isinstance(t, (int, float)):
+        val = float(t)
+    elif isinstance(t, str):
+        if 'T' in t and 'Z' in t:
+            import datetime
+            val = datetime.datetime.fromisoformat(t.replace('Z', '+00:00')).timestamp()
+        elif t.replace('.','',1).isdigit():
+            val = float(t)
+        else:
+            import pandas as pd
+            val = pd.to_datetime(t).timestamp()
+    else:
+        return 0
+    
+    while val > 5e9:
+        val /= 1000.0
+    return val
+
 def train(force=False):
     """
     Main training function. 
@@ -47,7 +69,8 @@ def train(force=False):
     TRAINING_STATE["logs"] = []
     
     _log_msg("=== Starting Neural Network Training ===")
-    db.update_training_progress(status='STARTING')
+    try: db.update_training_progress(status='STARTING')
+    except: pass
 
     try:
         conn = sqlite3.connect('training_set.db')
@@ -116,14 +139,6 @@ def train(force=False):
                 # Normalize: always work as a list of boxes
                 boxes_list = user_box if isinstance(user_box, list) else [user_box]
 
-                # Helper for time conversion (defined once per row)
-                def _t_u(t):
-                    if isinstance(t, str):
-                        try: return datetime.fromisoformat(t.replace('Z', '+00:00')).timestamp()
-                        except: return 0.0
-                    v = float(t)
-                    return v / 1000 if v > 2e12 else v
-
                 all_ts = [_t_u(c['time']) for c in ohlc]
 
                 # Generate one training sample per drawn box
@@ -158,16 +173,23 @@ def train(force=False):
                         pos = np.linspace(0, 1, sequence_length).reshape(-1, 1)
                         feat = np.hstack([feat, pos])
 
-                        # Targets relative to window
+                        # Targets: Segmentation Mask + Price Boundaries
                         win_ts = [_t_u(c['time']) for c in ohlc_window]
                         s_idx  = int(np.argmin([abs(t - b_start) for t in win_ts]))
                         e_idx  = int(np.argmin([abs(t - b_end)   for t in win_ts]))
 
+                        # Binary Mask: 1 for consolidation candles, 0 otherwise
+                        mask = np.zeros(sequence_length, dtype=np.float32)
+                        start_clip = max(0, min(s_idx, e_idx))
+                        end_clip   = min(sequence_length - 1, max(s_idx, e_idx))
+                        mask[start_clip : end_clip + 1] = 1.0
+                        
                         y_high = (float(box['priceHigh']) - window_min) / window_range
                         y_low  = (float(box['priceLow'])  - window_min) / window_range
 
                         X.append(feat)
-                        y.append([s_idx / float(sequence_length), e_idx / float(sequence_length), y_high, y_low])
+                        # Concatenate mask (100) and prices (2) -> (102)
+                        y.append(np.concatenate([mask, [y_high, y_low]]))
                     except Exception as be:
                         _log_msg(f"Skipping box #{box_idx} in {bid}: {be}")
                         continue
@@ -186,40 +208,15 @@ def train(force=False):
         X = np.array(X, dtype=np.float32)
         y = np.array(y, dtype=np.float32)
 
-        # Model definition
-        class ConsolidationCNN(nn.Module):
-            def __init__(self):
-                super().__init__()
-                self.conv = nn.Sequential(
-                    nn.Conv1d(5, 32, kernel_size=3, padding=1),
-                    nn.BatchNorm1d(32),
-                    nn.ReLU(),
-                    nn.Conv1d(32, 64, kernel_size=3, padding=1),
-                    nn.BatchNorm1d(64),
-                    nn.ReLU()
-                )
-                self.fc = nn.Sequential(
-                    nn.Flatten(),
-                    nn.Linear(64 * 100, 128),
-                    nn.ReLU(),
-                    nn.Dropout(0.2),
-                    nn.Linear(128, 64),
-                    nn.ReLU(),
-                    nn.Dropout(0.2),
-                    nn.Linear(64, 4)
-                )
-
-            def forward(self, x):
-                x = x.transpose(1, 2) # (N, 4, seq_len)
-                x = self.conv(x)      # (N, 64, seq_len)
-                return self.fc(x)     # (N, 4)
+        from ml.shared_models import ConsolidationCNN
 
         model = ConsolidationCNN()
-        criterion = nn.MSELoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-
-        X = np.array(X, dtype=np.float32)
-        y = np.array(y, dtype=np.float32)
+        
+        # Loss functions: BCE for heatmap, MSE for prices
+        # We use BCEWithLogitsLoss with pos_weight=2.0 to handle class imbalance
+        criterion_seg   = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([2.0]))
+        criterion_price = nn.MSELoss()
+        optimizer       = torch.optim.Adam(model.parameters(), lr=0.001)
 
         from sklearn.model_selection import train_test_split
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.15, random_state=42)
@@ -238,16 +235,33 @@ def train(force=False):
         for epoch in range(num_epochs):
             model.train()
             optimizer.zero_grad()
-            pred = model(X_train_t)
-            loss = criterion(pred, y_train_t)
+            
+            # Forward pass
+            pred_heatmap, pred_prices = model(X_train_t)
+            
+            # Split target into mask (100) and prices (2)
+            target_mask   = y_train_t[:, :100]
+            target_prices = y_train_t[:, 100:]
+            
+            loss_seg   = criterion_seg(pred_heatmap, target_mask)
+            loss_price = criterion_price(pred_prices, target_prices)
+            
+            # Combined loss: weight segmentation more heavily initially
+            loss = loss_seg + 0.5 * loss_price
+            
             loss.backward()
             optimizer.step()
             
             # Validation
             model.eval()
             with torch.no_grad():
-                val_pred = model(X_val_t)
-                val_loss = criterion(val_pred, y_val_t)
+                v_pred_heatmap, v_pred_prices = model(X_val_t)
+                vt_mask   = y_val_t[:, :100]
+                vt_prices = y_val_t[:, 100:]
+                
+                v_loss_seg   = criterion_seg(v_pred_heatmap, vt_mask)
+                v_loss_price = criterion_price(v_pred_prices, vt_prices)
+                val_loss = v_loss_seg + 0.5 * v_loss_price
             
             TRAINING_STATE["iteration"] = epoch + 1
             TRAINING_STATE["val_logloss"] = float(val_loss.item())
@@ -255,8 +269,7 @@ def train(force=False):
             TRAINING_STATE["val_losses"].append(float(val_loss.item()))
 
             if (epoch + 1) % 5 == 0:
-                db.update_training_progress(status='TRAINING', epoch=epoch+1, loss=float(loss.item()), val_loss=float(val_loss.item()))
-                _log_msg(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {loss.item():.6f}, Val Loss: {val_loss.item():.6f}")
+                _log_msg(f"Epoch {epoch+1}/{num_epochs}, Train Loss: {loss.item():.6f} (Seg: {loss_seg.item():.4f}, Price: {loss_price.item():.4f}), Val Loss: {val_loss.item():.6f}")
 
         # Save model
         models_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'models')
@@ -282,12 +295,14 @@ def train(force=False):
         except Exception as e:
             _log_msg(f"Warning: Failed to plot loss graph: {e}")
         
-        db.update_training_progress(status='COMPLETED', epoch=num_epochs, loss=float(loss.item()), val_loss=float(val_loss.item()))
+        try: db.update_training_progress(status='COMPLETED', epoch=num_epochs, loss=float(loss.item()), val_loss=float(val_loss.item()))
+        except: pass
         _log_msg(f"Training Completed ✓. Model saved to {save_path}")
 
     except Exception as e:
         _log_msg(f"FATAL ERROR: {e}")
-        db.update_training_progress(status='FAILED')
+        try: db.update_training_progress(status='FAILED')
+        except: pass
     finally:
         TRAINING_STATE["is_training"] = False
 

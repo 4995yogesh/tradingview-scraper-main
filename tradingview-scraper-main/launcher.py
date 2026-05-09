@@ -23,6 +23,14 @@ import sys
 import shutil
 import time
 import webbrowser
+import logging
+
+logging.basicConfig(
+    filename="launcher_debug.log",
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    filemode="a"
+)
 
 try:
     import urllib.request as _urllib
@@ -244,6 +252,7 @@ class DashboardLauncher:
         }.get(color, "default")
         self.log_area.insert(tk.END, message, tag)
         self.log_area.see(tk.END)
+        logging.info(message.strip())
 
     def _log_ts(self, message: str, color: str = C_FG):
         ts = time.strftime("%H:%M:%S")

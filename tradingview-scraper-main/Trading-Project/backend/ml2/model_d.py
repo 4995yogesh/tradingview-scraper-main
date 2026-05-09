@@ -18,7 +18,7 @@ class GatedConv1d(nn.Module):
 class QualityScorer(nn.Module):
     def __init__(self):
         super(QualityScorer, self).__init__()
-        self.g1 = GatedConv1d(21, 64)
+        self.g1 = GatedConv1d(30, 64)
         self.g2 = GatedConv1d(64, 128)
         self.pool = nn.AdaptiveAvgPool1d(1)
         self.flatten = nn.Flatten()
