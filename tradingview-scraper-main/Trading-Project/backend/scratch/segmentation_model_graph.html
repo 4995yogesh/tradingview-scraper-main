@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Segmentation Model Graph</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'dark' });
+    </script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+        h1 {
+            color: #61dafb;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #888;
+            margin-bottom: 30px;
+        }
+        .mermaid {
+            background-color: #1a1f2c;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            width: 80%;
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Segmentation Model Architecture (Model A)</h1>
+    <p>This graph represents the flow of data through the neural network used for segmentation (heatmap generation).</p>
+    <div class="mermaid">
+        graph TD
+            F["Input: Features [B, 50, 30]"] --> T1["Transpose(1, 2)"]
+            T1 --> G1["Gated Conv 1d (30 -> 64)"]
+            G1 --> G2["Gated Conv 1d (64 -> 128)"]
+            G2 --> T2["Transpose(1, 2)"]
+            T2 --> L["BiLSTM (128 -> 64 bidirectional)"]
+            L --> FC["Linear (128 -> 1)"]
+            FC --> O["Output: Logits [B, 50]"]
+            
+            style F fill:#2c3e50,stroke:#34495e,stroke-width:2px,color:#fff
+            style O fill:#27ae60,stroke:#2ecc71,stroke-width:2px,color:#fff
+            style G1 fill:#d35400,stroke:#e67e22,stroke-width:2px,color:#fff
+            style G2 fill:#d35400,stroke:#e67e22,stroke-width:2px,color:#fff
+            style L fill:#2980b9,stroke:#3498db,stroke-width:2px,color:#fff
+            style FC fill:#8e44ad,stroke:#9b59b6,stroke-width:2px,color:#fff
+    </div>
+</body>
+</html>

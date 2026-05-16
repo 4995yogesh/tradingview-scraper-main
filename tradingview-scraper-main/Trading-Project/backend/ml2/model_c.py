@@ -1,6 +1,12 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import sys
+import os
+
+# Add parent dir to path to import config
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import config
 
 class GatedConv1d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, padding=1):
@@ -18,7 +24,7 @@ class GatedConv1d(nn.Module):
 class RefinementModel(nn.Module):
     def __init__(self):
         super(RefinementModel, self).__init__()
-        self.g1 = GatedConv1d(30, 64)
+        self.g1 = GatedConv1d(config.FEATURE_COUNT, 64)
         self.g2 = GatedConv1d(64, 128)
         self.pool = nn.AdaptiveAvgPool1d(1)
         

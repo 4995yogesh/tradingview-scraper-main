@@ -89,7 +89,7 @@ function detectImprovedBox(ohlc) {
   return activeBox;
 }
 
-function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, heatmap = [], ml2Result = null, hideNeural = false, adaptiveBoxes = []) {
+function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, heatmap = [], ml2Result = null, hideNeural = false, panX = 0) {
   if (!canvas || !ohlcRaw || ohlcRaw.length === 0) return;
 
   // Filter ghost candles and weekends
@@ -148,6 +148,7 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
   const cw = Math.max(2, Math.round(CW * zoom));
   const cg = Math.max(1, Math.round(CG * zoom));
 
+
   const highs = ohlc.map(c => c.high).filter(isFinite);
   const lows = ohlc.map(c => c.low).filter(isFinite);
 
@@ -167,7 +168,7 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
     return PAD.t + ((adjMax - p) / adjRng) * cH;
   };
   const totW = ohlc.length * (cw + cg);
-  const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+  const sx = PAD.l + Math.max(0, (cW - totW) / 2) + panX;
 
   // Grid
   for (let i = 0; i <= 5; i++) {
@@ -262,8 +263,8 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
     // Heatmap bar (Relative color mapping)
     heatmap.slice(0, ohlc.length).forEach((val, i) => {
       const hX = sx + i * (cw + cg);
-      // Normalized value for color mapping
-      const nVal = (val - hMin) / hRange;
+      // Use absolute probability value for color mapping
+      const nVal = val;
 
       let r, g, b;
       if (nVal < 0.5) {
@@ -277,7 +278,7 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
 
     ctx.fillStyle = '#D1D4DC';
     ctx.font = 'bold 10px Inter, sans-serif';
-    ctx.fillText(`NEURAL SEGMENTATION (REL: ${hMax.toFixed(2)})`, sx, hY - 10);
+    ctx.fillText(`NEURAL SEGMENTATION (MAX: ${hMax.toFixed(2)})`, sx, hY - 10);
   }
 
   // ── ML2 Refinement Box ───────────────────────────────────────────────────
@@ -301,58 +302,11 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
     ctx.save();
     ctx.strokeStyle = '#26A69A'; ctx.lineWidth = 2;
     ctx.strokeRect(Math.min(mx1, mx2), Math.min(my1, my2), Math.abs(mx2 - mx1), Math.abs(my2 - my1));
-    ctx.fillStyle = '#26A69A'; ctx.font = 'bold 10px monospace';
-    ctx.fillText(`ML2: ${Math.round(ml2Result.confidence * 100)}%`, Math.min(mx1, mx2), Math.min(my1, my2) - 5);
+
     ctx.restore();
   }
 
-  // Adaptive Boxes (Red dotted)
-  if (adaptiveBoxes && adaptiveBoxes.length > 0) {
-    const times = allFiltered.map(c => new Date(c.time).getTime());
-    adaptiveBoxes.forEach(ab => {
-      const tsStart = typeof ab.time_start === 'number' ? ab.time_start : new Date(ab.time_start).getTime();
-      const tsEnd = typeof ab.time_end === 'number' ? ab.time_end : new Date(ab.time_end).getTime();
-      
-      if (isNaN(tsStart) || isNaN(tsEnd)) return;
-      
-      const findIdx = ts => {
-        let best = 0, bestDiff = Infinity;
-        times.forEach((t, i) => { const d = Math.abs(t - ts); if (d < bestDiff) { bestDiff = d; best = i; } });
-        return best;
-      };
-      
-      const sIdx = findIdx(tsStart) - winStart;
-      const eIdx = findIdx(tsEnd) - winStart;
-      
-      // Skip if zero width to prevent stacking vertical lines
-      if (sIdx === eIdx) return;
-      
-      if (sIdx >= 0 && eIdx < ohlc.length) {
-        const bx1 = sx + sIdx * (cw + cg) + (cw / 2);
-        const bx2 = sx + eIdx * (cw + cg) + (cw / 2) + cw;
-        const by1 = toY(ab.price_high);
-        const by2 = toY(ab.price_low);
-        
-        const bx = Math.min(bx1, bx2);
-        const bw = Math.abs(bx2 - bx1);
-        const by = Math.min(by1, by2);
-        const bh = Math.abs(by2 - by1);
-        
-        ctx.save();
-        ctx.strokeStyle = '#EF5350'; // Red
-        ctx.lineWidth = 2.0;
-        ctx.setLineDash([2, 4]); // Dotted
-        ctx.strokeRect(bx, by, bw, bh);
-        ctx.fillStyle = 'rgba(239,83,80,0.02)';
-        ctx.fillRect(bx, by, bw, bh);
-        
-        ctx.fillStyle = '#EF5350';
-        ctx.font = 'bold 10px monospace';
-        ctx.fillText('RULE EVOLVER', bx, by - 5);
-        ctx.restore();
-      }
-    });
-  }
+
 
   // Candles
   ohlc.forEach((c, i) => {
@@ -363,17 +317,48 @@ function renderChart(canvas, ohlcRaw, meta, zoom = 1, panY = 0, priceZoom = 1, h
     const bh = Math.max(1, bb - bt);
     const wx = x + cw / 2;
 
-    ctx.strokeStyle = '#D1D4DC'; ctx.lineWidth = 1;
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1;
+ 
+     if (ok) {
+       ctx.beginPath(); ctx.moveTo(wx, toY(c.high)); ctx.lineTo(wx, toY(c.low)); ctx.stroke();
+       ctx.fillStyle = '#000000';
+       ctx.fillRect(x, bt, cw, bh);
+       ctx.strokeRect(x + 0.5, bt + 0.5, cw - 1, Math.max(1, bh - 1));
+     } else {
+       ctx.beginPath(); ctx.moveTo(wx, toY(c.high)); ctx.lineTo(wx, toY(c.low)); ctx.stroke();
+       ctx.fillStyle = '#FFFFFF';
+       ctx.fillRect(x, bt, cw, bh);
+     }
+  });
 
-    if (ok) {
-      ctx.beginPath(); ctx.moveTo(wx, toY(c.high)); ctx.lineTo(wx, toY(c.low)); ctx.stroke();
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(x, bt, cw, bh);
-      ctx.strokeRect(x + 0.5, bt + 0.5, cw - 1, Math.max(1, bh - 1));
-    } else {
-      ctx.beginPath(); ctx.moveTo(wx, toY(c.high)); ctx.lineTo(wx, toY(c.low)); ctx.stroke();
-      ctx.fillStyle = '#D1D4DC';
-      ctx.fillRect(x, bt, cw, bh);
+  // ── Render Swings ──────────────────────────────────────────────────────────
+  ohlc.forEach((c, i) => {
+    if (i < 1 || i >= ohlc.length - 1) return; // Need neighbors
+    
+    const x = sx + i * (cw + cg);
+    const wx = x + cw / 2;
+    
+    const h = ohlc[i].high;
+    const l = ohlc[i].low;
+    const h_prev = ohlc[i-1].high;
+    const l_prev = ohlc[i-1].low;
+    const h_next = ohlc[i+1].high;
+    const l_next = ohlc[i+1].low;
+    
+    const isSH = h > h_prev && h > h_next;
+    const isSL = l < l_prev && l < l_next;
+    
+    if (isSH) {
+      ctx.fillStyle = 'rgba(76, 175, 80, 0.5)'; // Green for swing high with 50% opacity
+      ctx.beginPath();
+      ctx.arc(wx, toY(h) - 5, 3, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+    if (isSL) {
+      ctx.fillStyle = 'rgba(255, 82, 82, 0.5)'; // Bright Red for swing low with 50% opacity
+      ctx.beginPath();
+      ctx.arc(wx, toY(l) + 5, 3, 0, 2 * Math.PI);
+      ctx.fill();
     }
   });
 
@@ -443,7 +428,6 @@ const RefinementDashboard = () => {
   const [zoom, setZoom] = useState(1.0);
   const [magnet, setMagnet] = useState(true);
   const [hideNeural, setHideNeural] = useState(false);
-  const [adaptiveBoxes, setAdaptiveBoxes] = useState([]);
   const [lessons, setLessons] = useState([]);
   const [seenHashes, setSeenHashes] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('rf_seen_hashes') || '[]')); }
@@ -456,9 +440,15 @@ const RefinementDashboard = () => {
   // ML2 States
   const [heatmap, setHeatmap] = useState([]);
   const [ml2Result, setMl2Result] = useState(null);
+  
+  // Hard samples and loss graphs
+  const [hardSamples, setHardSamples] = useState([]);
+  const [lossGraphs, setLossGraphs] = useState([]);
+  const [expandedImage, setExpandedImage] = useState(null);
 
   const zoomRef = useRef(1.0);
   const panYRef = useRef(0);
+  const panXRef = useRef(0);
   const priceZoomRef = useRef(1.0);
   const mouseXRef = useRef(0);
   const ohlcRef = useRef(null);
@@ -495,7 +485,7 @@ const RefinementDashboard = () => {
     const cW = W - PAD.l - PAD.r;
     const cH = H - PAD.t - PAD.b;
     const totW = ohlc.length * (cw + cg);
-    const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+    const sx = PAD.l + Math.max(0, (cW - totW) / 2) + panXRef.current;
 
     const { maxP, minP, rng } = priceRangeRef.current;
     const midP = (maxP + minP) / 2 + py;
@@ -522,7 +512,7 @@ const RefinementDashboard = () => {
     const cW = W - PAD.l - PAD.r;
     const cH = H - PAD.t - PAD.b;
     const totW = ohlc.length * (cw + cg);
-    const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+    const sx = PAD.l + Math.max(0, (cW - totW) / 2) + panXRef.current;
 
     const { maxP, minP, rng } = priceRangeRef.current;
     const midP = (maxP + minP) / 2 + py;
@@ -545,15 +535,35 @@ const RefinementDashboard = () => {
   const fetchBoxes = useCallback(async () => {
     setLoading(true);
     try {
-      const qs = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
-      const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const txt = await res.text();
-      const data = JSON.parse(txt);
+      let data;
+      if (filter === 'HARD_SAMPLES') {
+        const res = await fetch(`http://localhost:8000/api/training/hard_samples`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const d = await res.json();
+        data = { status: d.status, boxes: d.samples || [] };
+      } else if (filter === 'LABELED') {
+        // Fetch both LABELED and ANALYZED for the LABELED tab
+        const [res1, res2] = await Promise.all([
+          fetch(`http://localhost:8000/api/training/all_boxes?limit=5000&status=LABELED`),
+          fetch(`http://localhost:8000/api/training/all_boxes?limit=5000&status=ANALYZED`)
+        ]);
+        if (!res1.ok || !res2.ok) throw new Error(`HTTP Error`);
+        const d1 = await res1.json();
+        const d2 = await res2.json();
+        data = { status: 'ok', boxes: [...(d1.boxes || []), ...(d2.boxes || [])] };
+      } else {
+        const qs = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
+        const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const txt = await res.text();
+        data = JSON.parse(txt);
+      }
+
       if (data.status === 'ok') {
         const fetched = data.boxes || [];
-        const shuffled = [...fetched].sort(() => Math.random() - 0.5);
-        setBoxes(shuffled);
+        // Don't shuffle hard samples to preserve loss order
+        const processed = filter === 'HARD_SAMPLES' ? fetched : [...fetched].sort(() => Math.random() - 0.5);
+        setBoxes(processed);
         setIdx(0);
         setDrawBoxes([]);
       } else {
@@ -578,6 +588,22 @@ const RefinementDashboard = () => {
       const res = await fetch('http://localhost:8000/api/training/lessons');
       const d = await res.json();
       if (d.status === 'ok') setLessons(d.lessons || []);
+    } catch (_) { }
+  };
+
+  const fetchHardSamples = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/training/hard_samples');
+      const d = await res.json();
+      if (d.status === 'ok') setHardSamples(d.samples || []);
+    } catch (_) { }
+  };
+
+  const fetchLossGraphs = async () => {
+    try {
+      const res = await fetch('http://localhost:8000/api/training/loss_graphs');
+      const d = await res.json();
+      if (d.status === 'ok') setLossGraphs(d.graphs || []);
     } catch (_) { }
   };
 
@@ -632,7 +658,7 @@ const RefinementDashboard = () => {
     fetchLessons();
 
     const poll = async () => {
-      if (!active || saving) return;
+      if (!active || saving || filter === 'HARD_SAMPLES') return;
       try {
         const qs = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
         const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
@@ -652,6 +678,8 @@ const RefinementDashboard = () => {
           });
           fetchStats();
           fetchLessons();
+          fetchHardSamples();
+          fetchLossGraphs();
         }
       } catch (_) { }
     };
@@ -680,18 +708,23 @@ const RefinementDashboard = () => {
           ? JSON.parse(box.ohlc_context)
           : (box.ohlc_context || []);
 
-        const body = JSON.stringify(ohlc);
-        console.log("Sending prediction request, payload length:", body.length);
-        const res = await fetch('http://localhost:8000/api/ml/predict_v2', {
+        const bodyV1 = JSON.stringify({
+          ohlc: ohlc,
+          symbol: box.symbol,
+          timeframe: box.timeframe
+        });
+        console.log("Sending V1 prediction request for", box.symbol, box.timeframe);
+        const resV1 = await fetch('http://localhost:8000/api/ml/predict_v1', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: body
+          body: bodyV1
         });
-        if (!res.ok) throw new Error('Prediction failed');
-        const data = await res.json();
-        console.log("ML2 Prediction data received:", data);
-        setHeatmap(data.heatmap || []);
-        setMl2Result(data);
+        if (!resV1.ok) throw new Error('V1 Prediction failed');
+        const dataV1 = await resV1.json();
+        console.log("ML2 V1 Prediction data received:", dataV1);
+        setHeatmap(dataV1.heatmap || []);
+        
+        setMl2Result(dataV1);
       } catch (e) {
         console.error("ML2 Prediction error:", e);
         setHeatmap([]);
@@ -699,44 +732,17 @@ const RefinementDashboard = () => {
       }
     };
     getPrediction();
-  }, [box]);
+  }, [box, idx]);
 
-  // ── Fetch Adaptive Consolidation Boxes ───────────────────────────────────
-  useEffect(() => {
-    if (!box) {
-      setAdaptiveBoxes([]);
-      return;
-    }
-    setAdaptiveBoxes([]); // Clear stale boxes immediately when switching
-    const fetchAdaptive = async () => {
-      try {
-        const raw = typeof box.original_meta === 'string'
-          ? JSON.parse(box.original_meta)
-          : (box.original_meta || {});
-        const tsEnd = typeof raw.timeEnd === 'number' ? raw.timeEnd : new Date(raw.timeEnd).getTime();
-        const endSeconds = Math.floor(tsEnd / 1000);
 
-        // Fetch 500 candles ending at the box's end time to provide enough history
-        const res = await fetch(`http://localhost:8000/api/adaptive_consolidation?symbol=${box.symbol}&timeframe=${box.timeframe.toLowerCase()}&candles=500&end_time=${endSeconds}`);
-        if (!res.ok) throw new Error('Failed to fetch adaptive boxes');
-        const data = await res.json();
-        if (data.status === 'success') {
-          setAdaptiveBoxes(data.boxes || []);
-        }
-      } catch (e) {
-        console.error("Adaptive fetch error:", e);
-        setAdaptiveBoxes([]);
-      }
-    };
-    fetchAdaptive();
-  }, [box]);
 
   // ── Draw chart on box or zoom change ─────────────────────────────────────
-  const redraw = useCallback((z, py, pz) => {
+  const redraw = useCallback((z, py, pz, px) => {
     if (!canvasRef.current || !ohlcRef.current) return;
     const pY = py !== undefined ? py : panYRef.current;
     const pZ = pz !== undefined ? pz : priceZoomRef.current;
-    const filtered = renderChart(canvasRef.current, ohlcRef.current, metaRef.current, z, pY, pZ, heatmap, ml2Result, hideNeural, adaptiveBoxes);
+    const pX = px !== undefined ? px : panXRef.current;
+    const filtered = renderChart(canvasRef.current, ohlcRef.current, metaRef.current, z, pY, pZ, heatmap, ml2Result, hideNeural, pX);
     if (filtered) {
       filteredOhlcRef.current = filtered;
       if (paintDragCanvasRef.current) {
@@ -744,7 +750,7 @@ const RefinementDashboard = () => {
         rafRef.current = requestAnimationFrame(paintDragCanvasRef.current);
       }
     }
-  }, [heatmap, ml2Result, hideNeural, adaptiveBoxes]);
+  }, [heatmap, ml2Result, hideNeural]);
 
   useEffect(() => {
     if (!box || !canvasRef.current) return;
@@ -772,9 +778,10 @@ const RefinementDashboard = () => {
       ohlcRef.current = ohlc;
       metaRef.current = meta;
       panYRef.current = 0;
+      panXRef.current = 0;
       priceZoomRef.current = 1.0;
       try {
-        const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0, heatmap, ml2Result, hideNeural, adaptiveBoxes);
+        const filtered = renderChart(canvasRef.current, ohlc, meta, zoomRef.current, 0, 1.0, heatmap, ml2Result, hideNeural, 0);
         if (filtered) {
           filteredOhlcRef.current = filtered;
           // Precompute price range for O(1) magnet snapping
@@ -819,8 +826,13 @@ const RefinementDashboard = () => {
         });
       }
     };
+    const onContextMenu = e => e.preventDefault();
     el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
+    el.addEventListener('contextmenu', onContextMenu);
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      el.removeEventListener('contextmenu', onContextMenu);
+    };
   }, [box, redraw]); // re-attach on new box
 
   // ── Keyboard shortcuts ─────────────────────────────────────────────────────
@@ -903,7 +915,7 @@ const RefinementDashboard = () => {
     const cH = H - PAD.t - PAD.b;
     const cW = W - PAD.l - PAD.r;
     const totW = ohlc.length * (cw + cg);
-    const sx = PAD.l + Math.max(0, (cW - totW) / 2);
+    const sx = PAD.l + Math.max(0, (cW - totW) / 2) + panXRef.current;
 
     const cIdx = Math.max(0, Math.min(ohlc.length - 1, Math.round((mx - sx) / (cw + cg))));
     const smx = sx + cIdx * (cw + cg) + (cw / 2);
@@ -918,9 +930,9 @@ const RefinementDashboard = () => {
       const adjRng = halfRng * 2;
       const yH = PAD.t + ((adjMax - candle.high) / adjRng) * cH;
       const yL = PAD.t + ((adjMax - candle.low) / adjRng) * cH;
-      if (Math.abs(my - yH) < 30 || Math.abs(my - yL) < 30) {
-        smy = Math.abs(my - yH) < Math.abs(my - yL) ? yH : yL;
-      }
+      
+      // Always snap to high or low, removing the 30px distance check
+      smy = Math.abs(my - yH) < Math.abs(my - yL) ? yH : yL;
     }
     return { smx, smy };
   }, []);
@@ -934,6 +946,15 @@ const RefinementDashboard = () => {
     const ratioY = H / rect.height;
     const mx = (e.clientX - rect.left) * ratioX;
     const my = (e.clientY - rect.top) * ratioY;
+    
+    if (e.button === 2) {
+      // Right click panning
+      modeRef.current = 'PAN';
+      dragRef.current = true;
+      offRef.current = { x: mx, y: my, startPanY: panYRef.current, startPanX: panXRef.current };
+      return;
+    }
+    
     if (mx > W - PAD.r) return;
 
     const hs = 10;
@@ -981,7 +1002,7 @@ const RefinementDashboard = () => {
 
     const { idx, price } = getChartCoords(mx, my);
     const newBox = { i1: idx, p1: price, i2: idx, p2: price };
-    drawBoxesRef.current = [...bxs, newBox];
+    drawBoxesRef.current = [newBox];
     activeIdxRef.current = drawBoxesRef.current.length - 1;
     modeRef.current = 'DRAW';
     dragRef.current = true;
@@ -1000,6 +1021,28 @@ const RefinementDashboard = () => {
       const ratioY = H / rect.height;
       const mx = (e.clientX - rect.left) * ratioX;
       const my = (e.clientY - rect.top) * ratioY;
+
+      if (modeRef.current === 'PAN') {
+        const off = offRef.current;
+        const dy = my - off.y;
+        const dx = mx - off.x;
+        const cH = H - PAD.t - PAD.b;
+        const { rng } = priceRangeRef.current;
+        
+        // Horizontal panning
+        panXRef.current = off.startPanX + dx;
+        
+        // Vertical panning
+        if (rng) {
+          const halfRng = (rng / 2) / priceZoomRef.current;
+          const adjRng = halfRng * 2;
+          const priceDelta = dy * (adjRng / cH);
+          panYRef.current = off.startPanY + priceDelta;
+        }
+        
+        redraw(zoomRef.current, panYRef.current, priceZoomRef.current, panXRef.current);
+        return;
+      }
 
       const { smx, smy } = snapToCandle(mx, my, W, H);
       const { idx: sIdx, price: sPrice } = getChartCoords(smx, smy);
@@ -1223,7 +1266,7 @@ const RefinementDashboard = () => {
         </div>
       )}
 
-      <div className="pt-20 px-6 pb-10 max-w-screen-xl mx-auto">
+      <div className="pt-20 px-6 pb-10 w-full">
 
         {/* Header */}
         <div className="flex flex-wrap justify-between items-center mb-6 gap-4">
@@ -1234,7 +1277,7 @@ const RefinementDashboard = () => {
 
           {/* Filter pills */}
           <div className="flex gap-2 flex-wrap">
-            {[['ALL', ''], ['LABELED', 'LABELED'], ['SKIPPED', 'SKIPPED'], ['NEEDS SHOT', 'PENDING_SCREENSHOT']].map(([lbl, val]) => (
+            {[['ALL', ''], ['LABELED', 'LABELED'], ['SKIPPED', 'SKIPPED'], ['NEEDS SHOT', 'PENDING_SCREENSHOT'], ['LOSS SAMPLES', 'HARD_SAMPLES']].map(([lbl, val]) => (
               <button key={lbl} onClick={() => setFilter(val)}
                 className={`text-[11px] font-bold px-3 py-1.5 rounded-lg border transition-all
                   ${filter === val ? 'border-[#2962FF] text-[#2962FF] bg-[#2962FF15]' : 'border-[#2A2E39] text-[#787B86] hover:text-white'}`}>
@@ -1397,7 +1440,7 @@ const RefinementDashboard = () => {
             <div className="space-y-4">
 
 
-              <NNTrainingDashboard />
+              <NNTrainingDashboard ml2Result={ml2Result} />
 
               <div className="bg-[#131722] p-5 rounded-2xl border border-[#2A2E39]">
                 <h3 className="text-[10px] font-bold text-[#787B86] uppercase tracking-widest mb-3">Box Details</h3>
@@ -1458,6 +1501,36 @@ const RefinementDashboard = () => {
             </div>
           </div>
         )}
+
+
+
+        {/* Training History Zone */}
+        {lossGraphs.length > 0 && (
+          <div className="mt-6 bg-[#131722] p-6 rounded-2xl border border-[#2A2E39]">
+            <h2 className="text-xl font-bold text-white mb-4">Training History</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {lossGraphs.map(graph => (
+                <div key={graph.filename} className="bg-[#0B0E14] p-4 rounded-xl border border-[#2A2E39]">
+                  <div className="relative h-48 bg-[#131722] rounded-lg overflow-hidden mb-2">
+                    <img src={`http://localhost:8000${graph.path}`} alt={`Loss Graph ${graph.version}`} className="w-full h-full object-contain cursor-pointer" onClick={() => setExpandedImage(graph.path)} />
+                  </div>
+                  <div className="text-xs font-mono text-[#787B86] text-center">{graph.version}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Image Modal */}
+        {expandedImage && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" onClick={() => setExpandedImage(null)}>
+            <div className="relative max-w-4xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
+              <img src={`http://localhost:8000${expandedImage}`} className="w-full h-full object-contain rounded-lg" />
+              <button className="absolute top-4 right-4 text-white text-2xl font-bold" onClick={() => setExpandedImage(null)}>&times;</button>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

@@ -20,28 +20,38 @@ from ml import trainer
 from ml.features import extract_features, FEATURE_VERSION
 from ml import llm_translator
 
-from ml2.inference import predict as ml2_predict
+from ml2.inference import predict_v1 as ml2_predict_v1
 
 router = APIRouter(prefix="/api/ml", tags=["ml"])
 
 
 
-@router.post("/predict_v2")
-async def predict_v2(request: Request):
-    """Runs the full 4-stage ML2 pipeline: Segment -> Extract -> Refine -> Score."""
+@router.post("/predict_v1")
+async def predict_v1(request: Request):
+    """Runs the full 4-stage ML2 pipeline: Segment -> Extract -> Refine -> Score (V1)."""
     try:
-        ohlc = await request.json()
-        print(f"ML2: Received prediction request, len={len(ohlc)}")
-        if len(ohlc) > 0:
-            print(f"ML2: First candle keys: {list(ohlc[0].keys())}")
+        data = await request.json()
+        if isinstance(data, list):
+            # Fallback for old clients
+            ohlc = data
+            symbol = None
+            timeframe = None
+        else:
+            ohlc = data.get('ohlc')
+            symbol = data.get('symbol')
+            timeframe = data.get('timeframe')
+            
+        print(f"ML2 V1: Received prediction request for {symbol} {timeframe}, len={len(ohlc) if ohlc else 0}")
         
-        result = ml2_predict(ohlc)
+        result = ml2_predict_v1(ohlc, symbol, timeframe)
         if not result:
-            raise HTTPException(status_code=500, detail="ML2 Prediction failed")
+            raise HTTPException(status_code=500, detail="ML2 V1 Prediction failed")
         return result
     except Exception as e:
-        print(f"ML2: Prediction endpoint error: {e}")
+        print(f"ML2 V1: Prediction endpoint error: {e}")
         raise HTTPException(status_code=422, detail=str(e))
+
+
 
 
 # ── Request / response models ─────────────────────────────────────────────────
@@ -174,6 +184,68 @@ def _backfill_features(zone: ZoneMeta, box_id: str) -> bool:
         return False
 
 
+def _backfill_nn_features(zone: ZoneMeta, box_id: str):
+    """
+    Compute and store NN feature vector in background.
+    """
+    try:
+        import sqlite3
+        import json
+        import os
+        import sys
+        
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(backend_dir, "training_set.db")
+        
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1 FROM nn_features WHERE box_id=?", (box_id,))
+        if cursor.fetchone():
+            conn.close()
+            return
+            
+        candles = _get_candles_for_zone(zone)
+        if not candles:
+            logger.warning("[ml_router] No candles for NN feature backfill of %s", box_id)
+            conn.close()
+            return
+            
+        ml2_dir = os.path.join(backend_dir, 'ml2')
+        if ml2_dir not in sys.path:
+            sys.path.append(ml2_dir)
+            
+        from feature_builder import build_full_features
+        import config
+        
+        formatted_candles = []
+        for c in candles:
+            formatted_candles.append({
+                'open': float(c['open']),
+                'high': float(c['high']),
+                'low': float(c['low']),
+                'close': float(c['close']),
+                'volume': float(c.get('volume', 0)),
+                'time': float(c['ts'])
+            })
+            
+        if len(formatted_candles) >= config.SEQUENCE_LENGTH:
+            formatted_candles = formatted_candles[-config.SEQUENCE_LENGTH:]
+        else:
+            formatted_candles = [formatted_candles[0]] * (config.SEQUENCE_LENGTH - len(formatted_candles)) + formatted_candles
+            
+        feats = build_full_features(formatted_candles, zone.symbol).cpu().numpy()
+        
+        cursor.execute(
+            "INSERT INTO nn_features (box_id, feature_vec) VALUES (?, ?)",
+            (box_id, json.dumps(feats.tolist()))
+        )
+        conn.commit()
+        conn.close()
+        logger.info("[ml_router] NN Feature backfill OK for %s", box_id)
+    except Exception as exc:
+        logger.warning("[ml_router] NN Feature extraction failed for %s: %s", box_id, exc)
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/label")
@@ -234,6 +306,11 @@ def label_box(payload: LabelPayload):
 
     # Feature backfill (immediate, non-blocking since it's fast)
     _backfill_features(payload.zone, payload.box_id)
+
+    # NN Feature backfill — async, never blocks the label save
+    def _nn_backfill():
+        _backfill_nn_features(payload.zone, payload.box_id)
+    threading.Thread(target=_nn_backfill, daemon=True, name="nn-feature-backfill").start()
 
     # LLM feature enrichment — async, never blocks the label save
     if payload.comment:

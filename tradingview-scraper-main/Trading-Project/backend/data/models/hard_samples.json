@@ -1,0 +1,102 @@
+[
+    {
+        "loss": 12.274798393249512,
+        "box_id": "259ee3eab4f6f830",
+        "label": "High Loss"
+    },
+    {
+        "loss": 7.912571907043457,
+        "box_id": "9f90f45b751b8ca9",
+        "label": "High Loss"
+    },
+    {
+        "loss": 4.142228603363037,
+        "box_id": "2741a990e7f54e3f",
+        "label": "High Loss"
+    },
+    {
+        "loss": 4.091734886169434,
+        "box_id": "e26e97f1f882cbdf",
+        "label": "High Loss"
+    },
+    {
+        "loss": 3.6998069286346436,
+        "box_id": "29a756bba7452a36",
+        "label": "High Loss"
+    },
+    {
+        "loss": 3.3215928077697754,
+        "box_id": "ce7592655b2cfb5a",
+        "label": "High Loss"
+    },
+    {
+        "loss": 3.2189502716064453,
+        "box_id": "ac81c571c021ab5d",
+        "label": "High Loss"
+    },
+    {
+        "loss": 3.181292772293091,
+        "box_id": "b9a245b685523f7080184b9e3d23ae27",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.864236354827881,
+        "box_id": "fb3d6dba576e09f28f54a1b16e131d1c",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.7471516132354736,
+        "box_id": "2a971a565ec12356",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.7174623012542725,
+        "box_id": "81d431c998eb2123",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.712205648422241,
+        "box_id": "6c6af031d7b93030",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.7099456787109375,
+        "box_id": "b36e230b29505176",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.6872525215148926,
+        "box_id": "8897388d4d6a0a91",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.6768975257873535,
+        "box_id": "d123e14814047dae",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.657581329345703,
+        "box_id": "c1f60cc1fdf60148",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.6363484859466553,
+        "box_id": "9c8d1ad0cabf02fb",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.515451669692993,
+        "box_id": "a0fa866481fd39ed",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.488412380218506,
+        "box_id": "7e88c733a1346b88",
+        "label": "High Loss"
+    },
+    {
+        "loss": 2.448634624481201,
+        "box_id": "066de4b2d771e9ef",
+        "label": "High Loss"
+    }
+]

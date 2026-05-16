@@ -4,7 +4,10 @@ import os
 from datetime import datetime
 
 class TrainingDB:
-    def __init__(self, db_path="training_set.db"):
+    def __init__(self, db_path=None):
+        if db_path is None:
+            backend_dir = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(backend_dir, "training_set.db")
         self.db_path = db_path
         self._init_db()
 
@@ -25,6 +28,13 @@ class TrainingDB:
                     gemini_analysis TEXT,
                     screenshot_b64 TEXT, -- The captured canvas image
                     status TEXT DEFAULT 'PENDING_SCREENSHOT', -- PENDING_SCREENSHOT, PENDING, LABELED, ANALYZED
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS nn_features (
+                    box_id TEXT PRIMARY KEY,
+                    feature_vec TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
@@ -139,10 +149,35 @@ class TrainingDB:
             return valid_rows
 
     def update_label(self, box_id, user_box):
+        import os
+        import json
+        
+        # Check if this is a hard sample
+        status = 'LABELED'
+        try:
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            hard_samples_path = os.path.join(base_dir, 'data', 'models', 'hard_samples.json')
+            print(f"DEBUG: Checking hard samples path: {hard_samples_path}")
+            if os.path.exists(hard_samples_path):
+                with open(hard_samples_path, 'r') as f:
+                    hard_samples = json.load(f)
+                    hard_ids = set(s['box_id'] for s in hard_samples)
+                    print(f"DEBUG: box_id={box_id} type={type(box_id)}")
+                    print(f"DEBUG: hard_ids={hard_ids}")
+                    if str(box_id) in hard_ids:
+                        status = 'ANALYZED'
+                        print(f"Promoting hard sample {box_id} to ANALYZED")
+                    else:
+                        print(f"DEBUG: box_id not in hard_ids")
+            else:
+                print(f"DEBUG: hard_samples_path does not exist")
+        except Exception as e:
+            print(f"Error checking hard samples: {e}")
+            
         with sqlite3.connect(self.db_path) as conn:
             conn.execute(
-                "UPDATE review_queue SET user_box = ?, status = 'LABELED' WHERE box_id = ?",
-                (json.dumps(user_box), box_id)
+                "UPDATE review_queue SET user_box = ?, status = ? WHERE box_id = ?",
+                (json.dumps(user_box), status, box_id)
             )
             conn.commit()
             cursor = conn.execute("SELECT COUNT(*) FROM review_queue WHERE status = 'LABELED'")

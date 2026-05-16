@@ -12,19 +12,21 @@ from model_b import extract_box
 from model_c import RefinementModel, refine_predict
 from model_d import QualityScorer, score_predict
 
+
 model_a = None
 model_c = None
 model_d = None
+
 
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 try:
     model_a_path = os.path.join(backend_dir, 'data', 'models', 'model_a.pt')
     if os.path.exists(model_a_path):
-        model_a = SegmentationModel()
-        model_a.load_state_dict(torch.load(model_a_path, map_location='cpu'))
+        from model_a import load_model
+        model_a = load_model(model_a_path)
         model_a.eval()
-        print("ML2: Model A (Gated) loaded")
+        print("ML2: Model A (Gated) loaded with safe loader")
 
     model_c_path = os.path.join(backend_dir, 'data', 'models', 'model_c.pt')
     if os.path.exists(model_c_path):
@@ -39,22 +41,41 @@ try:
         model_d.load_state_dict(torch.load(model_d_path, map_location='cpu'))
         model_d.eval()
         print("ML2: Model D (Dual Head) loaded")
+
+
 except Exception as e:
     print(f"Error loading models: {e}")
 
-def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
+def predict_v1(ohlc_candles: List[Dict], symbol: str = None, timeframe: str = None) -> Optional[Dict]:
     heatmap = []
     try:
-        sequence_length = 50
-        if len(ohlc_candles) < sequence_length:
-            ohlc_candles = [ohlc_candles[0]] * (sequence_length - len(ohlc_candles)) + ohlc_candles
-        else:
-            # Look at the relevant window (last 50)
+        sequence_length = 100
+        if not ohlc_candles:
+            return {
+                'heatmap': [],
+                'confidence': 0,
+                'model_version': 'v4-temporal-structure',
+                'error': 'No candles available'
+            }
+            
+        if isinstance(ohlc_candles, str):
+            try:
+                import json
+                ohlc_candles = json.loads(ohlc_candles)
+            except:
+                pass
+                
+        # Convert all keys to lowercase to be robust
+        ohlc_candles = [{k.lower(): v for k, v in c.items()} for c in ohlc_candles if isinstance(c, dict)]
+        
+        if len(ohlc_candles) >= sequence_length:
             ohlc_candles = ohlc_candles[-sequence_length:]
+        else:
+            # Pad beginning if not enough candles
+            ohlc_candles = [ohlc_candles[0]] * (sequence_length - len(ohlc_candles)) + ohlc_candles
 
-        raw_ohlc = np.array([[c['open'], c['high'], c['low'], c['close']] for c in ohlc_candles], dtype=np.float32)
-        features_tensor = build_features(raw_ohlc)
-        features = features_tensor.cpu().numpy()
+        from feature_builder import build_full_features
+        features = build_full_features(ohlc_candles, symbol).cpu().numpy()
         
         initial_box = None
         refined_box = None
@@ -65,7 +86,7 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
             heatmap_np = predict_heatmap(model_a, features)
             heatmap = heatmap_np.tolist()
             
-            initial_box_dict = extract_box(heatmap_np, ohlc_candles, threshold=0.15) 
+            initial_box_dict = extract_box(heatmap_np, ohlc_candles, threshold=0.5) 
             if initial_box_dict:
                 initial_box = np.array([
                     initial_box_dict['start_idx'], 
@@ -89,21 +110,23 @@ def predict(ohlc_candles: List[Dict]) -> Optional[Dict]:
                 p_low  = min(c['low'] for c in slice_c)
                 refined_box = [s_idx, e_idx, p_high, p_low]
 
-        if model_d and (refined_box or initial_box):
-            eval_box = refined_box if refined_box else initial_box
+        eval_box = refined_box if refined_box is not None else initial_box
+        
+        if model_d and eval_box is not None:
             input_box_d = np.array([eval_box[0]/float(sequence_length), eval_box[1]/float(sequence_length), 0.5, 0.5], dtype=np.float32)
             quality, is_valid = score_predict(model_d, features, input_box_d)
 
         # Map to final output
-        final_box = refined_box if refined_box else initial_box
+        final_box = eval_box
         
         res = {
             'heatmap': heatmap,
-            'confidence': float(quality) if is_valid else 0.05,
-            'model_version': 'v4-temporal-structure'
+            'confidence': float(quality),
+            'is_valid': bool(is_valid),
+            'model_version': 'v4-temporal-structure',
         }
         
-        if final_box:
+        if final_box is not None:
             idx1, idx2 = int(final_box[0]), int(final_box[1])
             res.update({
                 'timeStart': ohlc_candles[idx1]['time'],

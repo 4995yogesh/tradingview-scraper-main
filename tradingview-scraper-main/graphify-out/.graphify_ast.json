@@ -12,161 +12,161 @@
       "label": "_http_ok()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L29"
+      "source_location": "L37"
     },
     {
       "id": "launcher_find_node_exec",
       "label": "_find_node_exec()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L68"
+      "source_location": "L76"
     },
     {
       "id": "launcher_kill_pid",
       "label": "_kill_pid()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L79"
+      "source_location": "L87"
     },
     {
       "id": "launcher_kill_port",
       "label": "_kill_port()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L86"
+      "source_location": "L94"
     },
     {
       "id": "launcher_dashboardlauncher",
       "label": "DashboardLauncher",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L111"
+      "source_location": "L119"
     },
     {
       "id": "launcher_dashboardlauncher_init",
       "label": ".__init__()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L112"
+      "source_location": "L120"
     },
     {
       "id": "launcher_dashboardlauncher_deferred_init",
       "label": "._deferred_init()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L133"
+      "source_location": "L141"
     },
     {
       "id": "launcher_dashboardlauncher_build_ui",
       "label": "._build_ui()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L144"
+      "source_location": "L152"
     },
     {
       "id": "launcher_dashboardlauncher_log",
       "label": "._log()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L240"
+      "source_location": "L248"
     },
     {
       "id": "launcher_dashboardlauncher_log_ts",
       "label": "._log_ts()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L248"
+      "source_location": "L257"
     },
     {
       "id": "launcher_dashboardlauncher_log_safe",
       "label": "._log_safe()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L252"
+      "source_location": "L261"
     },
     {
       "id": "launcher_dashboardlauncher_read_output",
       "label": "._read_output()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L256"
+      "source_location": "L265"
     },
     {
       "id": "launcher_dashboardlauncher_set_status",
       "label": "._set_status()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L274"
+      "source_location": "L283"
     },
     {
       "id": "launcher_dashboardlauncher_poll_ready",
       "label": "._poll_ready()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L285"
+      "source_location": "L294"
     },
     {
       "id": "launcher_dashboardlauncher_kill_port",
       "label": "._kill_port()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L311"
+      "source_location": "L320"
     },
     {
       "id": "launcher_dashboardlauncher_toggle",
       "label": "._toggle()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L316"
+      "source_location": "L325"
     },
     {
       "id": "launcher_dashboardlauncher_start_backend",
       "label": "._start_backend()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L325"
+      "source_location": "L334"
     },
     {
       "id": "launcher_dashboardlauncher_stop_backend",
       "label": "._stop_backend()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L367"
+      "source_location": "L376"
     },
     {
       "id": "launcher_dashboardlauncher_start_frontend",
       "label": "._start_frontend()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L378"
+      "source_location": "L387"
     },
     {
       "id": "launcher_dashboardlauncher_stop_frontend",
       "label": "._stop_frontend()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L436"
+      "source_location": "L445"
     },
     {
       "id": "launcher_dashboardlauncher_start_all",
       "label": "._start_all()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L447"
+      "source_location": "L456"
     },
     {
       "id": "launcher_dashboardlauncher_stop_all",
       "label": "._stop_all()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L482"
+      "source_location": "L491"
     },
     {
       "id": "launcher_dashboardlauncher_on_close",
       "label": "._on_close()",
       "file_type": "code",
       "source_file": "launcher.py",
-      "source_location": "L491"
+      "source_location": "L500"
     },
     {
       "id": "launcher_rationale_1",
@@ -176,46 +176,46 @@
       "source_location": "L1"
     },
     {
-      "id": "launcher_rationale_69",
+      "id": "launcher_rationale_77",
       "label": "Return full path to yarn.cmd or npm.cmd, whichever is preferred + available.",
       "file_type": "rationale",
       "source_file": "launcher.py",
-      "source_location": "L69"
+      "source_location": "L77"
     },
     {
-      "id": "launcher_rationale_87",
+      "id": "launcher_rationale_95",
       "label": "Kill any process currently LISTENING on the given port.",
       "file_type": "rationale",
       "source_file": "launcher.py",
-      "source_location": "L87"
+      "source_location": "L95"
     },
     {
-      "id": "launcher_rationale_253",
+      "id": "launcher_rationale_262",
       "label": "Thread-safe log call via root.after.",
       "file_type": "rationale",
       "source_file": "launcher.py",
-      "source_location": "L253"
+      "source_location": "L262"
     },
     {
-      "id": "launcher_rationale_257",
+      "id": "launcher_rationale_266",
       "label": "Stream subprocess stdout into the log window (runs in daemon thread).",
       "file_type": "rationale",
       "source_file": "launcher.py",
-      "source_location": "L257"
+      "source_location": "L266"
     },
     {
-      "id": "launcher_rationale_287",
+      "id": "launcher_rationale_296",
       "label": "Poll `url` every 2 s until it returns HTTP 200 or timeout.         Runs in a dae",
       "file_type": "rationale",
       "source_file": "launcher.py",
-      "source_location": "L287"
+      "source_location": "L296"
     },
     {
-      "id": "launcher_rationale_448",
+      "id": "launcher_rationale_457",
       "label": "Start Backend + Frontend in parallel \u2014 frontend compile overlaps with backend in",
       "file_type": "rationale",
       "source_file": "launcher.py",
-      "source_location": "L448"
+      "source_location": "L457"
     },
     {
       "id": "setup_py",
@@ -2973,336 +2973,378 @@
       "label": "_compute_box_id_long()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L79"
+      "source_location": "L81"
     },
     {
       "id": "server_compute_box_id_short",
       "label": "_compute_box_id_short()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L90"
+      "source_location": "L92"
     },
     {
       "id": "server_snap_to_bucket",
       "label": "_snap_to_bucket()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L132"
+      "source_location": "L134"
     },
     {
       "id": "server_cache_get",
       "label": "_cache_get()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L147"
+      "source_location": "L149"
     },
     {
       "id": "server_cache_set",
       "label": "_cache_set()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L155"
+      "source_location": "L157"
     },
     {
       "id": "server_clear_consolidations_cache",
       "label": "clear_consolidations_cache()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L159"
+      "source_location": "L161"
     },
     {
       "id": "server_format_candles_for_ui",
       "label": "_format_candles_for_ui()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L169"
+      "source_location": "L171"
     },
     {
       "id": "server_resample_candles",
       "label": "resample_candles()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L250"
+      "source_location": "L252"
     },
     {
       "id": "server_seed_storage",
       "label": "_seed_storage()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L297"
+      "source_location": "L299"
     },
     {
       "id": "server_load_db_into_ram",
       "label": "_load_db_into_ram()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L362"
+      "source_location": "L364"
     },
     {
       "id": "server_gap_fill",
       "label": "_gap_fill()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L396"
+      "source_location": "L398"
     },
     {
       "id": "server_run_all_gap_fills",
       "label": "_run_all_gap_fills()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L470"
+      "source_location": "L472"
     },
     {
       "id": "server_get_day_start_ts",
       "label": "_get_day_start_ts()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L508"
+      "source_location": "L510"
     },
     {
       "id": "server_build_htf_from_1m",
       "label": "_build_htf_from_1m()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L517"
+      "source_location": "L519"
     },
     {
       "id": "server_build_htf_from_5m",
       "label": "_build_htf_from_5m()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L551"
+      "source_location": "L553"
     },
     {
       "id": "server_synthesize_htf_candles",
       "label": "_synthesize_htf_candles()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L582"
+      "source_location": "L584"
     },
     {
       "id": "server_fetch_latest_candles",
       "label": "_fetch_latest_candles()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L609"
+      "source_location": "L611"
     },
     {
       "id": "server_periodic_refresh_loop",
       "label": "_periodic_refresh_loop()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L657"
+      "source_location": "L659"
     },
     {
       "id": "server_auto_label_loop",
       "label": "_auto_label_loop()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L681"
+      "source_location": "L683"
     },
     {
       "id": "server_lifespan",
       "label": "lifespan()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L726"
+      "source_location": "L728"
     },
     {
       "id": "server_health",
       "label": "health()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L818"
+      "source_location": "L838"
     },
     {
       "id": "server_db_summary",
       "label": "db_summary()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L823"
+      "source_location": "L843"
     },
     {
       "id": "server_repair_gaps",
       "label": "repair_gaps()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L830"
+      "source_location": "L850"
     },
     {
       "id": "server_get_timeframes",
       "label": "get_timeframes()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L842"
+      "source_location": "L862"
     },
     {
       "id": "server_get_chart_data",
       "label": "get_chart_data()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L848"
+      "source_location": "L868"
     },
     {
       "id": "server_sync_tick",
       "label": "_sync_tick()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L859"
+      "source_location": "L879"
     },
     {
       "id": "server_parse_end_time",
       "label": "parse_end_time()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L885"
+      "source_location": "L905"
     },
     {
       "id": "server_get_ohlc",
       "label": "get_ohlc()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L901"
+      "source_location": "L921"
     },
     {
       "id": "server_get_consolidation",
       "label": "get_consolidation()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L956"
+      "source_location": "L976"
+    },
+    {
+      "id": "server_get_adaptive_consolidation",
+      "label": "get_adaptive_consolidation()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L998"
+    },
+    {
+      "id": "server_get_adaptive_consolidation_context",
+      "label": "get_adaptive_consolidation_context()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1020"
     },
     {
       "id": "server_get_consolidations_all",
       "label": "get_consolidations_all()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L979"
+      "source_location": "L1039"
     },
     {
       "id": "server_get_swings_all",
       "label": "get_swings_all()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1165"
+      "source_location": "L1225"
     },
     {
       "id": "server_get_features",
       "label": "get_features()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1279"
+      "source_location": "L1339"
     },
     {
       "id": "server_get_indicators",
       "label": "get_indicators()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1290"
+      "source_location": "L1350"
     },
     {
       "id": "server_get_watchlist",
       "label": "get_watchlist()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1308"
+      "source_location": "L1368"
     },
     {
       "id": "server_get_all_boxes",
       "label": "get_all_boxes()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1355"
+      "source_location": "L1415"
+    },
+    {
+      "id": "server_get_hard_samples",
+      "label": "get_hard_samples()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1465"
+    },
+    {
+      "id": "server_get_loss_graphs",
+      "label": "get_loss_graphs()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1504"
+    },
+    {
+      "id": "server_get_loss_graph_file",
+      "label": "get_loss_graph_file()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1550"
     },
     {
       "id": "server_get_training_pending",
       "label": "get_training_pending()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1405"
+      "source_location": "L1561"
     },
     {
       "id": "server_get_needs_screenshot",
       "label": "get_needs_screenshot()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1414"
+      "source_location": "L1570"
     },
     {
       "id": "server_upload_screenshot",
       "label": "upload_screenshot()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1423"
+      "source_location": "L1579"
     },
     {
       "id": "server_undo_training_label",
       "label": "undo_training_label()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1436"
+      "source_location": "L1592"
     },
     {
       "id": "server_get_training_stats",
       "label": "get_training_stats()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1448"
+      "source_location": "L1604"
     },
     {
       "id": "server_get_training_lessons",
       "label": "get_training_lessons()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1465"
+      "source_location": "L1621"
     },
     {
       "id": "server_submit_training_label",
       "label": "submit_training_label()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1506"
+      "source_location": "L1662"
     },
     {
       "id": "server_get_nn_status",
       "label": "get_nn_status()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1541"
+      "source_location": "L1756"
     },
     {
       "id": "server_skip_training_sample",
       "label": "skip_training_sample()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1550"
+      "source_location": "L1765"
     },
     {
       "id": "server_manual_retrain_nn",
       "label": "manual_retrain_nn()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1563"
+      "source_location": "L1778"
     },
     {
       "id": "server_get_nn_training_progress",
       "label": "get_nn_training_progress()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1573"
+      "source_location": "L1791"
+    },
+    {
+      "id": "server_stop_nn_training",
+      "label": "stop_nn_training()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1801"
     },
     {
       "id": "server_sync_training_queue",
       "label": "sync_training_queue()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1583"
+      "source_location": "L1815"
     },
     {
       "id": "server_get_nn_refined_zones",
       "label": "get_nn_refined_zones()",
       "file_type": "code",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1617"
+      "source_location": "L1849"
     },
     {
       "id": "server_rationale_1",
@@ -3312,228 +3354,249 @@
       "source_location": "L1"
     },
     {
-      "id": "server_rationale_80",
+      "id": "server_rationale_82",
       "label": "sha256(symbol:tf:tStart:tEnd:pH:pL) \u2192 first 16 hex chars.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L80"
+      "source_location": "L82"
     },
     {
-      "id": "server_rationale_91",
+      "id": "server_rationale_93",
       "label": "sha256(symbol:tf:tStart) \u2192 first 16 hex chars.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L91"
+      "source_location": "L93"
     },
     {
-      "id": "server_rationale_133",
+      "id": "server_rationale_135",
       "label": "Snap a unix-second timestamp to the lower bucket boundary for its timeframe.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L133"
+      "source_location": "L135"
     },
     {
-      "id": "server_rationale_148",
+      "id": "server_rationale_150",
       "label": "Return cached value if fresh, else None.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L148"
+      "source_location": "L150"
     },
     {
-      "id": "server_rationale_160",
+      "id": "server_rationale_162",
       "label": "Wipe the consolidations cache to ensure fresh labels are served immediately.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L160"
+      "source_location": "L162"
     },
     {
-      "id": "server_rationale_170",
+      "id": "server_rationale_172",
       "label": "Convert raw candle dicts into the exact shape lightweight-charts expects.     C",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L170"
+      "source_location": "L172"
     },
     {
-      "id": "server_rationale_251",
+      "id": "server_rationale_253",
       "label": "Aggregate lower-TF candles into higher-TF OHLCV buckets.     Uses strict getBuc",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L251"
+      "source_location": "L253"
     },
     {
-      "id": "server_rationale_299",
+      "id": "server_rationale_301",
       "label": "1. Persist raw candles to SQLite (write-through).     2. Load them into the in-",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L299"
+      "source_location": "L301"
     },
     {
-      "id": "server_rationale_363",
+      "id": "server_rationale_365",
       "label": "Pull all rows for a series from SQLite and push them into the RAM deque.     Ca",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L363"
+      "source_location": "L365"
     },
     {
-      "id": "server_rationale_397",
+      "id": "server_rationale_399",
       "label": "Detect and fill gaps in candle data.     Always fetches a minimum STARTUP_BARS",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L397"
+      "source_location": "L399"
     },
     {
-      "id": "server_rationale_471",
+      "id": "server_rationale_473",
       "label": "Parallel gap-fill across all symbol/timeframe pairs.     Shortest timeframes fi",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L471"
+      "source_location": "L473"
     },
     {
-      "id": "server_rationale_509",
+      "id": "server_rationale_511",
       "label": "Return the unix-second of the most recent OANDA trading day open (22:00 UTC).",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L509"
+      "source_location": "L511"
     },
     {
-      "id": "server_rationale_518",
+      "id": "server_rationale_520",
       "label": "Pull 1m closed candles from SQLite for the last 48h.     Aggregate them into ta",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L518"
+      "source_location": "L520"
     },
     {
-      "id": "server_rationale_552",
+      "id": "server_rationale_554",
       "label": "Pull all 5m closed candles from SQLite for the last 10 days.     Aggregate them",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L552"
+      "source_location": "L554"
     },
     {
-      "id": "server_rationale_583",
+      "id": "server_rationale_585",
       "label": "Re-compute all intraday HTF live buckets from 1m data,     and interday buckets",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L583"
+      "source_location": "L585"
     },
     {
-      "id": "server_rationale_610",
+      "id": "server_rationale_612",
       "label": "Fetch the very latest 1m candles from TradingView via HistoricalFetcher     and",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L610"
+      "source_location": "L612"
     },
     {
-      "id": "server_rationale_658",
+      "id": "server_rationale_660",
       "label": "Delta-Engine background thread:     1. Every 5 seconds: fetch only 1m candles f",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L658"
+      "source_location": "L660"
     },
     {
-      "id": "server_rationale_682",
+      "id": "server_rationale_684",
       "label": "Background loop to auto-label boxes that haven't been processed yet.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L682"
+      "source_location": "L684"
     },
     {
-      "id": "server_rationale_824",
+      "id": "server_rationale_844",
       "label": "Diagnostic endpoint \u2014 shows what's stored in SQLite.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L824"
+      "source_location": "L844"
     },
     {
-      "id": "server_rationale_831",
+      "id": "server_rationale_851",
       "label": "Immediately trigger a full gap-fill for all persistent series.     Use this to",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L831"
+      "source_location": "L851"
     },
     {
-      "id": "server_rationale_843",
+      "id": "server_rationale_863",
       "label": "Return list of timeframes for infinite canvas (5 fixed).",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L843"
+      "source_location": "L863"
     },
     {
-      "id": "server_rationale_855",
+      "id": "server_rationale_875",
       "label": "Thin proxy to /api/ohlc \u2014 used by InfiniteCanvas per-timeframe fetch.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L855"
+      "source_location": "L875"
     },
     {
-      "id": "server_rationale_860",
+      "id": "server_rationale_880",
       "label": "Overwrites the 'close' price of the final candle in any timeframe      with the",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L860"
+      "source_location": "L880"
     },
     {
-      "id": "server_rationale_963",
+      "id": "server_rationale_983",
       "label": "Return consolidation boxes for given series.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L963"
+      "source_location": "L983"
     },
     {
-      "id": "server_rationale_980",
+      "id": "server_rationale_1005",
+      "label": "Return adaptive consolidation boxes for given series.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1005"
+    },
+    {
+      "id": "server_rationale_1021",
+      "label": "Return adaptive consolidation boxes for given candles.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1021"
+    },
+    {
+      "id": "server_rationale_1040",
       "label": "Aggregate consolidation zones across ALL persistent timeframes.     Parallel: e",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L980"
+      "source_location": "L1040"
     },
     {
-      "id": "server_rationale_1166",
+      "id": "server_rationale_1226",
       "label": "3-bar pivot swing highs/lows with server-side 3+3 active unmitigated selection.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1166"
+      "source_location": "L1226"
     },
     {
-      "id": "server_rationale_1309",
+      "id": "server_rationale_1369",
       "label": "Async watchlist \u2014 runs blocking Indicators.scrape() in a thread pool     so it",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1309"
+      "source_location": "L1369"
     },
     {
-      "id": "server_rationale_1356",
+      "id": "server_rationale_1416",
       "label": "Returns ALL boxes regardless of status, with full ohlc_context for canvas render",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1356"
+      "source_location": "L1416"
     },
     {
-      "id": "server_rationale_1564",
+      "id": "server_rationale_1779",
       "label": "Trigger the PyTorch CNN training manually.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1564"
+      "source_location": "L1779"
     },
     {
-      "id": "server_rationale_1574",
+      "id": "server_rationale_1792",
       "label": "Return the real-time logs and loss of the CNN trainer.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1574"
+      "source_location": "L1792"
     },
     {
-      "id": "server_rationale_1584",
+      "id": "server_rationale_1802",
+      "label": "Request to stop active NN training.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1802"
+    },
+    {
+      "id": "server_rationale_1816",
       "label": "Force-sync all currently detected consolidations into the training DB.     Allo",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1584"
+      "source_location": "L1816"
     },
     {
-      "id": "server_rationale_1618",
+      "id": "server_rationale_1850",
       "label": "Return consolidation zones enriched with NN-predicted refined box coordinates.",
       "file_type": "rationale",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1618"
+      "source_location": "L1850"
     },
     {
       "id": "trading_project_frontend_craco_config_js",
@@ -6315,67 +6378,53 @@
       "source_location": "L1"
     },
     {
-      "id": "consolidation_consolidationcnn",
-      "label": "ConsolidationCNN",
-      "file_type": "code",
-      "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L9"
-    },
-    {
-      "id": "consolidation_consolidationcnn_init",
-      "label": ".__init__()",
-      "file_type": "code",
-      "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L10"
-    },
-    {
-      "id": "consolidation_consolidationcnn_forward",
-      "label": ".forward()",
-      "file_type": "code",
-      "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L23"
-    },
-    {
       "id": "consolidation_nnpredictor",
       "label": "NNPredictor",
       "file_type": "code",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L29"
+      "source_location": "L11"
     },
     {
       "id": "consolidation_get_instance",
       "label": "get_instance()",
       "file_type": "code",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L34"
+      "source_location": "L16"
     },
     {
       "id": "consolidation_nnpredictor_load_model",
       "label": "._load_model()",
       "file_type": "code",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L40"
+      "source_location": "L22"
     },
     {
       "id": "consolidation_nnpredictor_predict",
       "label": ".predict()",
       "file_type": "code",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L53"
+      "source_location": "L35"
     },
     {
       "id": "consolidation_consolidation_boxes",
       "label": "consolidation_boxes()",
       "file_type": "code",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L89"
+      "source_location": "L88"
     },
     {
-      "id": "consolidation_rationale_95",
+      "id": "consolidation_rationale_36",
+      "label": "Unified prediction logic with Min-Max normalization.         DEPRECATED: Global",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
+      "source_location": "L36"
+    },
+    {
+      "id": "consolidation_rationale_94",
       "label": "Detect consolidation boxes.     df must have columns ['open','high','low','clos",
       "file_type": "rationale",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L95"
+      "source_location": "L94"
     },
     {
       "id": "trading_project_project_indicators_init_py",
@@ -8996,29 +9045,38 @@
     },
     {
       "source": "launcher_py",
+      "target": "logging",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "launcher.py",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "launcher_py",
       "target": "urllib_request",
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L28",
-      "weight": 1.0
-    },
-    {
-      "source": "launcher_py",
-      "target": "launcher_http_ok",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "launcher.py",
-      "source_location": "L29",
-      "weight": 1.0
-    },
-    {
-      "source": "launcher_py",
-      "target": "launcher_http_ok",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "launcher.py",
       "source_location": "L36",
+      "weight": 1.0
+    },
+    {
+      "source": "launcher_py",
+      "target": "launcher_http_ok",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "launcher.py",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "launcher_py",
+      "target": "launcher_http_ok",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "launcher.py",
+      "source_location": "L44",
       "weight": 1.0
     },
     {
@@ -9027,7 +9085,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L68",
+      "source_location": "L76",
       "weight": 1.0
     },
     {
@@ -9036,7 +9094,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L79",
+      "source_location": "L87",
       "weight": 1.0
     },
     {
@@ -9045,7 +9103,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L86",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -9054,7 +9112,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L111",
+      "source_location": "L119",
       "weight": 1.0
     },
     {
@@ -9063,7 +9121,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L112",
+      "source_location": "L120",
       "weight": 1.0
     },
     {
@@ -9072,7 +9130,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L133",
+      "source_location": "L141",
       "weight": 1.0
     },
     {
@@ -9081,21 +9139,12 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L144",
+      "source_location": "L152",
       "weight": 1.0
     },
     {
       "source": "launcher_dashboardlauncher",
       "target": "launcher_dashboardlauncher_log",
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "launcher.py",
-      "source_location": "L240",
-      "weight": 1.0
-    },
-    {
-      "source": "launcher_dashboardlauncher",
-      "target": "launcher_dashboardlauncher_log_ts",
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
@@ -9104,11 +9153,20 @@
     },
     {
       "source": "launcher_dashboardlauncher",
+      "target": "launcher_dashboardlauncher_log_ts",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "launcher.py",
+      "source_location": "L257",
+      "weight": 1.0
+    },
+    {
+      "source": "launcher_dashboardlauncher",
       "target": "launcher_dashboardlauncher_log_safe",
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L252",
+      "source_location": "L261",
       "weight": 1.0
     },
     {
@@ -9117,7 +9175,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L256",
+      "source_location": "L265",
       "weight": 1.0
     },
     {
@@ -9126,7 +9184,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L274",
+      "source_location": "L283",
       "weight": 1.0
     },
     {
@@ -9135,7 +9193,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L285",
+      "source_location": "L294",
       "weight": 1.0
     },
     {
@@ -9144,21 +9202,12 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L311",
+      "source_location": "L320",
       "weight": 1.0
     },
     {
       "source": "launcher_dashboardlauncher",
       "target": "launcher_dashboardlauncher_toggle",
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "launcher.py",
-      "source_location": "L316",
-      "weight": 1.0
-    },
-    {
-      "source": "launcher_dashboardlauncher",
-      "target": "launcher_dashboardlauncher_start_backend",
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
@@ -9167,11 +9216,20 @@
     },
     {
       "source": "launcher_dashboardlauncher",
+      "target": "launcher_dashboardlauncher_start_backend",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "launcher.py",
+      "source_location": "L334",
+      "weight": 1.0
+    },
+    {
+      "source": "launcher_dashboardlauncher",
       "target": "launcher_dashboardlauncher_stop_backend",
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L367",
+      "source_location": "L376",
       "weight": 1.0
     },
     {
@@ -9180,7 +9238,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L378",
+      "source_location": "L387",
       "weight": 1.0
     },
     {
@@ -9189,7 +9247,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L436",
+      "source_location": "L445",
       "weight": 1.0
     },
     {
@@ -9198,7 +9256,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L447",
+      "source_location": "L456",
       "weight": 1.0
     },
     {
@@ -9207,7 +9265,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L482",
+      "source_location": "L491",
       "weight": 1.0
     },
     {
@@ -9216,7 +9274,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L491",
+      "source_location": "L500",
       "weight": 1.0
     },
     {
@@ -9225,7 +9283,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L126",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -9234,7 +9292,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L134",
+      "source_location": "L142",
       "weight": 1.0
     },
     {
@@ -9243,7 +9301,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L186",
+      "source_location": "L194",
       "weight": 1.0
     },
     {
@@ -9252,7 +9310,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L250",
+      "source_location": "L259",
       "weight": 1.0
     },
     {
@@ -9261,7 +9319,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L268",
+      "source_location": "L277",
       "weight": 1.0
     },
     {
@@ -9270,7 +9328,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L293",
+      "source_location": "L302",
       "weight": 1.0
     },
     {
@@ -9279,7 +9337,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L294",
+      "source_location": "L303",
       "weight": 1.0
     },
     {
@@ -9288,7 +9346,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L295",
+      "source_location": "L304",
       "weight": 1.0
     },
     {
@@ -9297,7 +9355,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L326",
+      "source_location": "L335",
       "weight": 1.0
     },
     {
@@ -9306,7 +9364,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L327",
+      "source_location": "L336",
       "weight": 1.0
     },
     {
@@ -9315,7 +9373,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L354",
+      "source_location": "L363",
       "weight": 1.0
     },
     {
@@ -9324,7 +9382,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L368",
+      "source_location": "L377",
       "weight": 1.0
     },
     {
@@ -9333,7 +9391,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L371",
+      "source_location": "L380",
       "weight": 1.0
     },
     {
@@ -9342,7 +9400,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L373",
+      "source_location": "L382",
       "weight": 1.0
     },
     {
@@ -9351,7 +9409,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L379",
+      "source_location": "L388",
       "weight": 1.0
     },
     {
@@ -9360,7 +9418,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L380",
+      "source_location": "L389",
       "weight": 1.0
     },
     {
@@ -9369,7 +9427,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L387",
+      "source_location": "L396",
       "weight": 1.0
     },
     {
@@ -9378,7 +9436,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L419",
+      "source_location": "L428",
       "weight": 1.0
     },
     {
@@ -9387,7 +9445,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L437",
+      "source_location": "L446",
       "weight": 1.0
     },
     {
@@ -9396,7 +9454,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L440",
+      "source_location": "L449",
       "weight": 1.0
     },
     {
@@ -9405,20 +9463,11 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L442",
+      "source_location": "L451",
       "weight": 1.0
     },
     {
       "source": "launcher_dashboardlauncher_stop_all",
-      "target": "launcher_dashboardlauncher_log_ts",
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "launcher.py",
-      "source_location": "L483",
-      "weight": 1.0
-    },
-    {
-      "source": "launcher_dashboardlauncher_on_close",
       "target": "launcher_dashboardlauncher_log_ts",
       "relation": "calls",
       "confidence": "EXTRACTED",
@@ -9428,11 +9477,20 @@
     },
     {
       "source": "launcher_dashboardlauncher_on_close",
+      "target": "launcher_dashboardlauncher_log_ts",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "launcher.py",
+      "source_location": "L501",
+      "weight": 1.0
+    },
+    {
+      "source": "launcher_dashboardlauncher_on_close",
       "target": "launcher_dashboardlauncher_stop_all",
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L494",
+      "source_location": "L503",
       "weight": 1.0
     },
     {
@@ -9445,57 +9503,57 @@
       "weight": 1.0
     },
     {
-      "source": "launcher_rationale_69",
+      "source": "launcher_rationale_77",
       "target": "launcher_find_node_exec",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L69",
+      "source_location": "L77",
       "weight": 1.0
     },
     {
-      "source": "launcher_rationale_87",
+      "source": "launcher_rationale_95",
       "target": "launcher_kill_port",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L87",
+      "source_location": "L95",
       "weight": 1.0
     },
     {
-      "source": "launcher_rationale_253",
+      "source": "launcher_rationale_262",
       "target": "launcher_dashboardlauncher_log_safe",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L253",
+      "source_location": "L262",
       "weight": 1.0
     },
     {
-      "source": "launcher_rationale_257",
+      "source": "launcher_rationale_266",
       "target": "launcher_dashboardlauncher_read_output",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L257",
+      "source_location": "L266",
       "weight": 1.0
     },
     {
-      "source": "launcher_rationale_287",
+      "source": "launcher_rationale_296",
       "target": "launcher_dashboardlauncher_poll_ready",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L287",
+      "source_location": "L296",
       "weight": 1.0
     },
     {
-      "source": "launcher_rationale_448",
+      "source": "launcher_rationale_457",
       "target": "launcher_dashboardlauncher_start_all",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "launcher.py",
-      "source_location": "L448",
+      "source_location": "L457",
       "weight": 1.0
     },
     {
@@ -13838,11 +13896,29 @@
     },
     {
       "source": "trading_project_backend_server_py",
+      "target": "indicators_user_style_learner",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "indicators_adaptive_consolidation",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
       "target": "hashlib",
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L63",
+      "source_location": "L65",
       "weight": 1.0
     },
     {
@@ -13851,25 +13927,25 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L65",
-      "weight": 1.0
-    },
-    {
-      "source": "trading_project_backend_server_py",
-      "target": "ml",
-      "relation": "imports_from",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L66",
-      "weight": 1.0
-    },
-    {
-      "source": "trading_project_backend_server_py",
-      "target": "ml",
-      "relation": "imports_from",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\backend\\server.py",
       "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "ml",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L68",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "ml",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L69",
       "weight": 1.0
     },
     {
@@ -13878,7 +13954,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L79",
+      "source_location": "L81",
       "weight": 1.0
     },
     {
@@ -13887,7 +13963,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L90",
+      "source_location": "L92",
       "weight": 1.0
     },
     {
@@ -13896,7 +13972,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L132",
+      "source_location": "L134",
       "weight": 1.0
     },
     {
@@ -13905,7 +13981,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L147",
+      "source_location": "L149",
       "weight": 1.0
     },
     {
@@ -13914,7 +13990,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L155",
+      "source_location": "L157",
       "weight": 1.0
     },
     {
@@ -13923,7 +13999,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L159",
+      "source_location": "L161",
       "weight": 1.0
     },
     {
@@ -13932,7 +14008,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L169",
+      "source_location": "L171",
       "weight": 1.0
     },
     {
@@ -13941,7 +14017,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L250",
+      "source_location": "L252",
       "weight": 1.0
     },
     {
@@ -13950,7 +14026,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L297",
+      "source_location": "L299",
       "weight": 1.0
     },
     {
@@ -13959,7 +14035,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L362",
+      "source_location": "L364",
       "weight": 1.0
     },
     {
@@ -13968,7 +14044,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L396",
+      "source_location": "L398",
       "weight": 1.0
     },
     {
@@ -13977,7 +14053,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L470",
+      "source_location": "L472",
       "weight": 1.0
     },
     {
@@ -13986,7 +14062,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L508",
+      "source_location": "L510",
       "weight": 1.0
     },
     {
@@ -13995,7 +14071,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L517",
+      "source_location": "L519",
       "weight": 1.0
     },
     {
@@ -14004,7 +14080,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L551",
+      "source_location": "L553",
       "weight": 1.0
     },
     {
@@ -14013,7 +14089,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L582",
+      "source_location": "L584",
       "weight": 1.0
     },
     {
@@ -14022,7 +14098,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L609",
+      "source_location": "L611",
       "weight": 1.0
     },
     {
@@ -14031,7 +14107,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L657",
+      "source_location": "L659",
       "weight": 1.0
     },
     {
@@ -14040,7 +14116,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L681",
+      "source_location": "L683",
       "weight": 1.0
     },
     {
@@ -14049,7 +14125,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L726",
+      "source_location": "L728",
       "weight": 1.0
     },
     {
@@ -14058,7 +14134,7 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L806",
+      "source_location": "L826",
       "weight": 1.0
     },
     {
@@ -14067,7 +14143,7 @@
       "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L808",
+      "source_location": "L828",
       "weight": 1.0
     },
     {
@@ -14076,7 +14152,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L818",
+      "source_location": "L838",
       "weight": 1.0
     },
     {
@@ -14085,7 +14161,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L823",
+      "source_location": "L843",
       "weight": 1.0
     },
     {
@@ -14094,7 +14170,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L830",
+      "source_location": "L850",
       "weight": 1.0
     },
     {
@@ -14103,7 +14179,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L842",
+      "source_location": "L862",
       "weight": 1.0
     },
     {
@@ -14112,7 +14188,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L848",
+      "source_location": "L868",
       "weight": 1.0
     },
     {
@@ -14121,7 +14197,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L859",
+      "source_location": "L879",
       "weight": 1.0
     },
     {
@@ -14130,7 +14206,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L885",
+      "source_location": "L905",
       "weight": 1.0
     },
     {
@@ -14139,7 +14215,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L901",
+      "source_location": "L921",
       "weight": 1.0
     },
     {
@@ -14148,7 +14224,25 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L956",
+      "source_location": "L976",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_adaptive_consolidation",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L998",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_adaptive_consolidation_context",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1020",
       "weight": 1.0
     },
     {
@@ -14157,7 +14251,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L979",
+      "source_location": "L1039",
       "weight": 1.0
     },
     {
@@ -14166,7 +14260,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1165",
+      "source_location": "L1225",
       "weight": 1.0
     },
     {
@@ -14175,7 +14269,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1279",
+      "source_location": "L1339",
       "weight": 1.0
     },
     {
@@ -14184,7 +14278,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1290",
+      "source_location": "L1350",
       "weight": 1.0
     },
     {
@@ -14193,7 +14287,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1308",
+      "source_location": "L1368",
       "weight": 1.0
     },
     {
@@ -14202,57 +14296,12 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1355",
+      "source_location": "L1415",
       "weight": 1.0
     },
     {
       "source": "trading_project_backend_server_py",
-      "target": "server_get_training_pending",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1405",
-      "weight": 1.0
-    },
-    {
-      "source": "trading_project_backend_server_py",
-      "target": "server_get_needs_screenshot",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1414",
-      "weight": 1.0
-    },
-    {
-      "source": "trading_project_backend_server_py",
-      "target": "server_upload_screenshot",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1423",
-      "weight": 1.0
-    },
-    {
-      "source": "trading_project_backend_server_py",
-      "target": "server_undo_training_label",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1436",
-      "weight": 1.0
-    },
-    {
-      "source": "trading_project_backend_server_py",
-      "target": "server_get_training_stats",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1448",
-      "weight": 1.0
-    },
-    {
-      "source": "trading_project_backend_server_py",
-      "target": "server_get_training_lessons",
+      "target": "server_get_hard_samples",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
@@ -14261,25 +14310,16 @@
     },
     {
       "source": "trading_project_backend_server_py",
-      "target": "server_submit_training_label",
+      "target": "server_get_loss_graphs",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1506",
+      "source_location": "L1504",
       "weight": 1.0
     },
     {
       "source": "trading_project_backend_server_py",
-      "target": "server_get_nn_status",
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1541",
-      "weight": 1.0
-    },
-    {
-      "source": "trading_project_backend_server_py",
-      "target": "server_skip_training_sample",
+      "target": "server_get_loss_graph_file",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
@@ -14288,11 +14328,92 @@
     },
     {
       "source": "trading_project_backend_server_py",
+      "target": "server_get_training_pending",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1561",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_needs_screenshot",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1570",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_upload_screenshot",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1579",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_undo_training_label",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1592",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_training_stats",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1604",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_training_lessons",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1621",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_submit_training_label",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1662",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_get_nn_status",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1756",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_skip_training_sample",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1765",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
       "target": "server_manual_retrain_nn",
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1563",
+      "source_location": "L1778",
       "weight": 1.0
     },
     {
@@ -14301,7 +14422,16 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1573",
+      "source_location": "L1791",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_backend_server_py",
+      "target": "server_stop_nn_training",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1801",
       "weight": 1.0
     },
     {
@@ -14310,7 +14440,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1583",
+      "source_location": "L1815",
       "weight": 1.0
     },
     {
@@ -14319,7 +14449,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1617",
+      "source_location": "L1849",
       "weight": 1.0
     },
     {
@@ -14328,7 +14458,7 @@
       "relation": "imports",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1703",
+      "source_location": "L1935",
       "weight": 1.0
     },
     {
@@ -14337,7 +14467,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L221",
+      "source_location": "L223",
       "weight": 1.0
     },
     {
@@ -14346,7 +14476,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L312",
+      "source_location": "L314",
       "weight": 1.0
     },
     {
@@ -14355,7 +14485,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L455",
+      "source_location": "L457",
       "weight": 1.0
     },
     {
@@ -14364,7 +14494,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L591",
+      "source_location": "L593",
       "weight": 1.0
     },
     {
@@ -14373,7 +14503,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L593",
+      "source_location": "L595",
       "weight": 1.0
     },
     {
@@ -14382,7 +14512,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L601",
+      "source_location": "L603",
       "weight": 1.0
     },
     {
@@ -14391,7 +14521,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L644",
+      "source_location": "L646",
       "weight": 1.0
     },
     {
@@ -14400,7 +14530,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L676",
+      "source_location": "L678",
       "weight": 1.0
     },
     {
@@ -14409,7 +14539,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L678",
+      "source_location": "L680",
       "weight": 1.0
     },
     {
@@ -14418,7 +14548,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L694",
+      "source_location": "L696",
       "weight": 1.0
     },
     {
@@ -14427,7 +14557,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L856",
+      "source_location": "L876",
       "weight": 1.0
     },
     {
@@ -14436,7 +14566,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L914",
+      "source_location": "L934",
       "weight": 1.0
     },
     {
@@ -14445,7 +14575,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L942",
+      "source_location": "L962",
       "weight": 1.0
     },
     {
@@ -14454,7 +14584,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L952",
+      "source_location": "L972",
       "weight": 1.0
     },
     {
@@ -14463,7 +14593,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L986",
+      "source_location": "L1046",
       "weight": 1.0
     },
     {
@@ -14472,7 +14602,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1108",
+      "source_location": "L1168",
       "weight": 1.0
     },
     {
@@ -14481,7 +14611,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1109",
+      "source_location": "L1169",
       "weight": 1.0
     },
     {
@@ -14490,7 +14620,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1160",
+      "source_location": "L1220",
       "weight": 1.0
     },
     {
@@ -14499,7 +14629,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1172",
+      "source_location": "L1232",
       "weight": 1.0
     },
     {
@@ -14508,7 +14638,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1274",
+      "source_location": "L1334",
       "weight": 1.0
     },
     {
@@ -14517,7 +14647,7 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1591",
+      "source_location": "L1823",
       "weight": 1.0
     },
     {
@@ -14530,291 +14660,318 @@
       "weight": 1.0
     },
     {
-      "source": "server_rationale_80",
+      "source": "server_rationale_82",
       "target": "server_compute_box_id_long",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L80",
+      "source_location": "L82",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_91",
+      "source": "server_rationale_93",
       "target": "server_compute_box_id_short",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L91",
+      "source_location": "L93",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_133",
+      "source": "server_rationale_135",
       "target": "server_snap_to_bucket",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L133",
+      "source_location": "L135",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_148",
+      "source": "server_rationale_150",
       "target": "server_cache_get",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L148",
+      "source_location": "L150",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_160",
+      "source": "server_rationale_162",
       "target": "server_clear_consolidations_cache",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L160",
+      "source_location": "L162",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_170",
+      "source": "server_rationale_172",
       "target": "server_format_candles_for_ui",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L170",
+      "source_location": "L172",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_251",
+      "source": "server_rationale_253",
       "target": "server_resample_candles",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L251",
+      "source_location": "L253",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_299",
+      "source": "server_rationale_301",
       "target": "server_seed_storage",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L299",
+      "source_location": "L301",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_363",
+      "source": "server_rationale_365",
       "target": "server_load_db_into_ram",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L363",
+      "source_location": "L365",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_397",
+      "source": "server_rationale_399",
       "target": "server_gap_fill",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L397",
+      "source_location": "L399",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_471",
+      "source": "server_rationale_473",
       "target": "server_run_all_gap_fills",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L471",
+      "source_location": "L473",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_509",
+      "source": "server_rationale_511",
       "target": "server_get_day_start_ts",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L509",
+      "source_location": "L511",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_518",
+      "source": "server_rationale_520",
       "target": "server_build_htf_from_1m",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L518",
+      "source_location": "L520",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_552",
+      "source": "server_rationale_554",
       "target": "server_build_htf_from_5m",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L552",
+      "source_location": "L554",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_583",
+      "source": "server_rationale_585",
       "target": "server_synthesize_htf_candles",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L583",
+      "source_location": "L585",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_610",
+      "source": "server_rationale_612",
       "target": "server_fetch_latest_candles",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L610",
+      "source_location": "L612",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_658",
+      "source": "server_rationale_660",
       "target": "server_periodic_refresh_loop",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L658",
+      "source_location": "L660",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_682",
+      "source": "server_rationale_684",
       "target": "server_auto_label_loop",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L682",
+      "source_location": "L684",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_824",
+      "source": "server_rationale_844",
       "target": "server_db_summary",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L824",
+      "source_location": "L844",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_831",
+      "source": "server_rationale_851",
       "target": "server_repair_gaps",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L831",
+      "source_location": "L851",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_843",
+      "source": "server_rationale_863",
       "target": "server_get_timeframes",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L843",
+      "source_location": "L863",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_855",
+      "source": "server_rationale_875",
       "target": "server_get_chart_data",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L855",
+      "source_location": "L875",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_860",
+      "source": "server_rationale_880",
       "target": "server_sync_tick",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L860",
+      "source_location": "L880",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_963",
+      "source": "server_rationale_983",
       "target": "server_get_consolidation",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L963",
+      "source_location": "L983",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_980",
+      "source": "server_rationale_1005",
+      "target": "server_get_adaptive_consolidation",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1005",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_1021",
+      "target": "server_get_adaptive_consolidation_context",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1021",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_1040",
       "target": "server_get_consolidations_all",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L980",
+      "source_location": "L1040",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1166",
+      "source": "server_rationale_1226",
       "target": "server_get_swings_all",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1166",
+      "source_location": "L1226",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1309",
+      "source": "server_rationale_1369",
       "target": "server_get_watchlist",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1309",
+      "source_location": "L1369",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1356",
+      "source": "server_rationale_1416",
       "target": "server_get_all_boxes",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1356",
+      "source_location": "L1416",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1564",
+      "source": "server_rationale_1779",
       "target": "server_manual_retrain_nn",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1564",
+      "source_location": "L1779",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1574",
+      "source": "server_rationale_1792",
       "target": "server_get_nn_training_progress",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1574",
+      "source_location": "L1792",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1584",
+      "source": "server_rationale_1802",
+      "target": "server_stop_nn_training",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1802",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_1816",
       "target": "server_sync_training_queue",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1584",
+      "source_location": "L1816",
       "weight": 1.0
     },
     {
-      "source": "server_rationale_1618",
+      "source": "server_rationale_1850",
       "target": "server_get_nn_refined_zones",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1618",
+      "source_location": "L1850",
       "weight": 1.0
     },
     {
@@ -20768,29 +20925,11 @@
     },
     {
       "source": "trading_project_project_indicators_consolidation_py",
-      "target": "consolidation_consolidationcnn",
-      "relation": "contains",
+      "target": "ml_shared_models",
+      "relation": "imports_from",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
       "source_location": "L9",
-      "weight": 1.0
-    },
-    {
-      "source": "consolidation_consolidationcnn",
-      "target": "consolidation_consolidationcnn_init",
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L10",
-      "weight": 1.0
-    },
-    {
-      "source": "consolidation_consolidationcnn",
-      "target": "consolidation_consolidationcnn_forward",
-      "relation": "method",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L23",
       "weight": 1.0
     },
     {
@@ -20799,7 +20938,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L29",
+      "source_location": "L11",
       "weight": 1.0
     },
     {
@@ -20808,7 +20947,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L34",
+      "source_location": "L16",
       "weight": 1.0
     },
     {
@@ -20817,7 +20956,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L40",
+      "source_location": "L22",
       "weight": 1.0
     },
     {
@@ -20826,7 +20965,7 @@
       "relation": "method",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L53",
+      "source_location": "L35",
       "weight": 1.0
     },
     {
@@ -20835,7 +20974,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L89",
+      "source_location": "L88",
       "weight": 1.0
     },
     {
@@ -20844,43 +20983,25 @@
       "relation": "calls",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L37",
+      "source_location": "L19",
       "weight": 1.0
     },
     {
-      "source": "consolidation_nnpredictor_load_model",
-      "target": "consolidation_consolidationcnn",
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L45",
-      "weight": 1.0
-    },
-    {
-      "source": "consolidation_consolidation_boxes",
-      "target": "consolidation_get_instance",
-      "relation": "calls",
-      "confidence": "EXTRACTED",
-      "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L296",
-      "weight": 1.0
-    },
-    {
-      "source": "consolidation_consolidation_boxes",
+      "source": "consolidation_rationale_36",
       "target": "consolidation_nnpredictor_predict",
-      "relation": "calls",
+      "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L297",
+      "source_location": "L36",
       "weight": 1.0
     },
     {
-      "source": "consolidation_rationale_95",
+      "source": "consolidation_rationale_94",
       "target": "consolidation_consolidation_boxes",
       "relation": "rationale_for",
       "confidence": "EXTRACTED",
       "source_file": "Trading-Project\\project\\indicators\\consolidation.py",
-      "source_location": "L95",
+      "source_location": "L94",
       "weight": 1.0
     },
     {
@@ -27490,7 +27611,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_80",
+      "source": "server_rationale_82",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27499,7 +27620,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_91",
+      "source": "server_rationale_93",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27508,7 +27629,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_133",
+      "source": "server_rationale_135",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27517,7 +27638,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_148",
+      "source": "server_rationale_150",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27526,7 +27647,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_160",
+      "source": "server_rationale_162",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27535,7 +27656,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_170",
+      "source": "server_rationale_172",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27544,7 +27665,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_251",
+      "source": "server_rationale_253",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27553,7 +27674,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_299",
+      "source": "server_rationale_301",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27562,7 +27683,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_363",
+      "source": "server_rationale_365",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27571,7 +27692,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_397",
+      "source": "server_rationale_399",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27580,7 +27701,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_471",
+      "source": "server_rationale_473",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27589,7 +27710,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_509",
+      "source": "server_rationale_511",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27598,7 +27719,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_518",
+      "source": "server_rationale_520",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27607,7 +27728,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_552",
+      "source": "server_rationale_554",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27616,7 +27737,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_583",
+      "source": "server_rationale_585",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27625,7 +27746,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_610",
+      "source": "server_rationale_612",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27634,7 +27755,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_658",
+      "source": "server_rationale_660",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27643,7 +27764,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_682",
+      "source": "server_rationale_684",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27652,7 +27773,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_824",
+      "source": "server_rationale_844",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27661,7 +27782,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_831",
+      "source": "server_rationale_851",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27670,7 +27791,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_843",
+      "source": "server_rationale_863",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27679,7 +27800,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_855",
+      "source": "server_rationale_875",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27688,7 +27809,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_860",
+      "source": "server_rationale_880",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27697,7 +27818,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_963",
+      "source": "server_rationale_983",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27706,7 +27827,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_980",
+      "source": "server_rationale_1005",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27715,7 +27836,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1166",
+      "source": "server_rationale_1021",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27724,7 +27845,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1309",
+      "source": "server_rationale_1040",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27733,7 +27854,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1356",
+      "source": "server_rationale_1226",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27742,7 +27863,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1564",
+      "source": "server_rationale_1369",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27751,7 +27872,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1574",
+      "source": "server_rationale_1416",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27760,7 +27881,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1584",
+      "source": "server_rationale_1779",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27769,7 +27890,34 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1618",
+      "source": "server_rationale_1792",
+      "target": "technicals_indicators",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L55",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1802",
+      "target": "technicals_indicators",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L55",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1816",
+      "target": "technicals_indicators",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L55",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1850",
       "target": "technicals_indicators",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27787,7 +27935,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_80",
+      "source": "server_rationale_82",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27796,7 +27944,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_91",
+      "source": "server_rationale_93",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27805,7 +27953,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_133",
+      "source": "server_rationale_135",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27814,7 +27962,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_148",
+      "source": "server_rationale_150",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27823,7 +27971,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_160",
+      "source": "server_rationale_162",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27832,7 +27980,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_170",
+      "source": "server_rationale_172",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27841,7 +27989,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_251",
+      "source": "server_rationale_253",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27850,7 +27998,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_299",
+      "source": "server_rationale_301",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27859,7 +28007,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_363",
+      "source": "server_rationale_365",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27868,7 +28016,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_397",
+      "source": "server_rationale_399",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27877,7 +28025,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_471",
+      "source": "server_rationale_473",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27886,7 +28034,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_509",
+      "source": "server_rationale_511",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27895,7 +28043,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_518",
+      "source": "server_rationale_520",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27904,7 +28052,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_552",
+      "source": "server_rationale_554",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27913,7 +28061,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_583",
+      "source": "server_rationale_585",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27922,7 +28070,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_610",
+      "source": "server_rationale_612",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27931,7 +28079,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_658",
+      "source": "server_rationale_660",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27940,7 +28088,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_682",
+      "source": "server_rationale_684",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27949,7 +28097,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_824",
+      "source": "server_rationale_844",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27958,7 +28106,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_831",
+      "source": "server_rationale_851",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27967,7 +28115,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_843",
+      "source": "server_rationale_863",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27976,7 +28124,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_855",
+      "source": "server_rationale_875",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27985,7 +28133,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_860",
+      "source": "server_rationale_880",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -27994,7 +28142,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_963",
+      "source": "server_rationale_983",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28003,7 +28151,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_980",
+      "source": "server_rationale_1005",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28012,7 +28160,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1166",
+      "source": "server_rationale_1021",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28021,7 +28169,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1309",
+      "source": "server_rationale_1040",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28030,7 +28178,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1356",
+      "source": "server_rationale_1226",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28039,7 +28187,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1564",
+      "source": "server_rationale_1369",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28048,7 +28196,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1574",
+      "source": "server_rationale_1416",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28057,7 +28205,7 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1584",
+      "source": "server_rationale_1779",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28066,7 +28214,34 @@
       "weight": 0.8
     },
     {
-      "source": "server_rationale_1618",
+      "source": "server_rationale_1792",
+      "target": "historical_historicalfetcher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L56",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1802",
+      "target": "historical_historicalfetcher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L56",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1816",
+      "target": "historical_historicalfetcher",
+      "relation": "uses",
+      "confidence": "INFERRED",
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L56",
+      "weight": 0.8
+    },
+    {
+      "source": "server_rationale_1850",
       "target": "historical_historicalfetcher",
       "relation": "uses",
       "confidence": "INFERRED",
@@ -28288,7 +28463,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "launcher.py",
-      "source_location": "L89",
+      "source_location": "L97",
       "weight": 1.0
     },
     {
@@ -28298,7 +28473,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "launcher.py",
-      "source_location": "L348",
+      "source_location": "L357",
       "weight": 1.0
     },
     {
@@ -28308,7 +28483,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "launcher.py",
-      "source_location": "L355",
+      "source_location": "L364",
       "weight": 1.0
     },
     {
@@ -28318,7 +28493,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "launcher.py",
-      "source_location": "L374",
+      "source_location": "L383",
       "weight": 1.0
     },
     {
@@ -28328,7 +28503,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "launcher.py",
-      "source_location": "L413",
+      "source_location": "L422",
       "weight": 1.0
     },
     {
@@ -28338,7 +28513,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "launcher.py",
-      "source_location": "L420",
+      "source_location": "L429",
       "weight": 1.0
     },
     {
@@ -28348,7 +28523,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "launcher.py",
-      "source_location": "L443",
+      "source_location": "L452",
       "weight": 1.0
     },
     {
@@ -28358,7 +28533,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "launcher.py",
-      "source_location": "L480",
+      "source_location": "L489",
       "weight": 1.0
     },
     {
@@ -30208,7 +30383,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L327",
+      "source_location": "L329",
       "weight": 1.0
     },
     {
@@ -30218,7 +30393,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L328",
+      "source_location": "L330",
       "weight": 1.0
     },
     {
@@ -30228,7 +30403,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L351",
+      "source_location": "L353",
       "weight": 1.0
     },
     {
@@ -30238,7 +30413,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L354",
+      "source_location": "L356",
       "weight": 1.0
     },
     {
@@ -30248,7 +30423,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L358",
+      "source_location": "L360",
       "weight": 1.0
     },
     {
@@ -30258,7 +30433,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L367",
+      "source_location": "L369",
       "weight": 1.0
     },
     {
@@ -30268,7 +30443,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L373",
+      "source_location": "L375",
       "weight": 1.0
     },
     {
@@ -30278,7 +30453,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L411",
+      "source_location": "L413",
       "weight": 1.0
     },
     {
@@ -30288,7 +30463,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L428",
+      "source_location": "L430",
       "weight": 1.0
     },
     {
@@ -30298,7 +30473,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L442",
+      "source_location": "L444",
       "weight": 1.0
     },
     {
@@ -30308,7 +30483,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L444",
+      "source_location": "L446",
       "weight": 1.0
     },
     {
@@ -30318,7 +30493,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L524",
+      "source_location": "L526",
       "weight": 1.0
     },
     {
@@ -30328,7 +30503,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L557",
+      "source_location": "L559",
       "weight": 1.0
     },
     {
@@ -30338,7 +30513,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L622",
+      "source_location": "L624",
       "weight": 1.0
     },
     {
@@ -30348,7 +30523,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L638",
+      "source_location": "L640",
       "weight": 1.0
     },
     {
@@ -30358,7 +30533,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L639",
+      "source_location": "L641",
       "weight": 1.0
     },
     {
@@ -30368,7 +30543,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L728",
+      "source_location": "L730",
       "weight": 1.0
     },
     {
@@ -30378,7 +30553,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L788",
+      "source_location": "L808",
       "weight": 1.0
     },
     {
@@ -30388,7 +30563,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L825",
+      "source_location": "L845",
       "weight": 1.0
     },
     {
@@ -30398,7 +30573,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L837",
+      "source_location": "L857",
       "weight": 1.0
     },
     {
@@ -30408,7 +30583,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L873",
+      "source_location": "L893",
       "weight": 1.0
     },
     {
@@ -30418,7 +30593,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L920",
+      "source_location": "L940",
       "weight": 1.0
     },
     {
@@ -30428,7 +30603,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L966",
+      "source_location": "L986",
       "weight": 1.0
     },
     {
@@ -30438,7 +30613,17 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L974",
+      "source_location": "L994",
+      "weight": 1.0
+    },
+    {
+      "source": "server_get_adaptive_consolidation",
+      "target": "fetcher_datafetcher_get_candles",
+      "relation": "calls",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Trading-Project\\backend\\server.py",
+      "source_location": "L1008",
       "weight": 1.0
     },
     {
@@ -30448,7 +30633,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1299",
+      "source_location": "L1359",
       "weight": 1.0
     },
     {
@@ -30458,7 +30643,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1299",
+      "source_location": "L1359",
       "weight": 1.0
     },
     {
@@ -30468,7 +30653,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1532",
+      "source_location": "L1747",
       "weight": 1.0
     },
     {
@@ -30478,7 +30663,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1628",
+      "source_location": "L1860",
       "weight": 1.0
     },
     {
@@ -30488,7 +30673,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "Trading-Project\\backend\\server.py",
-      "source_location": "L1642",
+      "source_location": "L1874",
       "weight": 1.0
     },
     {

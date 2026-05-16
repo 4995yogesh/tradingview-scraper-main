@@ -746,6 +746,24 @@ async def lifespan(app: FastAPI):
             except Exception as exc:
                 logger.error("DB load failed %s:%s [%s]: %s", ex, sym, tf, exc)
 
+    # Auto-clean cache (__pycache__)
+    try:
+        import glob
+        import shutil
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        pycache_dirs = glob.glob(os.path.join(backend_dir, "**/__pycache__"), recursive=True)
+        for d in pycache_dirs:
+            shutil.rmtree(d, ignore_errors=True)
+        logger.info(f"Cleared {len(pycache_dirs)} __pycache__ directories.")
+    except Exception as e:
+        logger.warning(f"Failed to clear __pycache__: {e}")
+
+    # Print diagnostics
+    import sys
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    import config
+    config.print_diagnostics()
+
     # 3. Start background gap-fill (non-blocking — server ready immediately)
     gap_thread = threading.Thread(
         target=_run_all_gap_fills,
@@ -1443,6 +1461,102 @@ async def get_all_boxes(limit: int = 200, status: str = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/training/hard_samples")
+async def get_hard_samples():
+    import json
+    import os
+    import sqlite3
+    try:
+        hard_samples_path = os.path.join("data", "models", "hard_samples.json")
+        if not os.path.exists(hard_samples_path):
+            return {"status": "ok", "samples": []}
+            
+        with open(hard_samples_path, "r") as f:
+            hard_samples = json.load(f)
+            
+        # Fetch screenshots and details for these Box IDs
+        box_ids = [s["box_id"] for s in hard_samples]
+        if not box_ids:
+            return {"status": "ok", "samples": []}
+            
+        with sqlite3.connect("training_set.db", timeout=30.0) as conn:
+            conn.row_factory = sqlite3.Row
+            placeholders = ",".join(["?"] * len(box_ids))
+            cursor = conn.execute(
+                f"SELECT box_id, symbol, timeframe, time_start, time_end, price_high, price_low, ohlc_context, original_meta, user_box, status, created_at, screenshot_b64 FROM review_queue WHERE box_id IN ({placeholders}) AND status NOT IN ('ANALYZED', 'LABELED')",
+                box_ids
+            )
+            rows = [dict(r) for r in cursor.fetchall()]
+            
+        # Map loss back to rows
+        loss_map = {s["box_id"]: s["loss"] for s in hard_samples}
+        for r in rows:
+            r["loss"] = loss_map.get(r["box_id"], 0.0)
+            
+        # Sort by loss descending again
+        rows.sort(key=lambda x: x["loss"], reverse=True)
+            
+        return {"status": "ok", "samples": rows}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/training/loss_graphs")
+async def get_loss_graphs():
+    import os
+    import glob
+    try:
+        backend_dir = os.path.dirname(os.path.abspath(__file__))
+        models_dir = os.path.join(backend_dir, "data", "models")
+        if not os.path.exists(models_dir):
+            return {"status": "ok", "graphs": []}
+            
+        pattern = os.path.join(models_dir, "training_val_loss*.png")
+        files = glob.glob(pattern)
+        
+        # Deduplicate: Skip "training_val_loss.png" if there are timestamped files
+        # because it's just a duplicate of the latest timestamped one.
+        has_timestamped = any(len(os.path.basename(f).split("_")) >= 5 for f in files)
+        
+        graphs = []
+        for f in files:
+            basename = os.path.basename(f)
+            if basename == "training_val_loss.png" and has_timestamped:
+                continue
+                
+            parts = basename.split("_")
+            if len(parts) >= 5:
+                date_str = parts[3]
+                time_str = parts[4].split(".")[0]
+                version = f"{date_str}_{time_str}"
+            elif basename == "training_val_loss.png":
+                version = "Latest"
+            else:
+                version = "Unknown"
+                
+            graphs.append({
+                "filename": basename,
+                "version": version,
+                "path": f"/api/training/loss_graphs/{basename}"
+            })
+            
+        # Sort so Latest is first, then timestamped ones descending
+        graphs.sort(key=lambda x: (x["version"] != "Latest", x["version"]), reverse=True)
+            
+        return {"status": "ok", "graphs": graphs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/training/loss_graphs/{filename}")
+async def get_loss_graph_file(filename: str):
+    import os
+    from fastapi.responses import FileResponse
+    backend_dir = os.path.dirname(os.path.abspath(__file__))
+    models_dir = os.path.join(backend_dir, "data", "models")
+    file_path = os.path.join(models_dir, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
+
 @app.get("/api/training/pending")
 async def get_training_pending(limit: int = 50):
     from training_db import training_db
@@ -1557,6 +1671,21 @@ async def submit_training_label(data: dict):
             raise HTTPException(status_code=400, detail="Missing box_id")
             
         if is_skip:
+            # Check if this is a hard sample
+            try:
+                import json
+                hard_samples_path = os.path.join("data", "models", "hard_samples.json")
+                if os.path.exists(hard_samples_path):
+                    with open(hard_samples_path, "r") as f:
+                        hard_samples = json.load(f)
+                        hard_ids = set(s["box_id"] for s in hard_samples)
+                        if str(box_id) in hard_ids:
+                            # Promote to ANALYZED even if skipped, so it moves out of loss samples
+                            training_db.update_label(box_id, [])
+                            return {"status": "ok"}
+            except Exception as e:
+                print(f"Error checking hard samples on skip: {e}")
+                
             training_db.skip_box(box_id)
             return {"status": "ok"}
 
@@ -1651,6 +1780,9 @@ async def manual_retrain_nn():
     try:
         from ml.train_nn import train_async
         train_async(force=True)
+        
+
+            
         return {"status": "triggered"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
@@ -1661,6 +1793,20 @@ async def get_nn_training_progress():
     try:
         from ml.train_nn import TRAINING_STATE
         return TRAINING_STATE
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/training/stop_nn")
+async def stop_nn_training():
+    """Request to stop active NN training."""
+    try:
+        from ml.train_nn import TRAINING_STATE
+        if not TRAINING_STATE.get("is_training", False):
+            return {"status": "not_running"}
+            
+        TRAINING_STATE["stop_requested"] = True
+        return {"status": "stop_requested"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
 

@@ -27,12 +27,13 @@ if __name__ == '__main__':
     optimizer = Adam(model.parameters(), lr=0.001)
     best_loss = float('inf')
     
-    # Point 1: pos_weight = (neg_count / pos_count)
     labels = [s['is_consolidation'] for s in dataset.samples]
     neg_count = labels.count(0)
     pos_count = labels.count(1)
-    pos_weight = neg_count / (pos_count + 1e-8)
-    logging.info(f"Class counts: Neg={neg_count}, Pos={pos_count}. Calculated pos_weight={pos_weight:.2f}")
+    
+    # Option A: Reduced pos_weight to stop aggressive predictions at the edges
+    pos_weight = 3.0
+    logging.info(f"Class counts: Neg={neg_count}, Pos={pos_count}. Forced pos_weight={pos_weight}")
 
     os.makedirs(os.path.join(backend_dir, 'data', 'models'), exist_ok=True)
     

@@ -1,12 +1,12 @@
-# Graph Report - .  (2026-05-06)
+# Graph Report - .  (2026-05-13)
 
 ## Corpus Check
 - 193 files · ~137,778 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1269 nodes · 1882 edges · 94 communities detected
-- Extraction: 68% EXTRACTED · 32% INFERRED · 0% AMBIGUOUS · INFERRED: 597 edges (avg confidence: 0.67)
+- 1276 nodes · 1893 edges · 95 communities detected
+- Extraction: 68% EXTRACTED · 32% INFERRED · 0% AMBIGUOUS · INFERRED: 604 edges (avg confidence: 0.66)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -104,10 +104,11 @@
 - [[_COMMUNITY_Community 91|Community 91]]
 - [[_COMMUNITY_Community 92|Community 92]]
 - [[_COMMUNITY_Community 93|Community 93]]
+- [[_COMMUNITY_Community 94|Community 94]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `Indicators` - 53 edges
-2. `HistoricalFetcher` - 43 edges
+1. `Indicators` - 56 edges
+2. `HistoricalFetcher` - 46 edges
 3. `FundamentalGraphs` - 42 edges
 4. `MarketMovers` - 32 edges
 5. `Minds` - 30 edges
@@ -118,30 +119,30 @@
 10. `Streamer` - 24 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Test scraping indicators successfully.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators with an invalid exchange.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators returns empty response.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
-- `Test scraping indicators with a valid success response.` --uses--> `Indicators`  [INFERRED]
-  tests\test_indicators.py → tradingview_scraper\symbols\technicals.py
 - `market_movers_scraper()` --calls--> `MarketMovers`  [INFERRED]
   tests\test_market_movers.py → tradingview_scraper\symbols\market_movers.py
+- `A class to handle bulk historical data fetching from TradingView via WebSocket p` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Fetches historical OHLC data with pagination.          Args:             exch` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Sorts the hashed map chronologically and trims to the requested date if necessar` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\historical.py → tradingview_scraper\symbols\exceptions.py
+- `Exports data to a specified format (JSON or CSV).          Args:             jso` --uses--> `DataNotFoundError`  [INFERRED]
+  tradingview_scraper\symbols\stream\streamer.py → tradingview_scraper\symbols\exceptions.py
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.03
-Nodes (87): main(), Example demonstrating how to pull massive datasets from TradingView.     We will, Returns ascending list of the last `limit` candles for the timeframe., HistoricalFetcher, A class to handle bulk historical data fetching from TradingView via WebSocket p, _auto_label_loop(), _build_htf_from_1m(), _build_htf_from_5m() (+79 more)
+Nodes (93): consolidation_boxes(), Detect consolidation boxes.     df must have columns ['open','high','low','clos, main(), Example demonstrating how to pull massive datasets from TradingView.     We will, Returns ascending list of the last `limit` candles for the timeframe., HistoricalFetcher, A class to handle bulk historical data fetching from TradingView via WebSocket p, Sorts the hashed map chronologically and trims to the requested date if necessar (+85 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.03
-Nodes (65): DataCollector, Continuous WebSocket listener for multiple symbols.     Emits raw candle data i, Runs the streaming generator in a synchronous thread loop with auto-reconnect., DataNotFoundError, Custom exception for when data is not found., Sorts the hashed map chronologically and trims to the requested date if necessar, Fetches historical OHLC data with pagination.          Args:             exch, Module providing a two function which return python generator contains trades re (+57 more)
+Cohesion: 0.04
+Nodes (51): DataCollector, Continuous WebSocket listener for multiple symbols.     Emits raw candle data i, Runs the streaming generator in a synchronous thread loop with auto-reconnect., DataNotFoundError, Custom exception for when data is not found., Module providing a two function which return python generator contains trades re, Handles keyboard interrupt signals to gracefully close the WebSocket connection., signal_handler() (+43 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.03
-Nodes (61): Configuration file for the Sphinx documentation builder.  For the full list of b, Skip autodoc for __init__ method., skip(), Exception, Ideas, Module providing a function to scrape published user ideas about a symbol., Scrapes trading ideas (popular or recent) for a specified symbol and page from T, Extract trading ideas from TradingView for a specified symbol over a range of pa (+53 more)
+Nodes (56): Configuration file for the Sphinx documentation builder.  For the full list of b, Skip autodoc for __init__ method., skip(), Exception, Ideas, Module providing a function to scrape published user ideas about a symbol., Scrapes trading ideas (popular or recent) for a specified symbol and page from T, Extract trading ideas from TradingView for a specified symbol over a range of pa (+48 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.04
@@ -149,7 +150,7 @@ Nodes (46): FundamentalGraphs, Module providing a function to scrape fundamental
 
 ### Community 4 - "Community 4"
 Cohesion: 0.05
-Nodes (41): CalendarScraper, DividendEvent, EarningsEvent, Module providing a function to scrape dividend and earnings of a specific market, A class used to scrape dividend and earnings events from the TradingView event c, Scrapes dividends events from the TradingView event calendar.          Args:, Represents a dividend event for a financial asset.      Attributes:         full, Scrapes earnings events from the TradingView event calendar.          Args: (+33 more)
+Nodes (42): CalendarScraper, DividendEvent, EarningsEvent, Module providing a function to scrape dividend and earnings of a specific market, A class used to scrape dividend and earnings events from the TradingView event c, Scrapes dividends events from the TradingView event calendar.          Args:, Represents a dividend event for a financial asset.      Attributes:         full, Scrapes earnings events from the TradingView event calendar.          Args: (+34 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.06
@@ -160,28 +161,28 @@ Cohesion: 0.06
 Nodes (33): Overview, Module providing a function to scrape symbol overview data from TradingView., A class to scrape comprehensive overview data for symbols from TradingView., Validate and format symbol.          Args:             symbol (str): The symbol, Get comprehensive overview data for a symbol.          Args:             symbol, Get basic profile information for a symbol.          Args:             symbol (s, Get market statistics for a symbol.          Args:             symbol (str): The, Get financial metrics for a symbol.          Args:             symbol (str): The (+25 more)
 
 ### Community 7 - "Community 7"
-Cohesion: 0.06
-Nodes (30): MarketMovers, Module providing a function to scrape market movers data (gainers, losers, penny, Validate if the category is supported for the given market.          Args:, Build the payload for the TradingView scanner API.          Args:             ma, A class to scrape market movers data from TradingView.      This class provides, Get filter conditions based on market and category.          Args:             m, Get sort configuration based on category.          Args:             category (s, Get the appropriate scanner URL for the market.          Args:             marke (+22 more)
+Cohesion: 0.04
+Nodes (40): detect_all_consolidations(), Consolidation detector (price action based), Detect consolidation zones.     A zone is active when (high - low) / close < ran, DataFetcher, DataFetcher — in-memory candle store for the multi-timeframe engine.  Optimizati, Add a closed candle.         Format: {timestamp, open, high, low, close, is_clos, Fast O(1) latest close price lookup., Returns a pandas DataFrame for the timeframe — validated before construction. (+32 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.06
-Nodes (31): Markets, Module providing a function to scrape market overview data (top stocks, indices,, Build the payload for the scanner API.          Args:             filters (List[, A class to scrape market overview data from TradingView.      This class provide, Get top stocks by specified criteria.          Args:             market (str): T, Validate if the market is supported.          Args:             market (str): Th, Validate and convert sort criteria.          Args:             sort_by (str): Th, Test getting top stocks with no data. (+23 more)
+Nodes (30): MarketMovers, Module providing a function to scrape market movers data (gainers, losers, penny, Validate if the category is supported for the given market.          Args:, Build the payload for the TradingView scanner API.          Args:             ma, A class to scrape market movers data from TradingView.      This class provides, Get filter conditions based on market and category.          Args:             m, Get sort configuration based on category.          Args:             category (s, Get the appropriate scanner URL for the market.          Args:             marke (+22 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.06
-Nodes (31): Module providing a function to screen stocks, crypto, forex, and other markets w, Validate if the market is supported.          Args:             market (str): Th, Get default columns based on market type.          Args:             market (str, A class to screen financial instruments from TradingView with custom filters., Build the payload for the scanner API.          Args:             filters (List[, Screen financial instruments based on custom filters.          Args:, Screener, Test screening with filters. (+23 more)
+Nodes (31): Markets, Module providing a function to scrape market overview data (top stocks, indices,, Build the payload for the scanner API.          Args:             filters (List[, A class to scrape market overview data from TradingView.      This class provide, Get top stocks by specified criteria.          Args:             market (str): T, Validate if the market is supported.          Args:             market (str): Th, Validate and convert sort criteria.          Args:             sort_by (str): Th, Test getting top stocks with no data. (+23 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.05
-Nodes (25): AlertDialogFooter(), AlertDialogHeader(), Badge(), BreadcrumbEllipsis(), BreadcrumbSeparator(), Calendar(), CommandShortcut(), ContextMenuShortcut() (+17 more)
+Cohesion: 0.06
+Nodes (31): Module providing a function to screen stocks, crypto, forex, and other markets w, Validate if the market is supported.          Args:             market (str): Th, Get default columns based on market type.          Args:             market (str, A class to screen financial instruments from TradingView with custom filters., Build the payload for the scanner API.          Args:             filters (List[, Screen financial instruments based on custom filters.          Args:, Screener, Test screening with filters. (+23 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.05
-Nodes (29): detect_all_consolidations(), Consolidation detector (price action based), Detect consolidation zones.     A zone is active when (high - low) / close < ran, DataFetcher, DataFetcher — in-memory candle store for the multi-timeframe engine.  Optimizati, Add a closed candle.         Format: {timestamp, open, high, low, close, is_clos, Fast O(1) latest close price lookup., Returns a pandas DataFrame for the timeframe — validated before construction. (+21 more)
+Nodes (25): AlertDialogFooter(), AlertDialogHeader(), Badge(), BreadcrumbEllipsis(), BreadcrumbSeparator(), Calendar(), CommandShortcut(), ContextMenuShortcut() (+17 more)
 
 ### Community 12 - "Community 12"
 Cohesion: 0.07
-Nodes (22): CandleDB, CandleDB — SQLite persistent store for OHLCV candle data.  Location: Trading-P, Record the wall-clock time of the last successful TV fetch., Return candles sorted ASCENDING by timestamp.         If count is given, return, Return all candles with ts >= since_ts, sorted ascending.         Used by the d, Most recent candle Unix timestamp, or None if no data exists., Oldest candle Unix timestamp, or None if no data exists., Number of stored candles for a particular series. (+14 more)
+Nodes (20): CandleDB, CandleDB — SQLite persistent store for OHLCV candle data.  Location: Trading-P, Record the wall-clock time of the last successful TV fetch., Return candles sorted ASCENDING by timestamp.         If count is given, return, Return all candles with ts >= since_ts, sorted ascending.         Used by the d, Most recent candle Unix timestamp, or None if no data exists., Oldest candle Unix timestamp, or None if no data exists., Number of stored candles for a particular series. (+12 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.09
@@ -204,7 +205,7 @@ Cohesion: 0.11
 Nodes (18): detect_breakout(), Breakout detector — optimized.  Changes:   - Added ATR-based expansion check: br, Detects an aggressive breakout candle.      Rules (all must pass):       1. Clos, _build_path(), _calc_rr(), _find_historical_tp(), generate_scenarios(), _no_trade() (+10 more)
 
 ### Community 18 - "Community 18"
-Cohesion: 0.12
+Cohesion: 0.11
 Nodes (9): Initialize the FundamentalGraphs scraper.          Args:             export_resu, Initialize the MarketMovers scraper.          Args:             export_result (b, Initialize the Markets scraper.          Args:             export_result (bool):, Initialize the Minds scraper.          Args:             export_result (bool): W, Initialize the Overview scraper.          Args:             export_result (bool), Initialize the Screener.          Args:             export_result (bool): Whethe, Initialize the SymbolMarkets scraper.          Args:             export_result (, generate_user_agent() (+1 more)
 
 ### Community 19 - "Community 19"
@@ -221,11 +222,11 @@ Nodes (4): classifySwings(), exportSwingsAsCsv(), loadSwingsFromMemory(), select
 
 ### Community 22 - "Community 22"
 Cohesion: 0.18
-Nodes (0): 
+Nodes (11): display_and_select_indicator(), fetch_indicator_metadata(), fetch_tradingview_indicators(), prepare_indicator_metadata(), Module providing utility functions for validating exchange symbols and fetching, Display a list of indicators and prompt the user to select one.      This functi, Validate one or more exchange symbols.      This function checks whether the pro, Fetch metadata for a TradingView indicator based on its script ID and version. (+3 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.25
-Nodes (5): consolidation_boxes(), ConsolidationCNN, get_instance(), NNPredictor, Detect consolidation boxes.     df must have columns ['open','high','low','clos
+Cohesion: 0.18
+Nodes (0): 
 
 ### Community 24 - "Community 24"
 Cohesion: 0.36
@@ -244,35 +245,35 @@ Cohesion: 0.29
 Nodes (1): WebpackHealthPlugin
 
 ### Community 28 - "Community 28"
-Cohesion: 0.4
-Nodes (2): App(), useHash()
+Cohesion: 0.33
+Nodes (3): get_instance(), NNPredictor, Unified prediction logic with Min-Max normalization.         DEPRECATED: Global
 
 ### Community 29 - "Community 29"
 Cohesion: 0.4
-Nodes (2): _buildMockCandles(), _getMockCandlesWithTickUpdate()
+Nodes (2): App(), useHash()
 
 ### Community 30 - "Community 30"
+Cohesion: 0.4
+Nodes (2): _buildMockCandles(), _getMockCandlesWithTickUpdate()
+
+### Community 31 - "Community 31"
 Cohesion: 0.47
 Nodes (3): fetchIndicators(), fetchLiveCandles(), resolveSymbol()
 
-### Community 31 - "Community 31"
+### Community 32 - "Community 32"
 Cohesion: 0.33
 Nodes (2): Pipeline, Orchestrates the entire Trading Data Pipeline.
 
-### Community 32 - "Community 32"
+### Community 33 - "Community 33"
 Cohesion: 0.47
 Nodes (4): drawAll(), drawChart(), drawGrid(), pollData()
 
-### Community 33 - "Community 33"
+### Community 34 - "Community 34"
 Cohesion: 0.4
 Nodes (4): renderConsolidation(), drawSpatialGrid(), renderEngine(), renderTimeframe()
 
-### Community 34 - "Community 34"
-Cohesion: 0.4
-Nodes (0): 
-
 ### Community 35 - "Community 35"
-Cohesion: 0.5
+Cohesion: 0.4
 Nodes (0): 
 
 ### Community 36 - "Community 36"
@@ -284,20 +285,20 @@ Cohesion: 0.5
 Nodes (0): 
 
 ### Community 38 - "Community 38"
-Cohesion: 0.67
-Nodes (1): Setup configuration for tradingview-scraper package.
+Cohesion: 0.5
+Nodes (0): 
 
 ### Community 39 - "Community 39"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (1): Setup configuration for tradingview-scraper package.
 
 ### Community 40 - "Community 40"
 Cohesion: 0.67
-Nodes (1): ChartCanvas()
+Nodes (0): 
 
 ### Community 41 - "Community 41"
 Cohesion: 0.67
-Nodes (0): 
+Nodes (1): ChartCanvas()
 
 ### Community 42 - "Community 42"
 Cohesion: 0.67
@@ -309,11 +310,11 @@ Nodes (0):
 
 ### Community 44 - "Community 44"
 Cohesion: 0.67
-Nodes (2): detect_retracement(), Detects simple retracement (pullback).     If bullish direction: look for a shor
+Nodes (0): 
 
 ### Community 45 - "Community 45"
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (2): detect_retracement(), Detects simple retracement (pullback).     If bullish direction: look for a shor
 
 ### Community 46 - "Community 46"
 Cohesion: 1.0
@@ -507,86 +508,88 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0): 
 
+### Community 94 - "Community 94"
+Cohesion: 1.0
+Nodes (0): 
+
 ## Knowledge Gaps
-- **262 isolated node(s):** `Dashboard Launcher — TradingView Scraper =======================================`, `Return full path to yarn.cmd or npm.cmd, whichever is preferred + available.`, `Kill any process currently LISTENING on the given port.`, `Thread-safe log call via root.after.`, `Stream subprocess stdout into the log window (runs in daemon thread).` (+257 more)
+- **263 isolated node(s):** `Dashboard Launcher — TradingView Scraper =======================================`, `Return full path to yarn.cmd or npm.cmd, whichever is preferred + available.`, `Kill any process currently LISTENING on the given port.`, `Thread-safe log call via root.after.`, `Stream subprocess stdout into the log window (runs in daemon thread).` (+258 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 45`** (2 nodes): `FeaturesSection()`, `FeaturesSection.jsx`
+- **Thin community `Community 46`** (2 nodes): `FeaturesSection()`, `FeaturesSection.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 46`** (2 nodes): `Footer()`, `Footer.jsx`
+- **Thin community `Community 47`** (2 nodes): `Footer()`, `Footer.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 47`** (2 nodes): `Hero()`, `Hero.jsx`
+- **Thin community `Community 48`** (2 nodes): `Hero()`, `Hero.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 48`** (2 nodes): `Navbar()`, `Navbar.jsx`
+- **Thin community `Community 49`** (2 nodes): `Navbar()`, `Navbar.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 49`** (2 nodes): `PricingSection()`, `PricingSection.jsx`
+- **Thin community `Community 50`** (2 nodes): `PricingSection()`, `PricingSection.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 50`** (2 nodes): `TopStories()`, `TopStories.jsx`
+- **Thin community `Community 51`** (2 nodes): `TopStories()`, `TopStories.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 51`** (2 nodes): `InfiniteCanvasPage()`, `InfiniteCanvasPage.jsx`
+- **Thin community `Community 52`** (2 nodes): `InfiniteCanvasPage()`, `InfiniteCanvasPage.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 52`** (2 nodes): `ChartToolbar()`, `ChartToolbar.jsx`
+- **Thin community `Community 53`** (2 nodes): `ChartToolbar()`, `ChartToolbar.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 53`** (2 nodes): `LayoutSelector()`, `LayoutSelector.jsx`
+- **Thin community `Community 54`** (2 nodes): `LayoutSelector()`, `LayoutSelector.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 54`** (2 nodes): `useCarousel()`, `carousel.jsx`
+- **Thin community `Community 55`** (2 nodes): `useCarousel()`, `carousel.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 55`** (2 nodes): `Toaster()`, `sonner.jsx`
+- **Thin community `Community 56`** (2 nodes): `Toaster()`, `sonner.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 56`** (2 nodes): `useCanvasStore.js`, `generateId()`
+- **Thin community `Community 57`** (2 nodes): `useCanvasStore.js`, `generateId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 57`** (2 nodes): `LayerController()`, `LayerController.jsx`
+- **Thin community `Community 58`** (2 nodes): `LayerController()`, `LayerController.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 58`** (1 nodes): `__init__.py`
+- **Thin community `Community 59`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 59`** (1 nodes): `craco.config.js`
+- **Thin community `Community 60`** (1 nodes): `craco.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 60`** (1 nodes): `postcss.config.js`
+- **Thin community `Community 61`** (1 nodes): `postcss.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (1 nodes): `tailwind.config.js`
+- **Thin community `Community 62`** (1 nodes): `tailwind.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (1 nodes): `index.js`
+- **Thin community `Community 63`** (1 nodes): `index.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (1 nodes): `accordion.jsx`
+- **Thin community `Community 64`** (1 nodes): `accordion.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (1 nodes): `alert.jsx`
+- **Thin community `Community 65`** (1 nodes): `alert.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 65`** (1 nodes): `button.jsx`
+- **Thin community `Community 66`** (1 nodes): `button.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 66`** (1 nodes): `card.jsx`
+- **Thin community `Community 67`** (1 nodes): `card.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (1 nodes): `checkbox.jsx`
+- **Thin community `Community 68`** (1 nodes): `checkbox.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 68`** (1 nodes): `collapsible.jsx`
+- **Thin community `Community 69`** (1 nodes): `collapsible.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 69`** (1 nodes): `input.jsx`
+- **Thin community `Community 70`** (1 nodes): `input.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (1 nodes): `label.jsx`
+- **Thin community `Community 71`** (1 nodes): `label.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (1 nodes): `popover.jsx`
+- **Thin community `Community 72`** (1 nodes): `popover.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 72`** (1 nodes): `progress.jsx`
+- **Thin community `Community 73`** (1 nodes): `progress.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (1 nodes): `select.jsx`
+- **Thin community `Community 74`** (1 nodes): `select.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 74`** (1 nodes): `separator.jsx`
+- **Thin community `Community 75`** (1 nodes): `separator.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 75`** (1 nodes): `switch.jsx`
+- **Thin community `Community 76`** (1 nodes): `switch.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (1 nodes): `table.jsx`
+- **Thin community `Community 77`** (1 nodes): `table.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (1 nodes): `tabs.jsx`
+- **Thin community `Community 78`** (1 nodes): `tabs.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (1 nodes): `textarea.jsx`
+- **Thin community `Community 79`** (1 nodes): `textarea.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (1 nodes): `toast.jsx`
+- **Thin community `Community 80`** (1 nodes): `toast.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (1 nodes): `toggle.jsx`
+- **Thin community `Community 81`** (1 nodes): `toggle.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (1 nodes): `tooltip.jsx`
+- **Thin community `Community 82`** (1 nodes): `tooltip.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (1 nodes): `mockData.js`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (1 nodes): `__init__.py`
+- **Thin community `Community 83`** (1 nodes): `mockData.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 84`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -596,33 +599,35 @@ Nodes (0):
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 87`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 88`** (1 nodes): `vite.config.js`
+- **Thin community `Community 88`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 89`** (1 nodes): `main.jsx`
+- **Thin community `Community 89`** (1 nodes): `vite.config.js`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 90`** (1 nodes): `__init__.py`
+- **Thin community `Community 90`** (1 nodes): `main.jsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 91`** (1 nodes): `tradingview_scraper.py`
+- **Thin community `Community 91`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 92`** (1 nodes): `__init__.py`
+- **Thin community `Community 92`** (1 nodes): `tradingview_scraper.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 93`** (1 nodes): `__init__.py`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 94`** (1 nodes): `__init__.py`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `save_csv_file()` connect `Community 4` to `Community 1`, `Community 15`?**
-  _High betweenness centrality (0.140) - this node is a cross-community bridge._
-- **Why does `Indicators` connect `Community 0` to `Community 2`, `Community 4`, `Community 12`?**
+- **Why does `save_json_file()` connect `Community 4` to `Community 15`?**
+  _High betweenness centrality (0.138) - this node is a cross-community bridge._
+- **Why does `save_csv_file()` connect `Community 4` to `Community 15`?**
   _High betweenness centrality (0.137) - this node is a cross-community bridge._
-- **Are the 42 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?**
-  _`Indicators` has 42 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 38 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API — optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars.`) actually correct?**
-  _`HistoricalFetcher` has 38 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `Streamer` connect `Community 1` to `Community 4`?**
+  _High betweenness centrality (0.135) - this node is a cross-community bridge._
+- **Are the 45 inferred relationships involving `Indicators` (e.g. with `TestIndicators` and `Setup method to create an Indicators instance.`) actually correct?**
+  _`Indicators` has 45 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 41 inferred relationships involving `HistoricalFetcher` (e.g. with `Trading Intelligence API — optimized.  Changes:   - asyncio.Lock guards all s` and `sha256(symbol:tf:tStart:tEnd:pH:pL) → first 16 hex chars.`) actually correct?**
+  _`HistoricalFetcher` has 41 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 26 inferred relationships involving `FundamentalGraphs` (e.g. with `TestFundamentalGraphs` and `Fixture to create an instance of FundamentalGraphs for testing.`) actually correct?**
   _`FundamentalGraphs` has 26 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 21 inferred relationships involving `MarketMovers` (e.g. with `TestMarketMovers` and `Fixture to create an instance of MarketMovers for testing.`) actually correct?**
   _`MarketMovers` has 21 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 21 inferred relationships involving `Minds` (e.g. with `TestMinds` and `Fixture to create an instance of Minds for testing.`) actually correct?**
-  _`Minds` has 21 INFERRED edges - model-reasoned connections that need verification._

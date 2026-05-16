@@ -159,7 +159,17 @@ def build_features(ohlc: np.ndarray) -> torch.Tensor:
     # 30: Range Tightness (ATR / Range Width)
     range_tight = atr / (r_width + eps)
 
-    # ── Final Stack (30 Channels) ────────────────────────────────────────────
+    # 31: Swing High (3-candle peak)
+    swing_high = torch.zeros_like(highs)
+    if n >= 3:
+        swing_high[1:-1] = ((highs[1:-1] > highs[:-2]) & (highs[1:-1] > highs[2:])).float()
+
+    # 32: Swing Low (3-candle trough)
+    swing_low = torch.zeros_like(lows)
+    if n >= 3:
+        swing_low[1:-1] = ((lows[1:-1] < lows[:-2]) & (lows[1:-1] < lows[2:])).float()
+
+    # ── Final Stack (32 Channels) ────────────────────────────────────────────
     features = torch.stack([
         ohlc_rel[:, 0], ohlc_rel[:, 1], ohlc_rel[:, 2], ohlc_rel[:, 3], # 1-4
         body_size, c_range, u_wick, l_wick, direction,                  # 5-9
@@ -167,7 +177,8 @@ def build_features(ohlc: np.ndarray) -> torch.Tensor:
         r_high_rel, r_low_rel, r_width_norm, r_stability,               # 13-16
         overlap, signed_prox, impulse, t_density, fake,                 # 17-21
         atr_slope, comp_ratio, eq_persist, dir_entropy, rej_accum,      # 22-26
-        vol_z, body_exp, pos_enc, range_tight                            # 27-30
+        vol_z, body_exp, pos_enc, range_tight,                           # 27-30
+        swing_high, swing_low                                            # 31-32
     ], dim=1)
     
     return features
@@ -178,5 +189,5 @@ if __name__ == "__main__":
     data[:, 2] = np.min(data, axis=1) - 0.1
     f = build_features(data)
     print(f"v4 Features Shape: {f.shape}")
-    assert f.shape[1] == 30
+    assert f.shape[1] == 32
     print("Feature distribution check passed.")

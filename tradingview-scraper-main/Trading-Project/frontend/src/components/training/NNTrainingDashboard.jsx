@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Cpu, Activity, CheckCircle, Clock } from 'lucide-react';
 
-const NNTrainingDashboard = () => {
+const NNTrainingDashboard = ({ ml2Result }) => {
   const [data, setData] = useState({
     status: 'IDLE',
     epoch: 0,
@@ -10,6 +10,11 @@ const NNTrainingDashboard = () => {
     max_iterations: 500,
     updated_at: null
   });
+
+  const lastEpochRef = useRef(0);
+  const trainingStartTimeRef = useRef(null);
+  const startEpochRef = useRef(0);
+  const [epochDuration, setEpochDuration] = useState(null);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -31,6 +36,28 @@ const NNTrainingDashboard = () => {
           total_samples:  live.total_samples || 0,
           updated_at:     db.data?.updated_at || null,
         };
+
+        if (merged.status === 'TRAINING' && merged.epoch > lastEpochRef.current) {
+          const now = Date.now();
+          if (!trainingStartTimeRef.current) {
+            trainingStartTimeRef.current = now;
+            startEpochRef.current = merged.epoch;
+          } else {
+            const totalElapsed = (now - trainingStartTimeRef.current) / 1000;
+            const epochsCompleted = merged.epoch - startEpochRef.current;
+            if (epochsCompleted > 0) {
+              const avgDuration = totalElapsed / epochsCompleted;
+              setEpochDuration(avgDuration);
+            }
+          }
+          lastEpochRef.current = merged.epoch;
+        } else if (merged.status !== 'TRAINING') {
+          lastEpochRef.current = 0;
+          trainingStartTimeRef.current = null;
+          startEpochRef.current = 0;
+          setEpochDuration(null);
+        }
+
         setData(merged);
       } catch (error) {
         console.error("Failed to fetch NN status:", error);
@@ -51,7 +78,33 @@ const NNTrainingDashboard = () => {
     }
   };
 
+  const handleStop = async () => {
+    try {
+      const resp = await fetch('http://localhost:8000/api/training/stop_nn', {
+        method: 'POST'
+      });
+      const res = await resp.json();
+      if (res.status === 'stop_requested') {
+        alert("Stop request sent!");
+      }
+    } catch (error) {
+      console.error("Failed to stop training:", error);
+    }
+  };
+
+  const formatTime = (secs) => {
+    if (!secs) return '0s';
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = Math.floor(secs % 60);
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
+  };
+
   const progress = Math.min(100, (data.epoch / (data.max_iterations || 500)) * 100);
+  const remainingEpochs = (data.max_iterations || 500) - data.epoch;
+  const remainingSeconds = epochDuration ? remainingEpochs * epochDuration : null;
 
   return (
     <div className="bg-[#131722] border border-[#2A2E39] rounded-2xl p-5 shadow-2xl relative overflow-hidden group">
@@ -69,11 +122,24 @@ const NNTrainingDashboard = () => {
           </div>
         </div>
         
-        <div className="flex items-center gap-2 bg-[#1E222D] px-3 py-1.5 rounded-lg border border-[#2A2E39]">
-          <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'TRAINING' ? 'bg-[#00BFA5] animate-pulse' : 'bg-[#787B86]'}`} />
-          <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: getStatusColor() }}>
-            {data.status}
-          </span>
+        <div className="flex items-center gap-2">
+            <button 
+              onClick={handleStop}
+              disabled={data.status !== 'TRAINING'}
+              className={`px-3 py-1.5 rounded-lg border text-[10px] font-bold uppercase tracking-wider transition-colors ${
+                data.status === 'TRAINING' 
+                  ? 'bg-[#EF535020] hover:bg-[#EF535040] text-[#EF5350] border-[#EF535040]' 
+                  : 'bg-[#1E222D] text-[#434651] border-[#2A2E39] cursor-not-allowed'
+              }`}
+            >
+              Stop
+            </button>
+          <div className="flex items-center gap-2 bg-[#1E222D] px-3 py-1.5 rounded-lg border border-[#2A2E39]">
+            <div className={`w-1.5 h-1.5 rounded-full ${data.status === 'TRAINING' ? 'bg-[#00BFA5] animate-pulse' : 'bg-[#787B86]'}`} />
+            <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: getStatusColor() }}>
+              {data.status}
+            </span>
+          </div>
         </div>
       </div>
 
@@ -85,9 +151,11 @@ const NNTrainingDashboard = () => {
               <Activity size={12} /> Training Progress
             </span>
             <span className="text-xs font-mono text-white">
-              Epoch: {data.epoch} <span className="text-[#434651]">/ {data.max_iterations || 500}</span>
+              Epoch: {data.epoch} <span className="text-[#434651]">/ {data.max_iterations || 300}</span>
               <span className="mx-2 text-[#2A2E39]">|</span>
               Samples: {data.total_samples || '...'}
+              <span className="mx-2 text-[#2A2E39]">|</span>
+              ETA: {data.status === 'TRAINING' ? formatTime(remainingSeconds) : 'N/A'}
             </span>
           </div>
           <div className="h-1.5 w-full bg-[#1E222D] rounded-full overflow-hidden border border-[#2A2E39]">
@@ -113,6 +181,14 @@ const NNTrainingDashboard = () => {
             </div>
           </div>
         </div>
+
+
+        
+        {ml2Result && ml2Result.error && (
+          <div className="mt-3 text-[10px] text-[#EF5350] bg-[#FF525210] p-2 rounded-lg border border-[#FF525220] font-mono">
+            Error: {ml2Result.error}
+          </div>
+        )}
 
         {/* Footer Info */}
         <div className="pt-4 border-t border-[#2A2E39] flex items-center justify-between">
