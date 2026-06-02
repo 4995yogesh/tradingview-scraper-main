@@ -60,6 +60,7 @@ from pipeline.data.db import candle_db          # ← SQLite layer
 from indicators.consolidation import consolidation_boxes  # PROJECT path active now
 from indicators.user_style_learner import UserStyleLearner
 from indicators.adaptive_consolidation import adaptive_consolidation_boxes
+import dukascopy_seeder  # ← Dukascopy historical seeder
 
 # ── ML imports ────────────────────────────────────────────────────────────────
 import hashlib
@@ -105,8 +106,16 @@ TIMEFRAME_MAP = {
 # Timeframes stored in SQLite via routine gap-fill (intra-day are derived from 5m)
 PERSISTENT_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d", "1w"]
 
-# Symbols to pre-load and gap-fill on startup
-PERSISTENT_SYMBOLS = [("OANDA", "EURUSD"), ("OANDA", "USDJPY")]
+# Symbols to pre-load and gap-fill on startup — all 7 major forex pairs
+PERSISTENT_SYMBOLS = [
+    ("OANDA", "EURUSD"),
+    ("OANDA", "USDJPY"),
+    ("OANDA", "GBPUSD"),
+    ("OANDA", "USDCHF"),
+    ("OANDA", "AUDUSD"),
+    ("OANDA", "USDCAD"),
+    ("OANDA", "NZDUSD"),
+]
 
 # Seconds per bar for each timeframe (used for gap calculation)
 TF_INTERVAL_SECS = {
@@ -123,6 +132,12 @@ TF_FETCH_LIMIT = {
 # Watchlist symbols
 WATCHLIST_SYMBOLS = [
     {"exchange": "OANDA", "symbol": "EURUSD"},
+    {"exchange": "OANDA", "symbol": "USDJPY"},
+    {"exchange": "OANDA", "symbol": "GBPUSD"},
+    {"exchange": "OANDA", "symbol": "USDCHF"},
+    {"exchange": "OANDA", "symbol": "AUDUSD"},
+    {"exchange": "OANDA", "symbol": "USDCAD"},
+    {"exchange": "OANDA", "symbol": "NZDUSD"},
 ]
 
 # Track which series are currently being gap-filled (to avoid double-fetching)
@@ -764,7 +779,18 @@ async def lifespan(app: FastAPI):
     import config
     config.print_diagnostics()
 
-    # 3. Start background gap-fill (non-blocking — server ready immediately)
+    # 3. Start Dukascopy seeder (background — fills historical gaps before TV gap-fill)
+    seed_thread = threading.Thread(
+        target=dukascopy_seeder.seed_missing_pairs,
+        args=(candle_db,),
+        kwargs={"exchange": "OANDA"},
+        name="dukascopy-seeder",
+        daemon=True,
+    )
+    seed_thread.start()
+    logger.info("=== Dukascopy seeder thread started ===")
+
+    # 4. Start background gap-fill (non-blocking — server ready immediately)
     gap_thread = threading.Thread(
         target=_run_all_gap_fills,
         name="gap-filler",
@@ -971,6 +997,38 @@ def get_ohlc(
 
     cd, vd = _format_candles_for_ui(closed_candles, timeframe)
     return {"status": "success", "candleData": cd, "volumeData": vd}
+
+
+@app.post("/api/fetch-symbol")
+def fetch_symbol_on_demand(
+    exchange: str = Query("OANDA"),
+    symbol:   str = Query("EURUSD"),
+):
+    """
+    Trigger an on-demand Dukascopy seed + TradingView gap-fill for a symbol.
+    Designed for the frontend sidebar — called when a user switches to a pair
+    that may not yet have data in the local DB.
+    Returns immediately; seeding runs in a background thread.
+    """
+    symbol = symbol.upper().strip()
+    exchange = exchange.upper().strip()
+
+    def _seed_and_gapfill():
+        # Step 1: Dukascopy seed (fast path for deep history)
+        dukascopy_seeder.seed_single_symbol(candle_db, symbol, exchange)
+        # Step 2: load freshly seeded rows into RAM cache
+        for tf in PERSISTENT_TIMEFRAMES:
+            _load_db_into_ram(exchange, symbol, tf)
+        # Step 3: TradingView gap-fill for recent live data
+        for tf in PERSISTENT_TIMEFRAMES:
+            _gap_fill(exchange, symbol, tf)
+        logger.info("[fetch-symbol] ✓ %s:%s ready", exchange, symbol)
+
+    t = threading.Thread(target=_seed_and_gapfill,
+                         name=f"on-demand-{symbol}", daemon=True)
+    t.start()
+    return {"status": "ok", "message": f"Seeding {exchange}:{symbol} in background"}
+
 
 @app.get("/api/consolidation")
 def get_consolidation(
@@ -1929,6 +1987,92 @@ async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
     except Exception as e:
         logger.error(f"[nn_zones] endpoint failed: {e}")
         return []
+
+
+# ── Pattern Memory Endpoints (Phase 6) ───────────────────────────────────────
+
+@app.get("/api/pattern/stats")
+async def get_pattern_stats():
+    """Return Pattern Memory DB and FAISS index health statistics."""
+    try:
+        from ml2.pattern_memory.pattern_db import PatternMemoryDB
+        from ml2.pattern_memory.similarity_engine import get_engine
+        db = PatternMemoryDB()
+        engine = get_engine()
+        stats = db.get_stats()
+        stats["faiss_index_size"] = engine.size
+        stats["faiss_ready"] = engine.size > 0
+        return stats
+    except Exception as e:
+        logger.error(f"[pattern/stats] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pattern/intelligence")
+async def get_pattern_intelligence(
+    symbol:    str = Query("EURUSD"),
+    timeframe: str = Query("15m"),
+    horizon:   int = Query(20, description="Return horizon in candles: 10, 20, 50, or 100"),
+    top_k:     int = Query(50, description="Number of FAISS neighbours to retrieve"),
+):
+    """
+    For the given symbol+timeframe, extract a TimeFM embedding from the most
+    recent candles and return a full PatternIntelligence report comparing this
+    pattern against all historical patterns in the Pattern Memory DB.
+    """
+    try:
+        from ml2.timesfm_predictor import TimesFMPredictor
+        from ml2.pattern_memory.pattern_db import PatternMemoryDB
+        from ml2.pattern_memory.similarity_engine import get_engine
+        from ml2.pattern_memory.outcome_intelligence import OutcomeIntelligence
+
+        # 1. Resolve candles from RAM storage
+        raw_candles = storage.get_candles("OANDA", symbol, timeframe, count=512)
+        if not raw_candles or len(raw_candles) < 10:
+            raise HTTPException(status_code=400, detail=f"Not enough candles for {symbol}/{timeframe}")
+
+        # Normalise candle dicts
+        candles = [{k.lower(): v for k, v in c.items()} for c in raw_candles if isinstance(c, dict)]
+
+        # 2. Lazy-load or reuse TimesFM predictor
+        from ml2 import inference as _inf
+        predictor = _inf.timesfm_predictor
+        if predictor is None:
+            raise HTTPException(status_code=503, detail="TimesFM model not loaded")
+
+        # 3. Get embedding
+        embedding = predictor.get_embedding(candles)
+
+        # 4. FAISS search
+        engine = get_engine()
+        if engine.size == 0:
+            raise HTTPException(status_code=503, detail="FAISS index not ready yet")
+
+        top_k_results = engine.search(embedding, k=top_k)
+        if not top_k_results:
+            return {"error": "No similar patterns found", "n_matches": 0}
+
+        pids   = [pid for pid, _ in top_k_results]
+        scores = [score for _, score in top_k_results]
+
+        # 5. Hydrate records
+        db      = PatternMemoryDB()
+        matches = db.get_patterns_by_ids(pids)
+
+        # 6. Compute outcome intelligence
+        intel      = OutcomeIntelligence()
+        report     = intel.compute(matches, scores, horizon=horizon)
+        result     = report.to_dict()
+        result["symbol"]    = symbol
+        result["timeframe"] = timeframe
+        result["n_candles_used"] = len(candles)
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"[pattern/intelligence] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

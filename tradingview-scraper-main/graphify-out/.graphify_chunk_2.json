@@ -1,0 +1,12 @@
+{"nodes":[
+  {"id":"training_val_loss_chart","label":"Training vs Validation Loss Chart (Latest)","file_type":"image","source_file":"Trading-Project/backend/data/models/training_val_loss.png","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"training_val_loss_20260511_1703","label":"Training Loss Curve — May 11 17:03","file_type":"image","source_file":"Trading-Project/backend/data/models/training_val_loss_20260511_1703.png","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"training_val_loss_20260513_1854","label":"Training Loss Curve — May 13 18:54","file_type":"image","source_file":"Trading-Project/backend/data/models/training_val_loss_20260513_1854.png","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"model_a_heatmap","label":"Model A Segmentation Heatmap Visualization","file_type":"image","source_file":"Trading-Project/backend/scratch/model_a_heatmap.png","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null}
+],"edges":[
+  {"source":"training_val_loss_20260511_1703","target":"training_val_loss_chart","relation":"conceptually_related_to","confidence":"INFERRED","confidence_score":0.9,"source_file":"Training-Project/backend/data/models/","source_location":null,"weight":1.0},
+  {"source":"training_val_loss_20260513_1854","target":"training_val_loss_chart","relation":"conceptually_related_to","confidence":"INFERRED","confidence_score":0.9,"source_file":"Trading-Project/backend/data/models/","source_location":null,"weight":1.0},
+  {"source":"model_a_heatmap","target":"training_val_loss_chart","relation":"conceptually_related_to","confidence":"INFERRED","confidence_score":0.75,"source_file":"Trading-Project/backend/scratch/","source_location":null,"weight":1.0}
+],"hyperedges":[
+  {"id":"training_run_history","label":"Multi-Session Training Run History","nodes":["training_val_loss_chart","training_val_loss_20260511_1703","training_val_loss_20260513_1854"],"relation":"form","confidence":"INFERRED","confidence_score":0.85,"source_file":"Trading-Project/backend/data/models/"}
+],"input_tokens":0,"output_tokens":0}

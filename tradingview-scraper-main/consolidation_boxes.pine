@@ -1,0 +1,874 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Consolidation Boxes — APEX v3.1  |  Adaptive Engine + HTF Box Overlay
+// Pine Script v6
+//
+// ─── ARCHITECTURE OVERVIEW ───────────────────────────────────────────────────
+//
+//  Three-tier adaptive detection engine (LTF):
+//
+//  TIER 1 — DYNAMIC STATISTICAL BASELINES
+//    All thresholds derived from rolling market statistics.
+//    • ATR percentile rank         → volatility regime position
+//    • 95th-pct body / range       → adaptive impulse threshold
+//    • Directional persistence EMA → trend-strength signal
+//
+//  TIER 2 — MARKET REGIME CLASSIFICATION
+//    QUIET / NORMAL / VOLATILE via ATR rank + directional persistence.
+//    Each regime provides a distinct parameter grid.
+//
+//  TIER 3 — PARAMETER MICRO-SEARCH  (9 combos per window)
+//    9 (atrScale × netDispRef) combinations scored using O(w) cached
+//    Phase-A metrics.  The globally highest-scoring (width, params) pair
+//    activates as a new box.
+//
+//  HTF BOX OVERLAY  (display only, no score influence)
+//    Up to two higher timeframes can be displayed as reference consolidation
+//    boxes on the LTF chart.  Detection uses a simple range/ATR gate and
+//    net-displacement filter on the HTF.  Each HTF box shows its timeframe
+//    as a label at the bottom-right corner.  HTF boxes do NOT affect the
+//    APEX scoring engine in any way.
+//
+// ─── SCORE ARCHITECTURE ──────────────────────────────────────────────────────
+//  Positive (reward):
+//   + Compression score    × 3.5   tight range vs ATR reference
+//   + Oscillation score    × 2.0   close-direction reversals
+//   + Boundary interaction × 1.5   wick touches at rails
+//   + Noise score          × 1.0   path ÷ net displacement
+//   + Path quality bonus   × pqw   smoothness + mean-reversion + entropy
+//  Negative (penalise):
+//   - Run penalty          × 2.0   monotonic close run
+//   - Displacement penalty × 2.0   net drift ratio
+//   - Wick breach penalty  × 3.0   close / wick outside rails
+//   - Internal vol penalty × vpw   ATR drift + range chaos + wick chaos
+//   - FVG penalty          × 1.5   fair value gap inside window
+//   - Impulse penalty      capped  internal impulse bars (max −2.0)
+//
+// ─────────────────────────────────────────────────────────────────────────────
+//@version=6
+indicator("Consolidation Boxes — APEX v3.1", overlay = true,
+          max_boxes_count  = 500,
+          max_labels_count = 500)
+
+// ── Look-back buffers ─────────────────────────────────────────────────────────
+max_bars_back(close, 500)
+max_bars_back(high,  500)
+max_bars_back(low,   500)
+max_bars_back(open,  500)
+max_bars_back(time,  500)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ INPUTS
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Window Geometry ───────────────────────────────────────────────────────────
+i_minBars      = input.int   (6,    "Min Window Width",
+                               minval = 2,   maxval = 50,
+                               tooltip = "Minimum bars a candidate window must span.")
+i_maxBars      = input.int   (30,   "Max Window Width",
+                               minval = 5,   maxval = 60,
+                               tooltip = "Maximum bars in the rolling scan.")
+i_maxBoxes     = input.int   (100,  "Max Active Boxes",
+                               minval = 1,   maxval = 500)
+i_scoreThresh  = input.float (1.5,  "Min Quality Score",
+                               minval = -5.0, maxval = 12.0, step = 0.1,
+                               tooltip = "Score floor. Raise for premium structures only.")
+
+// ── Regime Detection ──────────────────────────────────────────────────────────
+i_regimeLen    = input.int   (100,  "Regime ATR Rank Period",
+                               minval = 20, maxval = 300)
+i_pctLen       = input.int   (50,   "Percentile Stat Window",
+                               minval = 20, maxval = 200)
+
+// ── Impulse Cooldown ──────────────────────────────────────────────────────────
+i_cooldownBars = input.int   (3,    "Post-Impulse Cooldown Bars",
+                               minval = 0, maxval = 15)
+
+// ── HTF Box Overlay ───────────────────────────────────────────────────────────
+i_htf1Enable   = input.bool      (true,  "Show HTF 1 Boxes",
+                                   group = "HTF Box Overlay",
+                                   tooltip = "Draw HTF consolidation zones from a higher timeframe on the LTF chart. Does not affect detection scoring.")
+i_htf1         = input.timeframe ("15",  "HTF 1 Timeframe",
+                                   group = "HTF Box Overlay")
+i_htf1AtrMult  = input.float     (1.5,   "HTF1 Max Range (× ATR)",
+                                   group = "HTF Box Overlay",
+                                   minval = 0.3, maxval = 6.0, step = 0.1,
+                                   tooltip = "HTF range must be below this multiple of the HTF ATR to qualify as consolidation.")
+i_htf1BgColor  = input.color     (color.new(#1565C0, 75), "HTF1 Fill",   group = "HTF Box Overlay")
+i_htf1BdColor  = input.color     (color.new(#64B5F6, 10), "HTF1 Border", group = "HTF Box Overlay")
+
+i_htf2Enable   = input.bool      (true,  "Show HTF 2 Boxes",
+                                   group = "HTF Box Overlay")
+i_htf2         = input.timeframe ("60",  "HTF 2 Timeframe",
+                                   group = "HTF Box Overlay")
+i_htf2AtrMult  = input.float     (1.5,   "HTF2 Max Range (× ATR)",
+                                   group = "HTF Box Overlay",
+                                   minval = 0.3, maxval = 6.0, step = 0.1)
+i_htf2BgColor  = input.color     (color.new(#4A148C, 75), "HTF2 Fill",   group = "HTF Box Overlay")
+i_htf2BdColor  = input.color     (color.new(#CE93D8, 10), "HTF2 Border", group = "HTF Box Overlay")
+
+i_htfLookback  = input.int       (10,    "HTF Lookback (bars)",
+                                   group = "HTF Box Overlay",
+                                   minval = 3, maxval = 50,
+                                   tooltip = "Number of HTF bars used to measure the HTF range.")
+i_htfMaxNetPct = input.float     (0.60,  "HTF Max Net Displacement",
+                                   group = "HTF Box Overlay",
+                                   minval = 0.10, maxval = 1.00, step = 0.05,
+                                   tooltip = "Maximum net close displacement as a fraction of HTF range. Lower = stricter directional filter.")
+
+// ── Display ───────────────────────────────────────────────────────────────────
+i_timeFilter   = input.bool  (true, "Filter IST Midnight (00:00–05:59)")
+i_showLabels   = input.bool  (true, "Show Type Labels")
+i_showScore    = input.bool  (true, "Show Score in Label")
+i_showRegime   = input.bool  (true, "Show Regime Label")
+
+// ── LTF Box Colors ────────────────────────────────────────────────────────────
+i_colTightBg   = input.color (color.new(color.green,  85), "TIGHT Fill",   group = "Colors")
+i_colLooseBg   = input.color (color.new(#FF6D00,      85), "LOOSE Fill",   group = "Colors")
+i_colDriftBg   = input.color (color.new(color.red,    85), "DRIFT Fill",   group = "Colors")
+i_colTightBd   = input.color (color.new(color.green,   0), "TIGHT Border", group = "Colors")
+i_colLooseBd   = input.color (color.new(#FF6D00,       0), "LOOSE Border", group = "Colors")
+i_colDriftBd   = input.color (color.new(color.red,     0), "DRIFT Border", group = "Colors")
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+// IST = UTC + 5h 30m = 19 800 000 ms
+_istHour() =>
+    int istMs = int(time) + 19800000
+    int(istMs / 3600000) % 24
+
+isBlockedTime = i_timeFilter ? (na(_istHour()) ? false : _istHour() < 6) : false
+
+// Rolling percentile — na-safe, graceful on sparse early bars
+percentile(src, length, pct) =>
+    float[] arr = array.new_float(0)
+    for i = 0 to length - 1
+        float val = src[i]
+        if not na(val)
+            array.push(arr, val)
+    int sz = array.size(arr)
+    float result = na
+    if sz > 0
+        array.sort(arr)
+        int idx = math.max(0, math.min(sz - 1, int(math.round(float(sz - 1) * pct / 100.0))))
+        result  := array.get(arr, idx)
+    result
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ TIER 1 — DYNAMIC STATISTICAL BASELINES
+// ════════════════════════════════════════════════════════════════════════════
+
+float atrMain    = ta.atr(14)
+float atrPctRank = ta.percentrank(atrMain, i_regimeLen)
+float bodyPct95  = percentile(math.abs(close - open), i_pctLen, 95.0)
+float rangePct95 = percentile(high - low,             i_pctLen, 95.0)
+float rangePct60 = percentile(high - low,             i_pctLen, 60.0)
+float dirPersist = ta.ema(math.abs(close - close[1]) / math.max(atrMain, 1e-9), 14)
+
+max_bars_back(atrMain,    100)
+max_bars_back(bodyPct95,  100)
+max_bars_back(rangePct95, 100)
+max_bars_back(dirPersist, 100)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ TIER 1 — MARKET REGIME CLASSIFICATION
+// ════════════════════════════════════════════════════════════════════════════
+
+int regime = 1
+if not na(atrPctRank) and not na(dirPersist)
+    if atrPctRank < 33.0 and dirPersist < 0.45
+        regime := 0
+    else if atrPctRank >= 67.0 or dirPersist > 0.65
+        regime := 2
+
+string regimeName = regime == 0 ? "QUIET" : regime == 2 ? "VOLATILE" : "NORMAL"
+color  regimeCol  = regime == 0 ? color.teal : regime == 2 ? color.orange : color.silver
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ TIER 1 — DYNAMIC IMPULSE DETECTION
+// ════════════════════════════════════════════════════════════════════════════
+
+float currentBody = math.abs(close - open)
+float currentTR   = math.max(high - low,
+                   math.max(math.abs(high - close[1]),
+                            math.abs(low  - close[1])))
+
+bool isImpulseBar = false
+if not na(bodyPct95) and not na(rangePct95) and bodyPct95 > 0.0 and rangePct95 > 0.0
+    isImpulseBar := (currentBody > bodyPct95) or (currentTR > rangePct95)
+
+max_bars_back(isImpulseBar, 100)
+
+var int barsSinceImpulse = 99
+barsSinceImpulse := isImpulseBar ? 0 : barsSinceImpulse + 1
+
+bool inCooldown = barsSinceImpulse <= i_cooldownBars
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ HTF DATA FETCH  (display only — zero influence on APEX scoring)
+//
+//  Fetches the minimum necessary data from each higher timeframe:
+//    • Highest high  over htfLookback bars
+//    • Lowest  low   over htfLookback bars
+//    • ATR(14)       for range qualification
+//    • Net displacement of closes over htfLookback bars (directional filter)
+//
+//  Consolidation gate:
+//    range < htfATR × multiplier  AND  netDisp / range < maxNetPct
+//
+//  Both conditions must hold for an HTF box to be drawn.
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── HTF 1 ─────────────────────────────────────────────────────────────────────
+float htf1Hi  = i_htf1Enable ?
+     request.security(syminfo.tickerid, i_htf1,
+         ta.highest(high, i_htfLookback),
+         lookahead = barmerge.lookahead_off) : na
+
+float htf1Lo  = i_htf1Enable ?
+     request.security(syminfo.tickerid, i_htf1,
+         ta.lowest(low, i_htfLookback),
+         lookahead = barmerge.lookahead_off) : na
+
+float htf1ATR = i_htf1Enable ?
+     request.security(syminfo.tickerid, i_htf1,
+         ta.atr(14),
+         lookahead = barmerge.lookahead_off) : na
+
+float htf1ND  = i_htf1Enable ?
+     request.security(syminfo.tickerid, i_htf1,
+         math.abs(close - close[math.max(i_htfLookback - 1, 1)]),
+         lookahead = barmerge.lookahead_off) : na
+
+// ── HTF 2 ─────────────────────────────────────────────────────────────────────
+float htf2Hi  = i_htf2Enable ?
+     request.security(syminfo.tickerid, i_htf2,
+         ta.highest(high, i_htfLookback),
+         lookahead = barmerge.lookahead_off) : na
+
+float htf2Lo  = i_htf2Enable ?
+     request.security(syminfo.tickerid, i_htf2,
+         ta.lowest(low, i_htfLookback),
+         lookahead = barmerge.lookahead_off) : na
+
+float htf2ATR = i_htf2Enable ?
+     request.security(syminfo.tickerid, i_htf2,
+         ta.atr(14),
+         lookahead = barmerge.lookahead_off) : na
+
+float htf2ND  = i_htf2Enable ?
+     request.security(syminfo.tickerid, i_htf2,
+         math.abs(close - close[math.max(i_htfLookback - 1, 1)]),
+         lookahead = barmerge.lookahead_off) : na
+
+// ── HTF consolidation gates ───────────────────────────────────────────────────
+float htf1Range = nz(htf1Hi) - nz(htf1Lo)
+bool  htf1IsConsolidating = i_htf1Enable and
+     not na(htf1ATR) and htf1ATR > 0.0 and
+     htf1Range > 0.0 and
+     htf1Range < htf1ATR * i_htf1AtrMult and
+     nz(htf1ND) / htf1Range < i_htfMaxNetPct
+
+float htf2Range = nz(htf2Hi) - nz(htf2Lo)
+bool  htf2IsConsolidating = i_htf2Enable and
+     not na(htf2ATR) and htf2ATR > 0.0 and
+     htf2Range > 0.0 and
+     htf2Range < htf2ATR * i_htf2AtrMult and
+     nz(htf2ND) / htf2Range < i_htfMaxNetPct
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ TIER 2 — REGIME-ADAPTIVE PARAMETER GRIDS
+// ════════════════════════════════════════════════════════════════════════════
+
+float as0 = na
+float as1 = na
+float as2 = na
+if regime == 0
+    as0 := 0.7
+    as1 := 0.9
+    as2 := 1.1
+else if regime == 1
+    as0 := 1.0
+    as1 := 1.4
+    as2 := 1.8
+else
+    as0 := 1.5
+    as1 := 2.0
+    as2 := 2.5
+
+float nd0 = na
+float nd1 = na
+float nd2 = na
+if regime == 0
+    nd0 := 0.35
+    nd1 := 0.45
+    nd2 := 0.55
+else if regime == 1
+    nd0 := 0.45
+    nd1 := 0.55
+    nd2 := 0.65
+else
+    nd0 := 0.55
+    nd1 := 0.65
+    nd2 := 0.75
+
+int   maxConsecDir   = regime == 0 ? 3    : regime == 1 ? 4    : 5
+float atrDriftThresh = regime == 0 ? 1.15 : regime == 1 ? 1.30 : 1.50
+float volPenWt       = regime == 0 ? 3.0  : regime == 1 ? 2.5  : 2.0
+float pathQualWt     = regime == 0 ? 2.0  : regime == 1 ? 1.5  : 1.0
+float midCrossMin    = regime == 0 ? 0.20 : regime == 1 ? 0.15 : 0.10
+float pathSmoothRef  = regime == 0 ? 2.5  : regime == 1 ? 3.0  : 4.0
+float wickChaosFrac  = regime == 0 ? 0.50 : regime == 1 ? 0.60 : 0.70
+float impulseAtrMult = regime == 0 ? 1.8  : regime == 1 ? 2.0  : 2.5
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ PERSISTENT STATE  —  LTF boxes
+// ════════════════════════════════════════════════════════════════════════════
+
+var int[]   boxLeft   = array.new_int()
+var int[]   boxRight  = array.new_int()
+var float[] boxTop    = array.new_float()
+var float[] boxBottom = array.new_float()
+var float[] boxScore  = array.new_float()
+var bool[]  boxActive = array.new_bool()
+var box[]   boxObj    = array.new_box()
+var label[] boxLbl    = array.new_label()
+
+// ── HTF box state (one live box per HTF, cleared when consolidation ends) ──────
+var box   htf1ActiveBox = na
+var label htf1ActiveLbl = na
+var box   htf2ActiveBox = na
+var label htf2ActiveLbl = na
+
+// Regime info label
+var label regimeLbl = na
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ STEP 1 — UPDATE ACTIVE LTF BOXES  (Extend or Terminate)
+// ════════════════════════════════════════════════════════════════════════════
+
+int nActive   = 0
+int nBoxTotal = array.size(boxActive)
+
+if nBoxTotal > 0
+    for i = 0 to nBoxTotal - 1
+        if array.get(boxActive, i)
+            float bt = array.get(boxTop,    i)
+            float bb = array.get(boxBottom, i)
+
+            if close > bt or close < bb or isBlockedTime
+                // Terminate: tighten to actual span before closing
+                array.set(boxActive, i, false)
+                int   bLeft   = array.get(boxLeft, i)
+                int   dist    = bar_index - bLeft
+                int   distCap = math.min(dist, 499)
+                float actTop  = bt
+                float actBot  = bb
+                for bOff = 1 to distCap
+                    if high[bOff] > actTop
+                        actTop := high[bOff]
+                    if low[bOff] < actBot
+                        actBot := low[bOff]
+                box bx = array.get(boxObj, i)
+                if not na(bx)
+                    box.set_right (bx, bar_index - 1)
+                    box.set_top   (bx, actTop)
+                    box.set_bottom(bx, actBot)
+                array.set(boxRight,  i, bar_index - 1)
+                array.set(boxTop,    i, actTop)
+                array.set(boxBottom, i, actBot)
+
+            else
+                // Extend: push right edge forward
+                nActive += 1
+                box bx = array.get(boxObj, i)
+                if not na(bx)
+                    box.set_right(bx, bar_index)
+                array.set(boxRight, i, bar_index)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ STEP 2 — APEX ADAPTIVE WINDOW SCORING ENGINE
+//
+// ─── THREE-PHASE EXECUTION MODEL ─────────────────────────────────────────────
+//
+//  PHASE A  (per window — O(w)):
+//    One combined traversal computes ALL raw metrics: breach sums, range
+//    distribution, wick chaos, boundary touches, close-series oscillation
+//    stats, midpoint crossings, directional entropy, impulse count.
+//
+//  PHASE B  (per window — O(9)):
+//    9 parameter combos (3 atrScale × 3 netDispRef) scored using only
+//    arithmetic on Phase A results.  ~135 ops per window — negligible.
+//
+//  PHASE C  (once per bar — O(1)):
+//    The globally highest-scoring (window, params) pair activates as a box.
+//
+// ─── OVERLAP POLICY ──────────────────────────────────────────────────────────
+//  A candidate is suppressed if it has BOTH temporal AND price overlap with
+//  any existing active box or a recently closed box.  No nesting exceptions.
+//  This prevents multiple boxes from accumulating in the same price zone.
+// ════════════════════════════════════════════════════════════════════════════
+
+if nActive < i_maxBoxes and not isBlockedTime and not inCooldown and
+   bar_index > i_maxBars + i_pctLen + 10
+
+    // Seed rolling extremes
+    float wHi = high[1]
+    float wLo = low[1]
+    for k = 2 to i_minBars - 1
+        if high[k] > wHi
+            wHi := high[k]
+        if low[k] < wLo
+            wLo := low[k]
+
+    // Global best across all windows and all 9 combos
+    float gBestScore = -999.0
+    int   gBestW     = 0
+    float gBestHi    = na
+    float gBestLo    = na
+    float gBestComp  = 0.0
+    float gBestDisp  = 0.0
+    float gBestEff   = 0.0
+    float gBestBound = 0.0
+
+    for w = i_minBars to i_maxBars
+
+        if high[w] > wHi
+            wHi := high[w]
+        if low[w] < wLo
+            wLo := low[w]
+
+        float rangeH = wHi - wLo
+        if rangeH <= 0.0
+            continue
+
+        // IST time filter on the oldest bar of the window
+        if i_timeFilter
+            int wIstMs = int(time[w]) + 19800000
+            int wIstHr = int(wIstMs / 3600000) % 24
+            if wIstHr < 6
+                continue
+
+        // ── Impulse Anchor Rejection ───────────────────────────────────────
+        float anchorBody = math.abs(close[w] - open[w])
+        float anchorTR   = math.max(high[w] - low[w],
+                           math.max(math.abs(high[w] - close[w + 1]),
+                                    math.abs(low[w]  - close[w + 1])))
+        float anchorBP95 = bodyPct95[w]
+        float anchorRP95 = rangePct95[w]
+        float anchorATR  = atrMain[w]
+
+        bool anchorStatImpulse = (not na(anchorBP95) and anchorBP95 > 0.0 and anchorBody > anchorBP95) or
+                                 (not na(anchorRP95) and anchorRP95 > 0.0 and anchorTR   > anchorRP95)
+        bool anchorAtrImpulse  = anchorTR > anchorATR * impulseAtrMult
+
+        if anchorStatImpulse or anchorAtrImpulse
+            continue
+
+        // ── Strict Overlap Suppression ─────────────────────────────────────
+        //  Temporal AND price overlap with any active or recently-closed box
+        //  → skip this window.  No nesting exceptions.
+        int  wLeft   = bar_index - w
+        int  wRight  = bar_index - 1
+        bool skipWin = false
+        int  nBx     = array.size(boxActive)
+
+        if nBx > 0
+            for i = nBx - 1 to 0
+                bool isAct  = array.get(boxActive, i)
+                int  er     = array.get(boxRight,  i)
+                bool recent = er >= bar_index - i_maxBars
+                if isAct or recent
+                    int   el = array.get(boxLeft,   i)
+                    float et = array.get(boxTop,    i)
+                    float eb = array.get(boxBottom, i)
+                    // Both conditions must hold to suppress
+                    bool timeOvlp  = el <= wRight and er >= wLeft
+                    bool priceOvlp = et >= wLo    and eb <= wHi
+                    if timeOvlp and priceOvlp
+                        skipWin := true
+                        break
+                // Stop scanning once we've passed the relevant window
+                if not isAct and er < bar_index - i_maxBars
+                    break
+
+        if skipWin
+            continue
+
+        // ══════════════════════════════════════════════════════════════════
+        // PHASE A — COMBINED RAW METRICS  (single O(w) traversal)
+        // ══════════════════════════════════════════════════════════════════
+        float boxMid   = (wHi + wLo) * 0.5
+        float touchThr = rangeH * 0.08
+
+        float breachSum       = 0.0
+        float sumRanges       = 0.0
+        float sumRangeSq      = 0.0
+        int   wickChaos       = 0
+        int   topTch          = 0
+        int   botTch          = 0
+        int   maxRun          = 0
+        int   curRun          = 0
+        int   curDir          = 0
+        int   prevDir         = 0
+        int   dirChgs         = 0
+        float pathLen         = 0.0
+        int   upMoves         = 0
+        int   dnMoves         = 0
+        int   midCrossCount   = 0
+        int   internalImpulses = 0
+
+        for k = 1 to w
+            float hk   = high[k]
+            float lk   = low[k]
+            float ck   = close[k]
+            float barR = hk - lk
+
+            // Wick breach (normalised by box height)
+            if ck > wHi
+                breachSum += (ck - wHi) / rangeH * 3.0
+            else if ck < wLo
+                breachSum += (wLo - ck) / rangeH * 3.0
+            else
+                if hk > wHi
+                    breachSum += (hk - wHi) / rangeH * 0.5
+                if lk < wLo
+                    breachSum += (wLo - lk) / rangeH * 0.5
+
+            sumRanges  += barR
+            sumRangeSq += barR * barR
+
+            // Wick chaos (regime-adaptive span threshold)
+            if barR >= rangeH * wickChaosFrac
+                wickChaos += 1
+
+            // Boundary touches
+            if hk >= wHi - touchThr
+                topTch += 1
+            if lk <= wLo + touchThr
+                botTch += 1
+
+            // Internal impulses (k < w excludes anchor)
+            if k < w and isImpulseBar[k]
+                internalImpulses += 1
+
+            // Close-series metrics
+            if k < w
+                float cNew  = ck
+                float cOld  = close[k + 1]
+                float delta = cNew - cOld
+                pathLen += math.abs(delta)
+
+                int dir = delta > 0.0 ? 1 : delta < 0.0 ? -1 : 0
+                if dir != 0
+                    if dir == 1
+                        upMoves += 1
+                    else
+                        dnMoves += 1
+                    if dir == curDir
+                        curRun += 1
+                    else
+                        if curRun > maxRun
+                            maxRun := curRun
+                        curRun := 1
+                        curDir := dir
+                    if prevDir != 0 and dir != prevDir
+                        dirChgs += 1
+                    prevDir := dir
+                else
+                    if curRun > maxRun
+                        maxRun := curRun
+                    curRun := 0
+
+                bool aboveNow  = cNew >= boxMid
+                bool abovePrev = cOld >= boxMid
+                if aboveNow != abovePrev
+                    midCrossCount += 1
+
+        if curRun > maxRun
+            maxRun := curRun
+
+        // Reject extreme-breach windows immediately
+        float wickPen = math.min(breachSum / float(w), 1.0)
+        if wickPen > 0.85
+            continue
+
+        float netDisp     = math.abs(close[1] - close[w])
+        float meanRange   = sumRanges  / float(w)
+        float meanRangeSq = sumRangeSq / float(w)
+        float rangeVar    = math.max(meanRangeSq - meanRange * meanRange, 0.0)
+        float rangeStdDev = math.sqrt(rangeVar)
+
+        // ── Parameter-independent score components ─────────────────────────
+        float runPen     = math.min(float(maxRun) / float(maxConsecDir), 1.0)
+        float oscScore   = math.min(float(dirChgs) / math.max(float(w - 1) * 0.5, 1.0), 1.0)
+        float noiseScore = 1.0 - math.min(netDisp / (pathLen + 1e-9), 1.0)
+        float boundScore = math.min(float(topTch + botTch) / math.max(float(w) * 0.4, 1.0), 1.0)
+
+        // ── Internal Volatility Penalty ────────────────────────────────────
+        float atrStart    = atrMain[w]
+        float atrEnd      = atrMain[1]
+        float atrDriftR   = atrEnd / math.max(atrStart, 1e-9)
+        float atrDriftPen = math.min(
+             math.max(atrDriftR - atrDriftThresh, 0.0) /
+             math.max(atrDriftThresh - 1.0, 0.001), 1.0)
+        float rangeUnifPen = math.min(rangeStdDev / math.max(rangeH, 1e-9), 1.0)
+        float preBoxATR    = atrMain[w + 1]
+        float comprRatio   = meanRange / math.max(preBoxATR, 1e-9)
+        float comprPen     = math.min(math.max(comprRatio - 0.8, 0.0) / 0.7, 1.0)
+        float wickChaosPen = math.min(float(wickChaos) / math.max(float(w) * 0.5, 1.0), 1.0)
+        float internalVolPen = (atrDriftPen + rangeUnifPen + comprPen + wickChaosPen) * 0.25
+
+        // ── Path Quality Bonus ─────────────────────────────────────────────
+        float pathRatio    = pathLen / math.max(netDisp, rangeH * 0.01)
+        float smoothScore  = math.min(pathRatio / math.max(pathSmoothRef, 1.0), 1.0)
+        float midCrossFrac = float(midCrossCount) / math.max(float(w - 1), 1.0)
+        float midRevScore  = math.min(midCrossFrac / math.max(midCrossMin * 2.0, 0.001), 1.0)
+        int   totalMoves   = upMoves + dnMoves
+        float entropySc    = totalMoves > 0 ?
+             1.0 - float(math.abs(upMoves - dnMoves)) / float(totalMoves) : 0.5
+        float pathBonus    = (smoothScore + midRevScore + entropySc) * 0.3333 * pathQualWt
+
+        // ── FVG Penalty ────────────────────────────────────────────────────
+        float fvgPen = 0.0
+        for k = 1 to w - 2
+            float bodyMid = math.abs(close[k + 1] - open[k + 1])
+            bool  bullFg  = low[k]  > high[k + 2]
+            bool  bearFg  = high[k] < low[k + 2]
+            if bullFg or bearFg
+                float fvgSz = bullFg ? low[k] - high[k + 2] : low[k + 2] - high[k]
+                if fvgSz >= bodyMid * 0.35
+                    fvgPen := 1.5
+                    break
+
+        // ── Internal Impulse Penalty (capped at −2.0) ─────────────────────
+        float impulsePen = math.min(float(internalImpulses) * 2.5, 2.0)
+
+        // ── Base Score ────────────────────────────────────────────────────
+        float baseScore = oscScore       * 2.0 +
+                          boundScore     * 1.5 +
+                          noiseScore     * 1.0 +
+                          pathBonus            -
+                          runPen         * 2.0 -
+                          wickPen        * 3.0 -
+                          internalVolPen * volPenWt -
+                          fvgPen               -
+                          impulsePen
+
+        // ══════════════════════════════════════════════════════════════════
+        // PHASE B — PARAMETER MICRO-SEARCH  (9 combos)
+        // ══════════════════════════════════════════════════════════════════
+        for pi = 0 to 2
+            float curAS     = pi == 0 ? as0 : pi == 1 ? as1 : as2
+            float compScore = 1.0 - math.min(rangeH / (atrMain * curAS), 1.0)
+
+            for pj = 0 to 2
+                float curND   = pj == 0 ? nd0 : pj == 1 ? nd1 : nd2
+                float dispPen = math.min((netDisp / rangeH) / curND, 1.0)
+                float score   = baseScore + compScore * 3.5 - dispPen * 2.0
+
+                if score >= i_scoreThresh and score > gBestScore
+                    gBestScore := score
+                    gBestW     := w
+                    gBestHi    := wHi
+                    gBestLo    := wLo
+                    gBestComp  := compScore
+                    gBestDisp  := dispPen
+                    gBestEff   := noiseScore
+                    gBestBound := boundScore
+
+    // ════════════════════════════════════════════════════════════════════════
+    // PHASE C — ACTIVATE WINNING CANDIDATE
+    // ════════════════════════════════════════════════════════════════════════
+    if gBestW >= i_minBars
+        int   wLeft  = bar_index - gBestW
+        int   wRight = bar_index - 1
+        float wTop   = gBestHi
+        float wBot   = gBestLo
+
+        // Classification
+        string boxType = "LOOSE"
+        if gBestComp > 0.65 and gBestBound > 0.45
+            boxType := "TIGHT"
+        else if gBestDisp > 0.55 and gBestEff < 0.35
+            boxType := "DRIFT"
+
+        color bgCol = switch boxType
+            "TIGHT" => i_colTightBg
+            "DRIFT" => i_colDriftBg
+            =>         i_colLooseBg
+        color bdCol = switch boxType
+            "TIGHT" => i_colTightBd
+            "DRIFT" => i_colDriftBd
+            =>         i_colLooseBd
+
+        float scoreRnd = math.round(gBestScore * 100.0) / 100.0
+
+        box newBox = box.new(
+             left         = wLeft,
+             top          = wTop,
+             right        = bar_index,
+             bottom       = wBot,
+             border_color = bdCol,
+             bgcolor      = bgCol,
+             border_width = 1,
+             xloc         = xloc.bar_index,
+             extend       = extend.none
+        )
+
+        label newLbl = na
+        if i_showLabels
+            string lbTxt = boxType + " [" + regimeName + "]" +
+                           (i_showScore ? " (" + str.tostring(scoreRnd) + ")" : "")
+            newLbl := label.new(
+                 x         = wLeft,
+                 y         = wTop,
+                 text      = lbTxt,
+                 color     = color.new(bdCol, 80),
+                 textcolor = bdCol,
+                 style     = label.style_label_right,
+                 size      = size.tiny,
+                 xloc      = xloc.bar_index
+            )
+
+        array.push(boxLeft,   wLeft)
+        array.push(boxRight,  bar_index)
+        array.push(boxTop,    wTop)
+        array.push(boxBottom, wBot)
+        array.push(boxScore,  gBestScore)
+        array.push(boxActive, true)
+        array.push(boxObj,    newBox)
+        array.push(boxLbl,    newLbl)
+
+        // Cap arrays at 500
+        if array.size(boxActive) > 500
+            array.shift(boxLeft)
+            array.shift(boxRight)
+            array.shift(boxTop)
+            array.shift(boxBottom)
+            array.shift(boxScore)
+            array.shift(boxActive)
+            box oldBox = array.shift(boxObj)
+            if not na(oldBox)
+                box.delete(oldBox)
+            label oldLbl = array.shift(boxLbl)
+            if not na(oldLbl)
+                label.delete(oldLbl)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ STEP 3 — HTF BOX OVERLAY
+//
+//  Draws consolidation boxes from each selected higher timeframe directly
+//  on the LTF chart.  Each box carries a timeframe label at its bottom-right
+//  corner (label.style_label_lower_right places the anchor at the lower-right
+//  of the label, so text appears inside the box at the bottom-right corner).
+//
+//  State machine per HTF:
+//    • htfIsConsolidating = true  → create or extend the live box
+//    • htfIsConsolidating = false → close the live box (preserve as historical)
+//      Next consolidation episode will create a fresh box.
+//
+//  Historical HTF boxes remain on the chart with extend = extend.none.
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── HTF 1 box management ──────────────────────────────────────────────────────
+if i_htf1Enable
+    if htf1IsConsolidating
+        if na(htf1ActiveBox)
+            // Begin a new HTF1 consolidation box
+            htf1ActiveBox := box.new(
+                 left         = bar_index,
+                 top          = htf1Hi,
+                 right        = bar_index,
+                 bottom       = htf1Lo,
+                 border_color = i_htf1BdColor,
+                 bgcolor      = i_htf1BgColor,
+                 border_width = 1,
+                 xloc         = xloc.bar_index,
+                 extend       = extend.none
+            )
+            htf1ActiveLbl := label.new(
+                 x         = bar_index,
+                 y         = htf1Lo,
+                 text      = i_htf1,
+                 color     = color.new(i_htf1BdColor, 60),
+                 textcolor = i_htf1BdColor,
+                 style     = label.style_label_lower_right,
+                 size      = size.small,
+                 xloc      = xloc.bar_index
+            )
+        else
+            // Extend and update the live HTF1 box
+            box.set_right  (htf1ActiveBox, bar_index)
+            box.set_top    (htf1ActiveBox, htf1Hi)
+            box.set_bottom (htf1ActiveBox, htf1Lo)
+            label.set_x    (htf1ActiveLbl, bar_index)
+            label.set_y    (htf1ActiveLbl, htf1Lo)
+    else
+        // Consolidation ended — preserve box as historical, reset state
+        htf1ActiveBox := na
+        htf1ActiveLbl := na
+
+// ── HTF 2 box management ──────────────────────────────────────────────────────
+if i_htf2Enable
+    if htf2IsConsolidating
+        if na(htf2ActiveBox)
+            htf2ActiveBox := box.new(
+                 left         = bar_index,
+                 top          = htf2Hi,
+                 right        = bar_index,
+                 bottom       = htf2Lo,
+                 border_color = i_htf2BdColor,
+                 bgcolor      = i_htf2BgColor,
+                 border_width = 1,
+                 xloc         = xloc.bar_index,
+                 extend       = extend.none
+            )
+            htf2ActiveLbl := label.new(
+                 x         = bar_index,
+                 y         = htf2Lo,
+                 text      = i_htf2,
+                 color     = color.new(i_htf2BdColor, 60),
+                 textcolor = i_htf2BdColor,
+                 style     = label.style_label_lower_right,
+                 size      = size.small,
+                 xloc      = xloc.bar_index
+            )
+        else
+            box.set_right  (htf2ActiveBox, bar_index)
+            box.set_top    (htf2ActiveBox, htf2Hi)
+            box.set_bottom (htf2ActiveBox, htf2Lo)
+            label.set_x    (htf2ActiveLbl, bar_index)
+            label.set_y    (htf2ActiveLbl, htf2Lo)
+    else
+        htf2ActiveBox := na
+        htf2ActiveLbl := na
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ REGIME STATUS LABEL  (last bar only)
+// ════════════════════════════════════════════════════════════════════════════
+
+if i_showRegime and barstate.islast
+    if not na(regimeLbl)
+        label.delete(regimeLbl)
+    float rankRnd = na(atrPctRank) ? 0.0 : math.round(atrPctRank * 10.0)  / 10.0
+    float persRnd = na(dirPersist) ? 0.0 : math.round(dirPersist * 1000.0) / 1000.0
+    float bp95Rnd = na(bodyPct95)  ? 0.0 : math.round(bodyPct95  * 100.0)  / 100.0
+    float rp95Rnd = na(rangePct95) ? 0.0 : math.round(rangePct95 * 100.0)  / 100.0
+    string lblText = "APEX v3.1 | " + regimeName       +
+                     "\nATR Rank: "    + str.tostring(rankRnd) + "%" +
+                     "\nDir Persist: " + str.tostring(persRnd)       +
+                     "\nBody P95: "    + str.tostring(bp95Rnd)       +
+                     "\nRange P95: "   + str.tostring(rp95Rnd)       +
+                     "\nCooldown: "    + str.tostring(barsSinceImpulse) + " bars"
+    regimeLbl := label.new(
+         x         = bar_index + 2,
+         y         = high,
+         text      = lblText,
+         color     = color.new(regimeCol, 65),
+         textcolor = regimeCol,
+         style     = label.style_label_left,
+         size      = size.small,
+         xloc      = xloc.bar_index
+    )

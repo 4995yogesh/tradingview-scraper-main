@@ -1,0 +1,561 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Consolidation Boxes — Pine Script v6
+//
+// Faithful port of consolidation_boxes() in:
+//   Trading-Project/project/indicators/consolidation.py
+//
+// Logic preserved exactly:
+//   • 3-bar pivot swing-high / swing-low detection
+//   • FVG (Fair Value Gap) blocker
+//   • IST midnight filter  (UTC+5:30, hours 00:00–05:59)
+//   • 5-candle formation-phase expansion, then range lock
+//   • Box terminates one candle BEFORE the breakout close
+//   • On termination top/bottom = actual max-high / min-low over the box span
+//   • Classification:  TIGHT / DRIFT / LOOSE
+//   • Score = touches×0.5 + efficiency×3.0 − bias×2.0
+// ─────────────────────────────────────────────────────────────────────────────
+//@version=6
+indicator("Consolidation Boxes", overlay = true,
+          max_boxes_count  = 500,
+          max_labels_count = 500)
+
+// ── Increase look-back buffer so inner loops can access deep history ──────────
+max_bars_back(close, 1000)
+max_bars_back(high,  1000)
+max_bars_back(low,   1000)
+max_bars_back(open,  1000)
+
+// ════════════════════════════════════════════════════════════════════════════
+// INPUTS
+// ════════════════════════════════════════════════════════════════════════════
+i_minBars     = input.int  (6,    "Min Bars",               minval = 2,   maxval = 100)
+i_fvgThresh   = input.float(0.4,  "FVG Threshold",          minval = 0.0, maxval = 1.0, step = 0.05)
+i_timeFilter  = input.bool (true, "Filter IST Midnight (00:00–05:59)")
+i_showLabels  = input.bool (true, "Show Type Labels")
+i_showScore   = input.bool (true, "Show Score in Label")
+
+// ── Trending-box rejection gates ─────────────────────────────────────────────
+// Gate 1: reject if ≥ N consecutive closes move in the same direction
+i_maxConsecDir = input.int  (3,    "Max Consecutive Directional Closes",
+                              minval = 2, maxval = 20,
+                              tooltip = "Reject box if this many consecutive closes are all lower (or all higher) than the prior close. Catches staircase downtrends / uptrends masquerading as consolidation.")
+// Gate 2: reject if net close-to-close move exceeds X% of the box height
+i_maxNetMove   = input.float(0.75, "Max Net Displacement Ratio  (0–1)",
+                              minval = 0.1, maxval = 1.0, step = 0.05,
+                              tooltip = "Reject box if |close_last − close_first| / box_height > this value. E.g. 0.60 means price traversed 60%+ of the range directionally — not a consolidation.")
+
+// Box colours
+i_colTightBg  = input.color(color.new(color.green,  85), "TIGHT Fill",   group = "Colors")
+i_colLooseBg  = input.color(color.new(#FF6D00,      85), "LOOSE Fill",   group = "Colors")
+i_colDriftBg  = input.color(color.new(color.red,    85), "DRIFT Fill",   group = "Colors")
+i_colTightBd  = input.color(color.new(color.green,   0), "TIGHT Border", group = "Colors")
+i_colLooseBd  = input.color(color.new(#FF6D00,       0), "LOOSE Border", group = "Colors")
+i_colDriftBd  = input.color(color.new(color.red,     0), "DRIFT Border", group = "Colors")
+
+// ── ATR Cluster Detector ─────────────────────────────────────────────────────
+// Catches flat zones the swing-pivot detector misses (e.g. after FVG-heavy drops)
+i_clEnable    = input.bool (true,  "Enable Cluster Detector",                            group = "Cluster Detector")
+i_clMinBars   = input.int  (4,     "Min Bars in Cluster",    minval = 3,  maxval = 50,   group = "Cluster Detector")
+i_clMaxBars   = input.int  (20,    "Max Look-Back Window",   minval = 5,  maxval = 100,  group = "Cluster Detector")
+i_clAtrMult   = input.float(1.2,   "Max Range (× ATR 14)",   minval = 0.1, maxval = 5.0, step = 0.05, group = "Cluster Detector",
+                             tooltip = "Consolidation zone is accepted if highest_high - lowest_low < this multiplier × ATR(14). Lower = tighter zones only.")
+i_clMaxCDir   = input.int  (3,     "Max Consec Dir Closes",  minval = 2,  maxval = 20,   group = "Cluster Detector",
+                             tooltip = "Rejects zone if this many consecutive closes move monotonically. Protects against disguised trends.")
+i_clMaxNet    = input.float(0.75,  "Max Net Displacement",   minval = 0.1, maxval = 1.0, step = 0.05, group = "Cluster Detector",
+                             tooltip = "Rejects zone if |close_last-close_first| / zone_height > this value. Protects against price drift.")
+i_clBg        = input.color(color.new(#006D75, 85),  "Consolidation Fill",   group = "Cluster Detector")
+i_clBd        = input.color(color.new(#00BCD4,  0),  "Consolidation Border", group = "Cluster Detector")
+
+// ════════════════════════════════════════════════════════════════════════════
+// IST MIDNIGHT FILTER
+// Python: isBlockedTime = use_time_filter and (0 <= hour_arr[i] < 6)
+// IST    = UTC + 5 h 30 m  = UTC + 19 800 000 ms
+// ════════════════════════════════════════════════════════════════════════════
+_istHour() =>
+    int istMs = int(time) + 19800000
+    int(istMs / 3600000) % 24
+
+isBlockedTime = i_timeFilter ? _istHour() < 6 : false
+
+// ════════════════════════════════════════════════════════════════════════════
+// PER-BAR SIGNALS
+// Mapping: Python index i → Pine bar_index (current bar)
+//          i-1  → [1] (1 bar ago)
+//          i-2  → [2] (2 bars ago)
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── 3-bar pivot swings ────────────────────────────────────────────────────
+// Python: isSwingHigh = h1 > h2 and h1 >= h    (h=high[i], h1=high[i-1], h2=high[i-2])
+// Python: isSwingLow  = l1 < l2 and l1 <= l
+isSwingHigh = high[1] > high[2] and high[1] >= high
+isSwingLow  = low[1]  < low[2]  and low[1]  <= low
+
+// ── Fair Value Gap ────────────────────────────────────────────────────────
+// Python: bullishFVG = l > h2   (l=low[i], h2=high[i-2])
+//         bearishFVG = h < l2   (h=high[i], l2=low[i-2])
+bullishFVG  = low   > high[2]
+bearishFVG  = high  < low[2]
+bullFvgSize = bullishFVG ? low  - high[2] : 0.0
+bearFvgSize = bearishFVG ? low[2] - high  : 0.0
+bodySize    = math.abs(close - open)
+smallBull   = bullishFVG and bullFvgSize < bodySize * i_fvgThresh
+smallBear   = bearishFVG and bearFvgSize < bodySize * i_fvgThresh
+validFVG    = (bullishFVG and not smallBull) or (bearishFVG and not smallBear)
+
+// ════════════════════════════════════════════════════════════════════════════
+// STATE  (var = persists across bars, mirrors Python loop variables)
+// Python initialises all of these before the for-loop.
+// ════════════════════════════════════════════════════════════════════════════
+var bool  searchingSwings = true
+var int   anchorIndex     = 0
+var bool  gotSwingHigh    = false
+var bool  gotSwingLow     = false
+var float swingHighVal    = na
+var float swingLowVal     = na
+var int   firstSwingIndex = na     // absolute bar_index of first pivot bar
+var bool  active          = false
+var box   activeBox       = na
+var float rangeTop        = na
+var float rangeBottom     = na
+var bool  fvgBlocked      = false
+var bool  boxStarted      = false
+var int   activeBoxStart  = na     // absolute bar_index of box start (= firstSwingIndex at activation)
+var int   clLastRight     = na     // right edge of last drawn cluster box (prevents overlap re-trigger)
+var int   clLastLeft      = na     // left edge of last drawn cluster box
+var float clLastTop       = na     // top price of last drawn cluster
+var float clLastBottom    = na     // bottom price of last drawn cluster
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 1 — ACTIVE BOX: EXTEND OR TERMINATE
+//
+// Python:
+//   if active:
+//       if c > rangeTop or c < rangeBottom or isBlockedTime:
+//           activeBox["end"]    = i - 1
+//           activeBox["top"]    = high_arr[start:end+1].max()
+//           activeBox["bottom"] = low_arr[start:end+1].min()
+//           boxes.append(activeBox)
+//           … reset …
+//       else:
+//           age = i - activeBox["start"] + 1
+//           if age <= 5:
+//               expand rangeTop / rangeBottom
+//           activeBox["end"]    = i
+//           activeBox["top"]    = rangeTop
+//           activeBox["bottom"] = rangeBottom
+// ════════════════════════════════════════════════════════════════════════════
+if active
+    if close > rangeTop or close < rangeBottom or isBlockedTime
+        // ── Terminate: box ends at bar_index - 1 (one before breakout) ──
+        // Python recalculates top/bottom as actual max-high / min-low over
+        // the full box span (high_arr[start : end+1].max() etc.)
+        if not na(activeBox)
+            int   dist      = bar_index - activeBoxStart   // offset to box start
+            float actualTop = rangeTop
+            float actualBot = rangeBottom
+            // Scan bOff = 1 (= bar_index-1) … dist (= activeBoxStart)
+            for bOff = 1 to dist
+                if high[bOff] > actualTop
+                    actualTop := high[bOff]
+                if low[bOff] < actualBot
+                    actualBot := low[bOff]
+            box.set_top   (activeBox, actualTop)
+            box.set_bottom(activeBox, actualBot)
+            box.set_right (activeBox, bar_index - 1)   // end = i - 1
+
+        // Reset all state (Python resets after appending)
+        active          := false
+        activeBox       := na
+        rangeTop        := na
+        rangeBottom     := na
+        searchingSwings := true
+        boxStarted      := false
+        gotSwingHigh    := false
+        gotSwingLow     := false
+        swingHighVal    := na
+        swingLowVal     := na
+        firstSwingIndex := na
+        anchorIndex     := bar_index        // anchorIndex = i
+
+    else
+        // ── Extend ──
+        // Python: age = i - activeBox["start"] + 1
+        int age = bar_index - activeBoxStart + 1
+        // LOCK: only expand range during formation phase (first 5 candles)
+        if age <= 5
+            if high > rangeTop
+                rangeTop := high
+                if not na(activeBox)
+                    box.set_top(activeBox, rangeTop)
+            if low < rangeBottom
+                rangeBottom := low
+                if not na(activeBox)
+                    box.set_bottom(activeBox, rangeBottom)
+        // Always push the right edge forward (activeBox["end"] = i)
+        if not na(activeBox)
+            box.set_right(activeBox, bar_index)
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 2 — RESET STATE IN BLOCKED TIME  (not active)
+//
+// Python:
+//   if not active and isBlockedTime:
+//       anchorIndex = i; gotSwingHigh = gotSwingLow = False; …
+//       continue          ← skips the rest of the loop body
+// ════════════════════════════════════════════════════════════════════════════
+if not active and isBlockedTime
+    anchorIndex     := bar_index
+    gotSwingHigh    := false
+    gotSwingLow     := false
+    swingHighVal    := na
+    swingLowVal     := na
+    firstSwingIndex := na
+    rangeTop        := na
+    rangeBottom     := na
+    fvgBlocked      := false
+    boxStarted      := false
+    // (the `continue` in Python is implicit here — the rest of the steps
+    //  are inside `if not isBlockedTime` guards, so no further action.)
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 3 — FVG BLOCKER
+//
+// Python: if not boxStarted and validFVG and not isBlockedTime:
+//             fvgBlocked = True
+// ════════════════════════════════════════════════════════════════════════════
+if not boxStarted and validFVG and not isBlockedTime
+    fvgBlocked := true
+
+// ════════════════════════════════════════════════════════════════════════════
+// STEP 4 — SEARCH PHASE
+//
+// Python:
+//   if searchingSwings and not active and i > anchorIndex and not isBlockedTime:
+//       swingBarIndex = i - 1
+//       if swingBarIndex > anchorIndex:
+//           collect pivots …
+//       if fvgBlocked:        … flush …; continue
+//       elif gotSH and gotSL and firstSwingIndex is not None:
+//           inner for-j validation loop
+//           if all_inside and count >= min_bars:
+//               activate box, classify, score
+// ════════════════════════════════════════════════════════════════════════════
+if searchingSwings and not active and bar_index > anchorIndex and not isBlockedTime
+
+    // ── Collect swing pivots ──────────────────────────────────────────────
+    // Python: swingBarIndex = i - 1   (the confirmed pivot bar is always [1])
+    int swingBarIndex = bar_index - 1
+
+    if swingBarIndex > anchorIndex
+        // Python: if not gotSwingHigh and isSwingHigh: gotSwingHigh = True; swingHighVal = h1
+        if not gotSwingHigh and isSwingHigh
+            gotSwingHigh    := true
+            swingHighVal    := high[1]          // h1 = high[i-1]
+            if na(firstSwingIndex)
+                firstSwingIndex := swingBarIndex
+
+        // Python: if not gotSwingLow and isSwingLow: gotSwingLow = True; swingLowVal = l1
+        if not gotSwingLow and isSwingLow
+            gotSwingLow     := true
+            swingLowVal     := low[1]           // l1 = low[i-1]
+            if na(firstSwingIndex)
+                firstSwingIndex := swingBarIndex
+
+    // ── FVG blocker: flush and skip validation (Python `continue`) ────────
+    if fvgBlocked
+        anchorIndex     := bar_index
+        gotSwingHigh    := false
+        gotSwingLow     := false
+        swingHighVal    := na
+        swingLowVal     := na
+        firstSwingIndex := na
+        rangeTop        := na
+        rangeBottom     := na
+        fvgBlocked      := false
+        // No explicit `continue` needed — the else-if below handles branching.
+
+    // ── Validate potential box ────────────────────────────────────────────
+    // Python: elif gotSwingHigh and gotSwingLow and firstSwingIndex is not None:
+    else if gotSwingHigh and gotSwingLow and not na(firstSwingIndex)
+
+        // span = (i - firstSwingIndex + 1) = number of candles in potential box
+        int   span      = bar_index - firstSwingIndex + 1
+        float tempHigh  = swingHighVal
+        float tempLow   = swingLowVal
+        int   cnt       = 0
+        bool  allInside = true
+
+        // Python: for j in range(firstSwingIndex, i + 1):
+        //             pos_in_box = j - firstSwingIndex + 1
+        //             check close_arr[j] …
+        //
+        // Pine mapping: k = j - firstSwingIndex  →  j = firstSwingIndex + k
+        //   offset from current bar = bar_index - j = bar_index - firstSwingIndex - k
+        //                           = (span - 1) - k
+        //   k = 0  → farthest bar (firstSwingIndex),  offset = span - 1
+        //   k = span-1 → current bar (bar_index),     offset = 0
+        for k = 0 to span - 1
+            int   bOff    = span - 1 - k   // Pine look-back offset
+            int   posInBox = k + 1          // Python: pos_in_box = j - firstSwingIndex + 1
+
+            float ck = close[bOff]
+            float hk = high[bOff]
+            float lk = low[bOff]
+
+            // Python: if tempLow <= close_arr[j] <= tempHigh:
+            if tempLow <= ck and ck <= tempHigh
+                // Expansion allowed only during formation phase (first 5 candles)
+                // Python: if pos_in_box <= 5:
+                if posInBox <= 5
+                    if lk < tempLow
+                        tempLow  := lk
+                    if hk > tempHigh
+                        tempHigh := hk
+                cnt += 1
+            else
+                // Python: all_inside = False; break
+                allInside := false
+                break
+
+        // ── Box confirmed ─────────────────────────────────────────────────
+        if allInside and cnt >= i_minBars
+
+            // ── GATE 1: Max consecutive directional closes ─────────────────
+            // A true consolidation oscillates; a trend runs monotonically.
+            // Walk the box chronologically (k=0 = firstSwingIndex, k=span-1 = current).
+            // Track the longest unbroken run of same-direction closes.
+            int  maxRun     = 0
+            int  curRun     = 0
+            int  curDir     = 0   // +1 = up run, -1 = down run, 0 = flat/first
+            for k = 1 to span - 1
+                int   bOffPrev = span - 1 - (k - 1)   // close[k-1] in box
+                int   bOffCurr = span - 1 - k          // close[k]   in box
+                float cPrev    = close[bOffPrev]
+                float cCurr    = close[bOffCurr]
+                int   dir      = cCurr < cPrev ? -1 : cCurr > cPrev ? 1 : 0
+                if dir != 0
+                    if dir == curDir
+                        curRun += 1
+                    else
+                        curRun := 1
+                        curDir := dir
+                    if curRun > maxRun
+                        maxRun := curRun
+                else
+                    curRun := 0
+
+            // ── GATE 2: Net displacement ratio ────────────────────────────
+            // |close_last − close_first| / box_height
+            // close_last  = close[0]       (current bar = last bar of box)
+            // close_first = close[span-1]  (firstSwingIndex)
+            float netMove    = math.abs(close - close[span - 1])
+            float netMoveRng = tempHigh - tempLow   // use expanded range from validation
+            float netRatio   = netMoveRng > 0 ? netMove / netMoveRng : 0.0
+
+            bool  trendingBox = maxRun >= i_maxConsecDir or netRatio > i_maxNetMove
+
+            // Only activate and draw if NOT a disguised trend
+            if not trendingBox
+
+                swingHighVal    := tempHigh
+                swingLowVal     := tempLow
+                rangeTop        := swingHighVal
+                rangeBottom     := swingLowVal
+                active          := true
+                searchingSwings := false
+                boxStarted      := true
+                activeBoxStart  := firstSwingIndex
+
+                // ── Classification & Scoring ──────────────────────────────
+                float rng_v = rangeTop - rangeBottom
+
+                float tightness    = rng_v / (close + 1e-9)
+                float displacement = math.abs(close - close[span - 1])
+
+                float pathLen = 0.0
+                for k = 0 to span - 2
+                    int bOff1 = span - 1 - k
+                    int bOff2 = span - 2 - k
+                    pathLen  += math.abs(close[bOff1] - close[bOff2])
+                pathLen += 1e-9
+
+                float efficiency = displacement / pathLen
+
+                float bodySum = 0.0
+                for k = 0 to span - 1
+                    int bOff = span - 1 - k
+                    bodySum += math.abs(close[bOff] - open[bOff])
+                float bodyAvg = bodySum / span
+
+                float bias = bodyAvg / (rng_v + 1e-9)
+
+                float touchThresh = rng_v * 0.05
+                int   touches     = 0
+                for k = 0 to span - 1
+                    int bOff = span - 1 - k
+                    if rangeTop - high[bOff] < touchThresh
+                        touches += 1
+                    if low[bOff] - rangeBottom < touchThresh
+                        touches += 1
+
+                float score = float(touches) * 0.5 + efficiency * 3.0 - bias * 2.0
+                score       := math.round(score * 100.0) / 100.0
+
+                string boxType = "LOOSE"
+                if tightness < 0.005 and touches >= 4
+                    boxType := "TIGHT"
+                else if efficiency < 0.4 and bias > 0.3
+                    boxType := "DRIFT"
+
+                color bgCol = switch boxType
+                    "TIGHT" => i_colTightBg
+                    "DRIFT" => i_colDriftBg
+                    =>         i_colLooseBg
+                color bdCol = switch boxType
+                    "TIGHT" => i_colTightBd
+                    "DRIFT" => i_colDriftBd
+                    =>         i_colLooseBd
+
+                activeBox := box.new(
+                     left         = firstSwingIndex,
+                     top          = rangeTop,
+                     right        = bar_index,
+                     bottom       = rangeBottom,
+                     border_color = bdCol,
+                     bgcolor      = bgCol,
+                     border_width = 1,
+                     xloc         = xloc.bar_index,
+                     extend       = extend.none
+                )
+
+                if i_showLabels
+                    string scoreStr = i_showScore ? " (" + str.tostring(score) + ")" : ""
+                    label.new(
+                         x         = firstSwingIndex,
+                         y         = rangeTop,
+                         text      = boxType + scoreStr,
+                         color     = color.new(bdCol, 80),
+                         textcolor = bdCol,
+                         style     = label.style_label_right,
+                         size      = size.tiny,
+                         xloc      = xloc.bar_index
+                    )
+
+// ══════════════════════════════════════════════════════════════════════════════
+// STEP 5 — CONSOLIDATION ZONE DETECTOR (ATR-based flat area identifier)
+//
+// Scores every valid closed-candle window and draws the best one instead of
+// greedily accepting the largest qualifying window. This keeps the output more
+// stable when a sensitivity input changes by one step.
+// ══════════════════════════════════════════════════════════════════════════════
+// Calculate ATR at root level so it executes on every bar
+float atr14 = ta.atr(14)
+
+if i_clEnable and not active and not isBlockedTime
+
+    int   bestN     = 0
+    float bestHi    = na
+    float bestLo    = na
+    float bestScore = na
+
+    for n = i_clMinBars to i_clMaxBars
+        float wHi = high[1]   // Start from [1] (1 bar ago, closed)
+        float wLo = low[1]
+        for idx = 2 to n      // Check indices 2 to n (all closed candles)
+            if high[idx] > wHi
+                wHi := high[idx]
+            if low[idx] < wLo
+                wLo := low[idx]
+        float wHt = wHi - wLo
+        if wHt > 0 and wHt < atr14 * i_clAtrMult
+            int clStartCandidate = bar_index - n
+            int clEndCandidate   = bar_index - 1
+
+            bool timeOverlap  = not na(clLastLeft) and not na(clLastRight) and clStartCandidate <= clLastRight and clEndCandidate >= clLastLeft
+            bool priceOverlap = not na(clLastTop) and not na(clLastBottom) and wHi >= clLastBottom and wLo <= clLastTop
+            bool overlapsLast = timeOverlap and priceOverlap
+
+            if not overlapsLast
+                int clMaxRun = 0
+                int clCurRun = 0
+                int clCurDir = 0
+                for k = 1 to n - 1
+                    float cp = close[n - (k - 1)]
+                    float cc = close[n - k]
+                    int dd = cc < cp ? -1 : cc > cp ? 1 : 0
+                    if dd != 0
+                        if dd == clCurDir
+                            clCurRun += 1
+                        else
+                            clCurRun := 1
+                            clCurDir := dd
+                        if clCurRun > clMaxRun
+                            clMaxRun := clCurRun
+                    else
+                        clCurRun := 0
+
+                float clNet   = math.abs(close[1] - close[n])
+                float clRatio = clNet / wHt
+
+                bool clTrending = clMaxRun >= i_clMaxCDir or clRatio > i_clMaxNet
+
+                if not clTrending
+                    float touchThresh = wHt * 0.10
+                    int clTouches = 0
+                    for k = 1 to n
+                        if wHi - high[k] <= touchThresh
+                            clTouches += 1
+                        if low[k] - wLo <= touchThresh
+                            clTouches += 1
+
+                    float clPath = 0.0
+                    for k = 1 to n - 1
+                        clPath += math.abs(close[k] - close[k + 1])
+
+                    float clEfficiency = clPath > 0 ? clNet / clPath : 1.0
+                    float compactness  = 1.0 - math.min(wHt / (atr14 * i_clAtrMult), 1.0)
+                    float oscillation  = 1.0 - math.min(clRatio, 1.0)
+                    float runPenalty   = float(clMaxRun) / float(i_clMaxCDir)
+                    float clScore      = compactness * 3.0 + oscillation * 2.0 + float(clTouches) * 0.25 + float(n) * 0.05 - clEfficiency * 1.5 - runPenalty
+
+                    if na(bestScore) or clScore > bestScore
+                        bestScore := clScore
+                        bestN     := n
+                        bestHi    := wHi
+                        bestLo    := wLo
+
+    // ── Only proceed if a qualifying window was found ───────────────────────
+    if bestN >= i_clMinBars
+
+        int clStart = bar_index - bestN   // Only closed candles: n bars ago to 1 bar ago
+        int clEnd   = bar_index - 1       // Right edge = last closed candle (one before current)
+
+        box.new(
+             left         = clStart,
+             top          = bestHi,
+             right        = clEnd,
+             bottom       = bestLo,
+             border_color = i_clBd,
+             bgcolor      = i_clBg,
+             border_width = 1,
+             xloc         = xloc.bar_index,
+             extend       = extend.none
+        )
+
+        clLastLeft   := clStart
+        clLastRight  := clEnd
+        clLastTop    := bestHi
+        clLastBottom := bestLo
+
+        if i_showLabels
+            label.new(
+                 x         = clStart,
+                 y         = bestHi,
+                 text      = "CLUSTER",
+                 color     = color.new(i_clBd, 80),
+                 textcolor = i_clBd,
+                 style     = label.style_label_right,
+                 size      = size.tiny,
+                 xloc      = xloc.bar_index
+            )
+

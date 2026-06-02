@@ -1,10 +1,17 @@
 // API base URL – the FastAPI backend
 const API_BASE = "http://localhost:8000/api";
 
-// Generate realistic OHLCV candlestick data with timeframe support
+// Symbol config for the 7 major forex pairs (price display + symbolInfo)
 const SYMBOL_CONFIG = {
-  'EURUSD': { basePrice: 1.08, volatility: 0.005, name: 'EUR / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
+  'EURUSD': { basePrice: 1.08,  volatility: 0.005, name: 'EUR / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
+  'USDJPY': { basePrice: 149.5, volatility: 0.5,   name: 'USD / JPY', exchange: 'OANDA', type: 'Forex', currency: 'JPY' },
+  'GBPUSD': { basePrice: 1.27,  volatility: 0.006, name: 'GBP / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
+  'USDCHF': { basePrice: 0.895, volatility: 0.004, name: 'USD / CHF', exchange: 'OANDA', type: 'Forex', currency: 'CHF' },
+  'AUDUSD': { basePrice: 0.653, volatility: 0.004, name: 'AUD / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
+  'USDCAD': { basePrice: 1.361, volatility: 0.005, name: 'USD / CAD', exchange: 'OANDA', type: 'Forex', currency: 'CAD' },
+  'NZDUSD': { basePrice: 0.605, volatility: 0.004, name: 'NZD / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
 };
+
 
 // Timeframe config: bars to generate, interval in minutes
 const TF_CONFIG = {
@@ -66,10 +73,10 @@ export async function fetchWatchlist() {
 }
 
 function resolveSymbol(symbol) {
-  const map = {
-    EURUSD: { exchange: "OANDA", tvSymbol: "EURUSD" },
-  };
-  return map[symbol] || { exchange: "OANDA", tvSymbol: symbol };
+  // All forex pairs route through OANDA using the symbol as-is
+  const config = SYMBOL_CONFIG[symbol];
+  const exchange = config?.exchange || 'OANDA';
+  return { exchange, tvSymbol: symbol };
 }
 
 function generateCandlestickData(symbol = 'AAPL', days = 300, timeframe = '1d') {

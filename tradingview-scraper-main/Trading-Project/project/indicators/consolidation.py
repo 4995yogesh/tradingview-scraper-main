@@ -90,6 +90,8 @@ def consolidation_boxes(
     min_bars: int = 6,
     fvg_threshold: float = 0.4,
     use_time_filter: bool = True,
+    max_consec_dir: int = 4,
+    max_net_move: float = 0.60,
 ) -> pd.DataFrame:
     """Detect consolidation boxes.
     df must have columns ['open','high','low','close'] and datetime index.
@@ -97,6 +99,12 @@ def consolidation_boxes(
 
     Optimised: all OHLC data pre-extracted to numpy arrays so the hot loop
     does O(1) array indexing instead of slow pandas .iloc row access.
+
+    Trending-box rejection gates (applied after the close-inside validation):
+      max_consec_dir : reject if the longest run of consecutive same-direction
+                       closes >= this value (catches staircase trends).
+      max_net_move   : reject if |close[-1] - close[0]| / box_height > this
+                       value (catches directional traversal of the range).
     """
     n = len(df)
     if n < 3:
@@ -242,6 +250,34 @@ def consolidation_boxes(
                         break
 
                 if all_inside and current_count >= min_bars:
+                    # ── Trending-box rejection Gate 1: consecutive directional closes ──
+                    # Walk the validated span chronologically and find the longest
+                    # unbroken run of closes that move in the same direction.
+                    max_run = 0
+                    cur_run = 0
+                    cur_dir = 0  # +1 up, -1 down, 0 not yet set
+                    for j in range(firstSwingIndex + 1, i + 1):
+                        diff = close_arr[j] - close_arr[j - 1]
+                        if diff != 0:
+                            direction = 1 if diff > 0 else -1
+                            if direction == cur_dir:
+                                cur_run += 1
+                            else:
+                                cur_run = 1
+                                cur_dir = direction
+                            max_run = max(max_run, cur_run)
+                        else:
+                            cur_run = 0
+
+                    # ── Trending-box rejection Gate 2: net displacement ratio ──────
+                    # |close[-1] - close[0]| / box_height > max_net_move → trending
+                    box_height   = tempHigh - tempLow
+                    net_move     = abs(close_arr[i] - close_arr[firstSwingIndex])
+                    net_ratio    = (net_move / box_height) if box_height > 0 else 0.0
+
+                    trending_box = (max_run >= max_consec_dir) or (net_ratio > max_net_move)
+
+                if all_inside and current_count >= min_bars and not trending_box:
                     swingHighVal    = tempHigh
                     swingLowVal     = tempLow
                     rangeTop        = swingHighVal

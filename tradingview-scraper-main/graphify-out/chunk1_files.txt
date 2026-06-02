@@ -1,0 +1,8 @@
+Trading-Project\README.md
+Trading-Project\test_result.md
+Trading-Project\backend\requirements.txt
+Trading-Project\backend\data\quality_models\quality_lgb_v1.txt
+Trading-Project\backend\ml2\agent_system\constitution.md
+Trading-Project\frontend\README.md
+Trading-Project\project\requirements.txt
+Trading-Project\project\docs\frontend_integration.md

@@ -1,0 +1,1950 @@
+{
+  "nodes": [
+    {
+      "id": "readme_trading_project",
+      "label": "Trading Project Overview",
+      "file_type": "document",
+      "source_file": "Trading-Project/README.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "constitution_accuracy",
+      "label": "Accuracy over Speed Principle",
+      "file_type": "document",
+      "source_file": "Trading-Project/backend/ml2/agent_system/constitution.md",
+      "source_location": "L3-4",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "constitution_structural_realism",
+      "label": "Structural Realism (21-channel tensors)",
+      "file_type": "document",
+      "source_file": "Trading-Project/backend/ml2/agent_system/constitution.md",
+      "source_location": "L6-10",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "constitution_signal_noise",
+      "label": "Signal vs Noise (UNCERTAIN label)",
+      "file_type": "document",
+      "source_file": "Trading-Project/backend/ml2/agent_system/constitution.md",
+      "source_location": "L17-18",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "constitution_feedback_loop",
+      "label": "Validator Agent Feedback Loop",
+      "file_type": "document",
+      "source_file": "Trading-Project/backend/ml2/agent_system/constitution.md",
+      "source_location": "L20-22",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "test_result_report",
+      "label": "Model Test Results Report",
+      "file_type": "document",
+      "source_file": "Trading-Project/test_result.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "frontend_integration_doc",
+      "label": "Frontend Integration Documentation",
+      "file_type": "document",
+      "source_file": "Trading-Project/project/docs/frontend_integration.md",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "training_val_loss_chart",
+      "label": "Training vs Validation Loss Chart (Latest)",
+      "file_type": "image",
+      "source_file": "Trading-Project/backend/data/models/training_val_loss.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "training_val_loss_20260511_1703",
+      "label": "Training Loss Curve \u2014 May 11 17:03",
+      "file_type": "image",
+      "source_file": "Trading-Project/backend/data/models/training_val_loss_20260511_1703.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "training_val_loss_20260513_1854",
+      "label": "Training Loss Curve \u2014 May 13 18:54",
+      "file_type": "image",
+      "source_file": "Trading-Project/backend/data/models/training_val_loss_20260513_1854.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "model_a_heatmap",
+      "label": "Model A Segmentation Heatmap Visualization",
+      "file_type": "image",
+      "source_file": "Trading-Project/backend/scratch/model_a_heatmap.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "trading_project_frontend_src_components_chart_charttoolbar_jsx",
+      "label": "ChartToolbar.jsx",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartToolbar.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "charttoolbar_charttoolbar",
+      "label": "ChartToolbar()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartToolbar.jsx",
+      "source_location": "L18"
+    },
+    {
+      "id": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "label": "IndicatorPanel.jsx",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L1"
+    },
+    {
+      "id": "indicatorpanel_paneselector",
+      "label": "PaneSelector()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L61"
+    },
+    {
+      "id": "indicatorpanel_activeindicatorrow",
+      "label": "ActiveIndicatorRow()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L90"
+    },
+    {
+      "id": "indicatorpanel_cataloguecard",
+      "label": "CatalogueCard()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L129"
+    },
+    {
+      "id": "indicatorpanel_indicatorpanel",
+      "label": "IndicatorPanel()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L161"
+    },
+    {
+      "id": "trading_project_frontend_src_lib_swinglevels_js",
+      "label": "swingLevels.js",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L1"
+    },
+    {
+      "id": "swinglevels_normalizetimeforchart",
+      "label": "normalizeTimeForChart()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L84"
+    },
+    {
+      "id": "swinglevels_aggregatecandles",
+      "label": "aggregateCandles()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L101"
+    },
+    {
+      "id": "swinglevels_detectswings",
+      "label": "detectSwings()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L156"
+    },
+    {
+      "id": "swinglevels_isfilled",
+      "label": "isFilled()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L190"
+    },
+    {
+      "id": "swinglevels_updatemitigationstate",
+      "label": "updateMitigationState()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L200"
+    },
+    {
+      "id": "swinglevels_classifyswings",
+      "label": "classifySwings()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L218"
+    },
+    {
+      "id": "swinglevels_selectactiveswings",
+      "label": "selectActiveSwings()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L244"
+    },
+    {
+      "id": "swinglevels_enforcemaxlines",
+      "label": "enforceMaxLines()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L269"
+    },
+    {
+      "id": "swinglevels_gethighertfs",
+      "label": "getHigherTfs()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L299"
+    },
+    {
+      "id": "swinglevels_saveswingstomemory",
+      "label": "saveSwingsToMemory()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L323"
+    },
+    {
+      "id": "swinglevels_loadswingsfrommemory",
+      "label": "loadSwingsFromMemory()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L349"
+    },
+    {
+      "id": "swinglevels_exportswingsascsv",
+      "label": "exportSwingsAsCsv()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L367"
+    },
+    {
+      "id": "swinglevels_clearswingsfrommemory",
+      "label": "clearSwingsFromMemory()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L382"
+    },
+    {
+      "id": "trading_project_pipeline_init_py",
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\__init__.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "trading_project_pipeline_api_init_py",
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\api\\__init__.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "trading_project_pipeline_core_init_py",
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\core\\__init__.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "trading_project_pipeline_data_collector_py",
+      "label": "collector.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "collector_datacollector",
+      "label": "DataCollector",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L20"
+    },
+    {
+      "id": "collector_datacollector_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L26"
+    },
+    {
+      "id": "collector_datacollector_stream_task",
+      "label": "._stream_task()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L30"
+    },
+    {
+      "id": "collector_datacollector_start",
+      "label": ".start()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L87"
+    },
+    {
+      "id": "collector_datacollector_stop",
+      "label": ".stop()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L112"
+    },
+    {
+      "id": "collector_rationale_21",
+      "label": "Continuous WebSocket listener for multiple symbols.     Emits raw candle data i",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L21"
+    },
+    {
+      "id": "collector_rationale_31",
+      "label": "Runs the streaming generator in a synchronous thread loop with auto-reconnect.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L31"
+    },
+    {
+      "id": "trading_project_pipeline_data_db_py",
+      "label": "db.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "db_candledb",
+      "label": "CandleDB",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L26"
+    },
+    {
+      "id": "db_candledb_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L37"
+    },
+    {
+      "id": "db_candledb_conn",
+      "label": "._conn()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L45"
+    },
+    {
+      "id": "db_candledb_setup_schema",
+      "label": "._setup_schema()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L60"
+    },
+    {
+      "id": "db_candledb_upsert_candles",
+      "label": ".upsert_candles()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L94"
+    },
+    {
+      "id": "db_candledb_log_refresh",
+      "label": ".log_refresh()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L138"
+    },
+    {
+      "id": "db_candledb_get_candles",
+      "label": ".get_candles()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L149"
+    },
+    {
+      "id": "db_candledb_get_candles_since",
+      "label": ".get_candles_since()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L177"
+    },
+    {
+      "id": "db_candledb_get_latest_ts",
+      "label": ".get_latest_ts()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L185"
+    },
+    {
+      "id": "db_candledb_get_oldest_ts",
+      "label": ".get_oldest_ts()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L193"
+    },
+    {
+      "id": "db_candledb_count",
+      "label": ".count()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L201"
+    },
+    {
+      "id": "db_candledb_series_summary",
+      "label": ".series_summary()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L209"
+    },
+    {
+      "id": "db_rationale_1",
+      "label": "CandleDB \u2014 SQLite persistent store for OHLCV candle data.  Location: Trading-P",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "db_rationale_27",
+      "label": "Persistent SQLite store for OHLCV candle data.      Design choices:     - WAL",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L27"
+    },
+    {
+      "id": "db_rationale_46",
+      "label": "Return (or create) a thread-local SQLite connection.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L46"
+    },
+    {
+      "id": "db_rationale_61",
+      "label": "Create tables and indices if they don't already exist.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L61"
+    },
+    {
+      "id": "db_rationale_96",
+      "label": "Bulk insert-or-replace candles.          Accepts dicts in the following format",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L96"
+    },
+    {
+      "id": "db_rationale_139",
+      "label": "Record the wall-clock time of the last successful TV fetch.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L139"
+    },
+    {
+      "id": "db_rationale_153",
+      "label": "Return candles sorted ASCENDING by timestamp.         If count is given, return",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L153"
+    },
+    {
+      "id": "db_rationale_179",
+      "label": "Return all candles with ts >= since_ts, sorted ascending.         Used by the d",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L179"
+    },
+    {
+      "id": "db_rationale_186",
+      "label": "Most recent candle Unix timestamp, or None if no data exists.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L186"
+    },
+    {
+      "id": "db_rationale_194",
+      "label": "Oldest candle Unix timestamp, or None if no data exists.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L194"
+    },
+    {
+      "id": "db_rationale_202",
+      "label": "Number of stored candles for a particular series.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L202"
+    },
+    {
+      "id": "db_rationale_210",
+      "label": "Return a summary of all stored series (for diagnostics).",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L210"
+    },
+    {
+      "id": "trading_project_pipeline_data_storage_py",
+      "label": "storage.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "storage_datastorage",
+      "label": "DataStorage",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L7"
+    },
+    {
+      "id": "storage_datastorage_init",
+      "label": ".__init__()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L12"
+    },
+    {
+      "id": "storage_datastorage_ensure_paths",
+      "label": "._ensure_paths()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L21"
+    },
+    {
+      "id": "storage_datastorage_append_candle",
+      "label": ".append_candle()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L43"
+    },
+    {
+      "id": "storage_datastorage_get_candles",
+      "label": ".get_candles()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L75"
+    },
+    {
+      "id": "storage_datastorage_prepend_candles",
+      "label": ".prepend_candles()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L87"
+    },
+    {
+      "id": "storage_datastorage_get_features",
+      "label": ".get_features()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L98"
+    },
+    {
+      "id": "storage_datastorage_on_validated_candle",
+      "label": ".on_validated_candle()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L106"
+    },
+    {
+      "id": "storage_datastorage_on_new_feature",
+      "label": ".on_new_feature()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L109"
+    },
+    {
+      "id": "storage_rationale_8",
+      "label": "In-memory storage for raw and derived candles.     Thread-safe implementation f",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L8"
+    },
+    {
+      "id": "storage_rationale_44",
+      "label": "Append or update a candle based on timestamp.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L44"
+    },
+    {
+      "id": "storage_rationale_76",
+      "label": "Fetch the last 'count' candles, optionally older than end_time.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L76"
+    },
+    {
+      "id": "storage_rationale_88",
+      "label": "Prepend a chunk of older candles to the cache (avoiding duplicates).",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L88"
+    },
+    {
+      "id": "trading_project_pipeline_data_init_py",
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\data\\__init__.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "trading_project_pipeline_processing_init_py",
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\pipeline\\processing\\__init__.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "trading_project_project_api_server_py",
+      "label": "server.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "server_update_engine_output",
+      "label": "update_engine_output()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L33"
+    },
+    {
+      "id": "server_health",
+      "label": "health()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L60"
+    },
+    {
+      "id": "server_get_scenarios",
+      "label": "get_scenarios()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L66"
+    },
+    {
+      "id": "server_get_candles",
+      "label": "get_candles()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L80"
+    },
+    {
+      "id": "server_get_consolidations",
+      "label": "get_consolidations()",
+      "file_type": "code",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L106"
+    },
+    {
+      "id": "server_rationale_1",
+      "label": "Trading Intelligence API \u2014 optimized.  Changes:   - asyncio.Lock guards all s",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L1"
+    },
+    {
+      "id": "server_rationale_34",
+      "label": "Thread-safe update of the shared engine state.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L34"
+    },
+    {
+      "id": "server_rationale_61",
+      "label": "Quick liveness check.",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L61"
+    },
+    {
+      "id": "server_rationale_67",
+      "label": "Returns the latest scenario projections grouped by timeframe.     Shape: { \"1m\"",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L67"
+    },
+    {
+      "id": "server_rationale_85",
+      "label": "Returns the latest N closed candles for the given timeframe.     Each candle: {",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L85"
+    },
+    {
+      "id": "server_rationale_107",
+      "label": "Returns detected consolidation zones for all active timeframes.     Each zone:",
+      "file_type": "rationale",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L107"
+    },
+    {
+      "id": "trading_project_tests_init_py",
+      "label": "__init__.py",
+      "file_type": "code",
+      "source_file": "Trading-Project\\tests\\__init__.py",
+      "source_location": "L1"
+    }
+  ],
+  "edges": [
+    {
+      "source": "constitution_structural_realism",
+      "target": "constitution_accuracy",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Trading-Project/backend/ml2/agent_system/constitution.md",
+      "source_location": "L6-10",
+      "weight": 1.0
+    },
+    {
+      "source": "constitution_signal_noise",
+      "target": "constitution_accuracy",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Trading-Project/backend/ml2/agent_system/constitution.md",
+      "source_location": "L17-18",
+      "weight": 1.0
+    },
+    {
+      "source": "constitution_feedback_loop",
+      "target": "constitution_accuracy",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "Trading-Project/backend/ml2/agent_system/constitution.md",
+      "source_location": "L20-22",
+      "weight": 1.0
+    },
+    {
+      "source": "frontend_integration_doc",
+      "target": "readme_trading_project",
+      "relation": "references",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "Trading-Project/project/docs/frontend_integration.md",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "training_val_loss_20260511_1703",
+      "target": "training_val_loss_chart",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "Training-Project/backend/data/models/",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "training_val_loss_20260513_1854",
+      "target": "training_val_loss_chart",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.9,
+      "source_file": "Trading-Project/backend/data/models/",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "model_a_heatmap",
+      "target": "training_val_loss_chart",
+      "relation": "conceptually_related_to",
+      "confidence": "INFERRED",
+      "confidence_score": 0.75,
+      "source_file": "Trading-Project/backend/scratch/",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_charttoolbar_jsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartToolbar.jsx",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_charttoolbar_jsx",
+      "target": "lucide_react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartToolbar.jsx",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_charttoolbar_jsx",
+      "target": "trading_project_frontend_src_data_chartdata",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartToolbar.jsx",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_charttoolbar_jsx",
+      "target": "trading_project_frontend_src_components_chart_layoutselector",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartToolbar.jsx",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_charttoolbar_jsx",
+      "target": "charttoolbar_charttoolbar",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\ChartToolbar.jsx",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "lucide_react",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "trading_project_frontend_src_components_chart_swingsettingsmodal",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "trading_project_frontend_src_components_chart_consolidationsettingsmodal",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "trading_project_frontend_src_lib_swinglevels",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L17",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "indicatorpanel_paneselector",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "indicatorpanel_activeindicatorrow",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "indicatorpanel_cataloguecard",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L129",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_components_chart_indicatorpanel_jsx",
+      "target": "indicatorpanel_indicatorpanel",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\components\\chart\\IndicatorPanel.jsx",
+      "source_location": "L161",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_normalizetimeforchart",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L84",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_aggregatecandles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L101",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_detectswings",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L156",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_isfilled",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L190",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_updatemitigationstate",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L200",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_classifyswings",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L218",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_selectactiveswings",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L244",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_enforcemaxlines",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L269",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_gethighertfs",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L299",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_saveswingstomemory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L323",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_loadswingsfrommemory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L349",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_exportswingsascsv",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L367",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_frontend_src_lib_swinglevels_js",
+      "target": "swinglevels_clearswingsfrommemory",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L382",
+      "weight": 1.0
+    },
+    {
+      "source": "swinglevels_selectactiveswings",
+      "target": "swinglevels_classifyswings",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L245",
+      "weight": 1.0
+    },
+    {
+      "source": "swinglevels_exportswingsascsv",
+      "target": "swinglevels_loadswingsfrommemory",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\frontend\\src\\lib\\swingLevels.js",
+      "source_location": "L368",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "asyncio",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "logging",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "threading",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "time",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "sys",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "os",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L6",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "tradingview_scraper_symbols_stream_streamer",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "pipeline_core_engine",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "pipeline_config",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "pipeline_data_storage",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "datetime",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_collector_py",
+      "target": "collector_datacollector",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L20",
+      "weight": 1.0
+    },
+    {
+      "source": "collector_datacollector",
+      "target": "collector_datacollector_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "collector_datacollector",
+      "target": "collector_datacollector_stream_task",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L30",
+      "weight": 1.0
+    },
+    {
+      "source": "collector_datacollector",
+      "target": "collector_datacollector_start",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L87",
+      "weight": 1.0
+    },
+    {
+      "source": "collector_datacollector",
+      "target": "collector_datacollector_stop",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L112",
+      "weight": 1.0
+    },
+    {
+      "source": "collector_rationale_21",
+      "target": "collector_datacollector",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "collector_rationale_31",
+      "target": "collector_datacollector_stream_task",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\collector.py",
+      "source_location": "L31",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_db_py",
+      "target": "sqlite3",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L11",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_db_py",
+      "target": "threading",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_db_py",
+      "target": "logging",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_db_py",
+      "target": "pathlib",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_db_py",
+      "target": "typing",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_db_py",
+      "target": "os",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_db_py",
+      "target": "db_candledb",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L26",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L37",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_conn",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L45",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_setup_schema",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_upsert_candles",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L94",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_log_refresh",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L138",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_get_candles",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L149",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_get_candles_since",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L177",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_get_latest_ts",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L185",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_get_oldest_ts",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L193",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_count",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L201",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb",
+      "target": "db_candledb_series_summary",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L209",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_init",
+      "target": "db_candledb_setup_schema",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L41",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_setup_schema",
+      "target": "db_candledb_conn",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L62",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_upsert_candles",
+      "target": "db_candledb_conn",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L128",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_log_refresh",
+      "target": "db_candledb_conn",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L140",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_get_candles",
+      "target": "db_candledb_conn",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L159",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_get_candles_since",
+      "target": "db_candledb_get_candles",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L183",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_get_latest_ts",
+      "target": "db_candledb_conn",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L187",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_get_oldest_ts",
+      "target": "db_candledb_conn",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L195",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_count",
+      "target": "db_candledb_conn",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L203",
+      "weight": 1.0
+    },
+    {
+      "source": "db_candledb_series_summary",
+      "target": "db_candledb_conn",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L211",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_1",
+      "target": "trading_project_pipeline_data_db_py",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_27",
+      "target": "db_candledb",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L27",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_46",
+      "target": "db_candledb_conn",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_61",
+      "target": "db_candledb_setup_schema",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_96",
+      "target": "db_candledb_upsert_candles",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L96",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_139",
+      "target": "db_candledb_log_refresh",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L139",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_153",
+      "target": "db_candledb_get_candles",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L153",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_179",
+      "target": "db_candledb_get_candles_since",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L179",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_186",
+      "target": "db_candledb_get_latest_ts",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L186",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_194",
+      "target": "db_candledb_get_oldest_ts",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L194",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_202",
+      "target": "db_candledb_count",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L202",
+      "weight": 1.0
+    },
+    {
+      "source": "db_rationale_210",
+      "target": "db_candledb_series_summary",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\db.py",
+      "source_location": "L210",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_storage_py",
+      "target": "threading",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_storage_py",
+      "target": "collections",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L2",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_storage_py",
+      "target": "typing",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L3",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_storage_py",
+      "target": "pipeline_config",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L4",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_storage_py",
+      "target": "pipeline_core_engine",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L5",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_pipeline_data_storage_py",
+      "target": "storage_datastorage",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L7",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage",
+      "target": "storage_datastorage_init",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L12",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage",
+      "target": "storage_datastorage_ensure_paths",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L21",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage",
+      "target": "storage_datastorage_append_candle",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L43",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage",
+      "target": "storage_datastorage_get_candles",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L75",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage",
+      "target": "storage_datastorage_prepend_candles",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L87",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage",
+      "target": "storage_datastorage_get_features",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L98",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage",
+      "target": "storage_datastorage_on_validated_candle",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L106",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage",
+      "target": "storage_datastorage_on_new_feature",
+      "relation": "method",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L109",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage_append_candle",
+      "target": "storage_datastorage_ensure_paths",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L46",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage_prepend_candles",
+      "target": "storage_datastorage_ensure_paths",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L90",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage_on_validated_candle",
+      "target": "storage_datastorage_append_candle",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L107",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_datastorage_on_new_feature",
+      "target": "storage_datastorage_ensure_paths",
+      "relation": "calls",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L111",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_rationale_8",
+      "target": "storage_datastorage",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L8",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_rationale_44",
+      "target": "storage_datastorage_append_candle",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L44",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_rationale_76",
+      "target": "storage_datastorage_get_candles",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L76",
+      "weight": 1.0
+    },
+    {
+      "source": "storage_rationale_88",
+      "target": "storage_datastorage_prepend_candles",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\pipeline\\data\\storage.py",
+      "source_location": "L88",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "asyncio",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L13",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "logging",
+      "relation": "imports",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L14",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "contextlib",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L15",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "typing",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L16",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "fastapi",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L18",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "fastapi_middleware_cors",
+      "relation": "imports_from",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L19",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "server_update_engine_output",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L33",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "server_health",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L60",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "server_get_scenarios",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L66",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "server_get_candles",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L80",
+      "weight": 1.0
+    },
+    {
+      "source": "trading_project_project_api_server_py",
+      "target": "server_get_consolidations",
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L106",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_1",
+      "target": "trading_project_project_api_server_py",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L1",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_34",
+      "target": "server_update_engine_output",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L34",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_61",
+      "target": "server_health",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L61",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_67",
+      "target": "server_get_scenarios",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L67",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_85",
+      "target": "server_get_candles",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L85",
+      "weight": 1.0
+    },
+    {
+      "source": "server_rationale_107",
+      "target": "server_get_consolidations",
+      "relation": "rationale_for",
+      "confidence": "EXTRACTED",
+      "source_file": "Trading-Project\\project\\api\\server.py",
+      "source_location": "L107",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [
+    {
+      "id": "training_run_history",
+      "label": "Multi-Session Training Run History",
+      "nodes": [
+        "training_val_loss_chart",
+        "training_val_loss_20260511_1703",
+        "training_val_loss_20260513_1854"
+      ],
+      "relation": "form",
+      "confidence": "INFERRED",
+      "confidence_score": 0.85,
+      "source_file": "Trading-Project/backend/data/models/"
+    }
+  ],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

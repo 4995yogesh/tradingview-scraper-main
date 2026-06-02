@@ -1,0 +1,14 @@
+{"nodes":[
+  {"id":"readme_trading_project","label":"Trading Project Overview","file_type":"document","source_file":"Trading-Project/README.md","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"constitution_accuracy","label":"Accuracy over Speed Principle","file_type":"document","source_file":"Trading-Project/backend/ml2/agent_system/constitution.md","source_location":"L3-4","source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"constitution_structural_realism","label":"Structural Realism (21-channel tensors)","file_type":"document","source_file":"Trading-Project/backend/ml2/agent_system/constitution.md","source_location":"L6-10","source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"constitution_signal_noise","label":"Signal vs Noise (UNCERTAIN label)","file_type":"document","source_file":"Trading-Project/backend/ml2/agent_system/constitution.md","source_location":"L17-18","source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"constitution_feedback_loop","label":"Validator Agent Feedback Loop","file_type":"document","source_file":"Trading-Project/backend/ml2/agent_system/constitution.md","source_location":"L20-22","source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"test_result_report","label":"Model Test Results Report","file_type":"document","source_file":"Trading-Project/test_result.md","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null},
+  {"id":"frontend_integration_doc","label":"Frontend Integration Documentation","file_type":"document","source_file":"Trading-Project/project/docs/frontend_integration.md","source_location":null,"source_url":null,"captured_at":null,"author":null,"contributor":null}
+],"edges":[
+  {"source":"constitution_structural_realism","target":"constitution_accuracy","relation":"rationale_for","confidence":"EXTRACTED","confidence_score":1.0,"source_file":"Trading-Project/backend/ml2/agent_system/constitution.md","source_location":"L6-10","weight":1.0},
+  {"source":"constitution_signal_noise","target":"constitution_accuracy","relation":"rationale_for","confidence":"EXTRACTED","confidence_score":1.0,"source_file":"Trading-Project/backend/ml2/agent_system/constitution.md","source_location":"L17-18","weight":1.0},
+  {"source":"constitution_feedback_loop","target":"constitution_accuracy","relation":"rationale_for","confidence":"EXTRACTED","confidence_score":1.0,"source_file":"Trading-Project/backend/ml2/agent_system/constitution.md","source_location":"L20-22","weight":1.0},
+  {"source":"frontend_integration_doc","target":"readme_trading_project","relation":"references","confidence":"INFERRED","confidence_score":0.8,"source_file":"Trading-Project/project/docs/frontend_integration.md","source_location":null,"weight":1.0}
+],"hyperedges":[],"input_tokens":0,"output_tokens":0}

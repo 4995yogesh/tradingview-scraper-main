@@ -94,3 +94,10 @@ def get_all_samples():
     with get_conn() as conn:
         rows = conn.execute("SELECT * FROM quality_store ORDER BY created_at ASC").fetchall()
         return [dict(r) for r in rows]
+
+# Auto-initialize database tables on module load
+try:
+    init_db()
+except Exception as _e:
+    logger.error("Failed to auto-initialize ml_quality.db: %s", _e)
+

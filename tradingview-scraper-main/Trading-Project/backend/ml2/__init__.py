@@ -2,5 +2,5 @@
 
 __version__ = "2.0.0"
 
-from .inference import predict
+from .inference import predict_v1 as predict
 from .features import compute_features

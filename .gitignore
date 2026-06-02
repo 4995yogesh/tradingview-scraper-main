@@ -1,2 +1,4 @@
-
 launcher_debug.log
+*.db
+*.db-shm
+*.db-wal

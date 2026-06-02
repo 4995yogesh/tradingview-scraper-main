@@ -6,6 +6,7 @@ import ChartToolbar from './ChartToolbar';
 import SettingsPanel from './SettingsPanel';
 import LayoutSelector from './LayoutSelector';
 import IndicatorPanel from './IndicatorPanel';
+import ForexPairSidebar from './ForexPairSidebar';
 
 // ── Keyboard timeframe shortcut map (TradingView-style) ─────────────────────
 // Supports both single-key and multi-char sequences (e.g. "15", "4H", "30")
@@ -26,26 +27,23 @@ const TF_SHORTCUT_MAP = {
   '1M':  '1M',
 };
 
-const FIXED_SYMBOL = 'USDJPY';
-
 // Auto-refresh interval in seconds
 const AUTO_REFRESH_INTERVAL = 5;
 
-// Symbol precision map
-const SYMBOL_PRECISION = {
-  EURUSD: 5,
-  USDJPY: 3,
-};
+// Symbol precision map — 3 decimal pairs use JPY cross convention
+const JPY_PAIRS = new Set(['USDJPY','EURJPY','GBPJPY','AUDJPY','CHFJPY','NZDJPY','CADJPY']);
 
 export function getSymbolPrecision(symbol) {
-  return SYMBOL_PRECISION[symbol] ?? 5;
+  return JPY_PAIRS.has(symbol) ? 3 : 5;
 }
 
+const DEFAULT_SYMBOL = 'USDJPY';
+
 const defaultPanes = [
-  { symbol: FIXED_SYMBOL, timeframe: '1d', chartType: 'hollow', indicators: [] },
-  { symbol: FIXED_SYMBOL, timeframe: '4h', chartType: 'hollow', indicators: [] },
-  { symbol: FIXED_SYMBOL, timeframe: '1h', chartType: 'hollow', indicators: [] },
-  { symbol: FIXED_SYMBOL, timeframe: '15m', chartType: 'hollow', indicators: [] },
+  { symbol: DEFAULT_SYMBOL, timeframe: '1d', chartType: 'hollow', indicators: [] },
+  { symbol: DEFAULT_SYMBOL, timeframe: '4h', chartType: 'hollow', indicators: [] },
+  { symbol: DEFAULT_SYMBOL, timeframe: '1h', chartType: 'hollow', indicators: [] },
+  { symbol: DEFAULT_SYMBOL, timeframe: '15m', chartType: 'hollow', indicators: [] },
 ];
 
 /**
@@ -91,7 +89,7 @@ const ChartPage = () => {
   const containerRef = useRef(null);
 
   // ── Persisted state (auto-saved to localStorage via useChartMemory) ──────────
-  const symbol = FIXED_SYMBOL; // Symbol is permanently locked to EURUSD
+  const [symbol, setSymbol] = useChartMemory('activeSymbol', DEFAULT_SYMBOL);
   const [timeframe, setTimeframe] = useChartMemory('timeframe', '1d');
   const [chartType, setChartType] = useChartMemory('chartType', 'hollow');
   const [panes, setPanes] = useChartMemory('panes', defaultPanes);
@@ -189,9 +187,14 @@ const ChartPage = () => {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
-  // Sync pane 0 timeframe/chartType; symbol is always FIXED_SYMBOL for every pane
+  // Handle symbol switch: update all panes to new symbol
+  const handleSymbolChange = useCallback((newSymbol) => {
+    setSymbol(newSymbol);
+    setPanes(prev => prev.map(p => ({ ...p, symbol: newSymbol })));
+  }, [setSymbol, setPanes]);
+
+  // Sync pane state — symbol + chartType kept in sync across panes
   const updatePane = useCallback((idx, key, value) => {
-    if (key === 'symbol') return; // symbol is locked
     setPanes(prev => prev.map((p, i) => i === idx ? { ...p, [key]: value } : p));
     if (idx === 0) {
       if (key === 'timeframe') setTimeframe(value);
@@ -202,11 +205,11 @@ const ChartPage = () => {
   // Ensure all panes share the global symbol and chartType
   useEffect(() => {
     setPanes(prev => prev.map((p, i) => {
-      const update = { ...p, symbol: FIXED_SYMBOL, chartType: chartType };
+      const update = { ...p, symbol: symbol, chartType: chartType };
       if (i === 0) { update.timeframe = timeframe; }
       return update;
     }));
-  }, [timeframe, chartType, setPanes]);
+  }, [symbol, timeframe, chartType, setPanes]);
 
   // Keep keyboard active-pane ref in sync
   useEffect(() => { kbActivePane.current = activePaneIdx; }, [activePaneIdx]);
@@ -306,7 +309,7 @@ const ChartPage = () => {
 
     return (
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-1 px-2 py-1 bg-[#000000E0] border-b border-[#2A2E39]" onClick={e => e.stopPropagation()}>
-        <span className="text-[6px] font-semibold text-white">{FIXED_SYMBOL}</span>
+        <span className="text-[6px] font-semibold text-white">{pane.symbol || symbol}</span>
         <div className="relative">
           <button onClick={() => { setShowTf(!showTf); setShowInput(false); }} className="text-[5px] text-[#787B86] hover:text-white bg-[#2A2E39] px-1.5 py-0.5 rounded transition-colors">
             {tfLabels[pane.timeframe] || '1D'}
@@ -368,17 +371,16 @@ const ChartPage = () => {
 
   const renderChart = (idx) => {
     const pane = panes[idx] || { ...panes[0], timeframe: panes[0].timeframe };
-    // Always force EURUSD regardless of stored pane data
-    const effectivePane = { ...pane, symbol: FIXED_SYMBOL, indicators: pane.indicators || [] };
+    const effectivePane = { ...pane, symbol: symbol, indicators: pane.indicators || [] };
     const isMain = idx === 0;
     const cRef = isMain ? chartWidgetRef : null;
-    const panePrecision = getSymbolPrecision(FIXED_SYMBOL);
+    const panePrecision = getSymbolPrecision(symbol);
     const swingSettings = getSwingSettings(effectivePane);
     const consolidationSettings = getConsolidationSettings(effectivePane);
     const neuralSettings = getNeuralSettings(effectivePane);
     return (
       <div
-        key={`pane-${idx}-${effectivePane.timeframe}`}
+        key={`pane-${idx}-${effectivePane.timeframe}-${symbol}`}
         className={`h-full w-full relative border border-[#2A2E39] ${
           activePaneIdx === idx && activeLayout !== '1' ? 'ring-1 ring-[#2962FF60]' : ''
         }`}
@@ -386,7 +388,7 @@ const ChartPage = () => {
       >
         <ChartWidget
           ref={cRef}
-          symbol={FIXED_SYMBOL}
+          symbol={symbol}
           timeframe={effectivePane.timeframe}
           chartType={isMain ? chartType : effectivePane.chartType}
           onPriceUpdate={isMain ? handlePriceUpdate : undefined}
@@ -462,6 +464,7 @@ const ChartPage = () => {
         <div className="flex-1 relative min-w-0">
           <ChartWidget
             ref={chartWidgetRef}
+            key={`main-${symbol}`}
             symbol={symbol}
             timeframe={timeframe}
             chartType={chartType}
@@ -520,8 +523,14 @@ const ChartPage = () => {
       />
 
 
-      <div className="flex flex-1 overflow-hidden">
-        {getLayoutCharts()}
+      <div className="flex flex-1 overflow-hidden min-w-0">
+        <ForexPairSidebar
+          activeSymbol={symbol}
+          onSymbolChange={handleSymbolChange}
+        />
+        <div className="flex flex-1 overflow-hidden min-w-0">
+          {getLayoutCharts()}
+        </div>
       </div>
 
       <div className="h-[26px] bg-[#000000] border-t border-[#2A2E39] flex items-center px-2 justify-between shrink-0">

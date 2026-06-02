@@ -1,0 +1,900 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// Consolidation Boxes — WSE v2  |  Pine Script v6
+//
+// ARCHITECTURE: Window-Based Candidate Scoring Engine (v2 — Critical Fix Layer)
+//
+// This version adds three major detection-quality upgrades on top of v1:
+//
+//   FIX 1 — IMPULSE CANDLE EXCLUSION
+//     Any candidate window whose OLDEST bar is a statistically abnormal
+//     expansion candle (body > avgBody_mult × rolling average body, OR
+//     trueRange > atr_impulse_mult × ATR) is rejected outright.
+//     Consolidation must begin AFTER impulse exhaustion, not during it.
+//     An additional "expansion cooldown" guard delays detection for
+//     i_impulseCooldown bars after any impulse candle is detected.
+//
+//   FIX 2 — INTERNAL VOLATILITY ANALYSIS
+//     Four new internal quality sub-scores are computed for every candidate:
+//       a) ATR Drift Penalty   — rising ATR inside the window = unstable
+//       b) Range Uniformity    — high stddev of candle ranges = chaotic
+//       c) Volatility Compression Ratio — avg internal range vs pre-box ATR
+//       d) Wick Chaos Score    — large opposing wicks spanning most of box
+//     These are combined into a single internalVolPenalty that is subtracted
+//     from the composite score.
+//
+//   FIX 3 — INTERNAL PATH QUALITY
+//     Three new path-quality sub-scores replace endpoint-only validation:
+//       a) Path Smoothness Ratio — total path / net displacement; high ratio
+//          with low net displacement = noisy rotation
+//       b) Mean Reversion Quality — how often close crosses the box midpoint
+//       c) Directional Entropy — balance of up/down moves; imbalance = trend
+//     These are combined into a pathQualityBonus (+reward) and
+//     pathChaospenalty (−penalty) and factored into the composite score.
+//
+// ─── COMPOSITE SCORE (10 dimensions) ─────────────────────────────────────────
+//  Positive (reward):
+//   1. Compression Score          (+3.5)
+//   2. Oscillation Score          (+2.0)
+//   3. Boundary Interaction       (+1.5)
+//   4. Noise Score                (+1.0)
+//   5. Path Quality Bonus         (+1.5)  NEW — mean-reversion + entropy balance
+//  Negative (penalise):
+//   6. Run Penalty                (−2.0)
+//   7. Displacement Penalty       (−2.0)
+//   8. Wick Breach Penalty        (−3.0)
+//   9. Internal Volatility Penalty(−2.5)  NEW — ATR drift + range chaos + wick chaos
+//  10. FVG Penalty                (−var)
+//
+// ─────────────────────────────────────────────────────────────────────────────
+//@version=6
+indicator("Consolidation Boxes — WSE v2", overlay = true,
+          max_boxes_count  = 500,
+          max_labels_count = 500)
+
+// ── Increase look-back buffer ─────────────────────────────────────────────────
+max_bars_back(close, 500)
+max_bars_back(high,  500)
+max_bars_back(low,   500)
+max_bars_back(open,  500)
+max_bars_back(time,  500)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ INPUTS
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Main WSE Detector ─────────────────────────────────────────────────────
+i_minBars      = input.int  (6,    "Min Window Width",
+                              minval = 2,   maxval = 50,
+                              tooltip = "Minimum bars a candidate window must span.")
+i_maxBars      = input.int  (30,   "Max Window Width",
+                              minval = 5,   maxval = 60,
+                              tooltip = "Maximum bars in the rolling-window scan.")
+i_maxBoxes     = input.int  (100,  "Max Active Boxes",
+                              minval = 1,   maxval = 500)
+i_scoreThresh  = input.float(1.5,  "Min Quality Score",
+                              minval = -5.0, maxval = 10.0, step = 0.1,
+                              tooltip = "Candidate windows scoring below this are rejected. Default raised to 1.5 due to new penalties.")
+i_timeFilter   = input.bool (true, "Filter IST Midnight (00:00–05:59)")
+i_showLabels   = input.bool (true, "Show Type Labels")
+i_showScore    = input.bool (true, "Show Score in Label")
+
+// ── Soft-Penalty Reference Parameters ────────────────────────────────────────
+i_maxConsecDir = input.int  (4,    "Consec. Directional Closes — Penalty Ref.",
+                              minval = 2, maxval = 20)
+i_maxNetMove   = input.float(0.60, "Net Displacement Ratio — Penalty Ref.",
+                              minval = 0.1, maxval = 1.0, step = 0.05)
+
+// ── ATR Compression Reference ─────────────────────────────────────────────
+i_atrPeriod    = input.int  (14,   "ATR Period",      minval = 5,  maxval = 100)
+i_atrScale     = input.float(1.5,  "ATR Scale (compression ref.)",
+                              minval = 0.3, maxval = 5.0, step = 0.05)
+
+// ── FVG Penalty ───────────────────────────────────────────────────────────
+i_fvgThresh    = input.float(0.4,  "FVG Threshold",   minval = 0.0, maxval = 1.0, step = 0.05)
+i_fvgPenalty   = input.float(1.5,  "FVG Score Penalty",minval = 0.0, maxval = 5.0, step = 0.1)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ FIX 1 INPUTS — IMPULSE CANDLE EXCLUSION
+// ════════════════════════════════════════════════════════════════════════════
+
+i_impulseGroup   = "FIX 1 — Impulse Candle Exclusion"
+
+// ATR-based impulse detection: if a bar's true range exceeds this multiple
+// of ATR it is classified as an impulse/expansion bar.
+i_impulseAtrMult = input.float(2.0,  "Impulse ATR Multiplier",
+                                minval = 1.0, maxval = 6.0, step = 0.1,
+                                group = i_impulseGroup,
+                                tooltip = "True range > this × ATR → impulse candle. Default 2.0. Lower = stricter impulse detection.")
+
+// Body-based impulse detection: if a bar's body exceeds this multiple of
+// the rolling average body it is classified as an impulse bar.
+i_impulseBodyMult = input.float(2.5, "Impulse Body Multiplier",
+                                 minval = 1.0, maxval = 8.0, step = 0.1,
+                                 group = i_impulseGroup,
+                                 tooltip = "Body > this × avg body (rolling 20 bars) → impulse candle. Default 2.5.")
+
+// Rolling period for the average body size used in body-impulse detection.
+i_bodyAvgPeriod  = input.int  (20,  "Body Average Period",
+                                minval = 5, maxval = 50,
+                                group = i_impulseGroup,
+                                tooltip = "Rolling average body size computed over this many bars for impulse detection.")
+
+// Cooldown: after an impulse candle, suppress box detection for this many bars.
+// This enforces "wait for stabilisation after expansion."
+i_impulseCooldown = input.int (4,   "Impulse Cooldown Bars",
+                                minval = 0, maxval = 20,
+                                group = i_impulseGroup,
+                                tooltip = "Bars to wait after an impulse candle before allowing new box creation. Allows stabilisation.")
+
+// Window anchor rejection: if the OLDEST bar in a candidate window is itself
+// an impulse candle, the entire window is rejected regardless of score.
+i_rejectImpulseAnchor = input.bool(true, "Reject Windows Starting With Impulse",
+                                    group = i_impulseGroup,
+                                    tooltip = "When true, any window whose leftmost bar is an impulse candle is discarded.")
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ FIX 2 INPUTS — INTERNAL VOLATILITY ANALYSIS
+// ════════════════════════════════════════════════════════════════════════════
+
+i_volGroup    = "FIX 2 — Internal Volatility Quality"
+
+// Maximum allowed internal volatility penalty (0–1 normalised) before the
+// entire internal-vol penalty reaches its maximum weight.
+i_volPenWeight = input.float(2.5,  "Internal Vol Penalty Weight",
+                              minval = 0.0, maxval = 5.0, step = 0.1,
+                              group = i_volGroup,
+                              tooltip = "Max score subtracted when internal volatility is fully chaotic. Default 2.5.")
+
+// What fraction of the box height a candle's range must exceed to count as
+// a 'wick chaos' candle (spans too much of the box in a single bar).
+i_wickChaosThresh = input.float(0.60, "Wick Chaos Height Fraction",
+                                 minval = 0.2, maxval = 1.0, step = 0.05,
+                                 group = i_volGroup,
+                                 tooltip = "A candle whose high-low range ≥ this × box height is a 'wick chaos' candle.")
+
+// ATR trend direction inside box: if ATR at the end of the window is more
+// than this multiple of ATR at the start, volatility is expanding (bad).
+i_atrDriftThresh = input.float(1.30, "Internal ATR Expansion Threshold",
+                                minval = 1.0, maxval = 3.0, step = 0.05,
+                                group = i_volGroup,
+                                tooltip = "ATR_end / ATR_start > this → volatility expanding inside box → penalty. 1.30 = 30% expansion allowed.")
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ FIX 3 INPUTS — INTERNAL PATH QUALITY
+// ════════════════════════════════════════════════════════════════════════════
+
+i_pathGroup   = "FIX 3 — Internal Path Quality"
+
+// Path smoothness: total path / net displacement. If this ratio is very
+// high, price zigzagged wildly but went nowhere = noisy rotation.
+i_pathSmoothRef = input.float(3.0,  "Path Smoothness Ref. Ratio",
+                               minval = 1.5, maxval = 10.0, step = 0.5,
+                               group = i_pathGroup,
+                               tooltip = "path/displacement ≥ this value → path is fully smooth/oscillatory for consolidation. Lower = stricter.")
+
+// Mean reversion quality: fraction of bars where the close crosses back
+// through the box midpoint. More crossings = better balanced auction.
+i_midCrossMin  = input.float(0.15, "Min Midpoint Cross Fraction",
+                              minval = 0.0, maxval = 0.5, step = 0.05,
+                              group = i_pathGroup,
+                              tooltip = "Fraction of bars crossing the box midpoint required for a bonus. 0.15 = 15% of bars cross mid.")
+
+// Directional entropy weight: penalise heavy directional imbalance.
+i_entropyWeight = input.float(1.5,  "Path Quality Bonus Weight",
+                               minval = 0.0, maxval = 3.0, step = 0.1,
+                               group = i_pathGroup,
+                               tooltip = "Maximum bonus added for excellent path quality (balanced, mean-reverting consolidation).")
+
+// ── Box Colors ────────────────────────────────────────────────────────────
+i_colTightBg   = input.color(color.new(color.green,  85), "TIGHT Fill",   group = "Colors")
+i_colLooseBg   = input.color(color.new(#FF6D00,      85), "LOOSE Fill",   group = "Colors")
+i_colDriftBg   = input.color(color.new(color.red,    85), "DRIFT Fill",   group = "Colors")
+i_colTightBd   = input.color(color.new(color.green,   0), "TIGHT Border", group = "Colors")
+i_colLooseBd   = input.color(color.new(#FF6D00,       0), "LOOSE Border", group = "Colors")
+i_colDriftBd   = input.color(color.new(color.red,     0), "DRIFT Border", group = "Colors")
+
+// ── ATR Cluster Detector ─────────────────────────────────────────────────
+i_clEnable     = input.bool (true,  "Enable Cluster Detector",                              group = "Cluster Detector")
+i_clMinBars    = input.int  (5,     "Min Bars in Cluster",   minval = 3,  maxval = 50,      group = "Cluster Detector")
+i_clMaxBars    = input.int  (20,    "Max Look-Back Window",  minval = 5,  maxval = 100,     group = "Cluster Detector")
+i_clAtrMult    = input.float(0.5,   "Max Range (× ATR 14)",  minval = 0.1, maxval = 5.0,
+                              step = 0.05, group = "Cluster Detector")
+i_clMaxCDir    = input.int  (4,     "Max Consec Dir Closes", minval = 2,  maxval = 20,      group = "Cluster Detector")
+i_clMaxNet     = input.float(0.60,  "Max Net Displacement",  minval = 0.1, maxval = 1.0,
+                              step = 0.05, group = "Cluster Detector")
+i_clBg         = input.color(color.new(#006D75, 85), "Cluster Fill",   group = "Cluster Detector")
+i_clBd         = input.color(color.new(#00BCD4,  0), "Cluster Border", group = "Cluster Detector")
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ HELPERS
+// ════════════════════════════════════════════════════════════════════════════
+
+// IST hour (UTC +5:30 = 19 800 000 ms offset)
+_istHour() =>
+    int istMs = int(time) + 19800000
+    int(istMs / 3600000) % 24
+
+isBlockedTime = i_timeFilter ? _istHour() < 6 : false
+
+// Root-level ATRs (always computed to keep look-back buffers warm)
+float atrMain = ta.atr(i_atrPeriod)
+float atr14   = ta.atr(14)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ FIX 1 — GLOBAL IMPULSE STATE TRACKING
+//
+// We maintain a running rolling average of body size over i_bodyAvgPeriod bars.
+// On every bar, we check if the current bar is an impulse candle and track
+// how many bars ago the last impulse occurred (impulse cooldown counter).
+//
+// Key variables:
+//   isImpulseBar  — true if this bar is an expansion/impulse candle
+//   barsSinceImpulse — bars elapsed since last impulse (resets each impulse)
+//   avgBody       — exponential rolling average of body sizes
+//
+// DESIGN RATIONALE:
+//   • trueRange > ATR × multiplier catches large-range expansion bars even
+//     when they have small bodies (doji-like impulse, e.g. news spike).
+//   • body > avgBody × multiplier catches directional impulse delivery
+//     (e.g. big bullish or bearish engulfing momentum candles).
+//   • Both conditions independently trigger impulse classification.
+// ════════════════════════════════════════════════════════════════════════════
+
+// Rolling sum of body sizes over i_bodyAvgPeriod bars (computed at root level
+// so look-back is always maintained, avoiding Pine runtime errors in loops).
+var float bodyRollingSum  = 0.0
+float     currentBody     = math.abs(close - open)
+
+// Maintain rolling sum using a sliding window approach
+bodyRollingSum := bodyRollingSum + currentBody - math.abs(close[i_bodyAvgPeriod] - open[i_bodyAvgPeriod])
+float avgBody = bodyRollingSum / float(i_bodyAvgPeriod)
+
+// True range of the current bar
+float currentTR = math.max(high - low,
+                   math.max(math.abs(high - close[1]),
+                            math.abs(low  - close[1])))
+
+// Impulse classification: EITHER condition is sufficient
+bool isImpulseBar = (currentTR    > atrMain * i_impulseAtrMult ) or
+ (currentBody  > avgBody  * i_impulseBodyMult  and avgBody > 0.0)
+
+// Track bars since the last impulse (used for cooldown gate)
+// Reset to 0 every time we see an impulse; otherwise increment.
+var int barsSinceImpulse = i_impulseCooldown + 1  // initialise above threshold
+barsSinceImpulse := isImpulseBar ? 0 : barsSinceImpulse + 1
+
+// Cooldown gate: true when we are still within the cooldown window after
+// an impulse. Detection is suppressed during this period.
+bool inImpulseCooldown = barsSinceImpulse <= i_impulseCooldown
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ PERSISTENT STATE  (parallel tracking arrays for all boxes)
+// ════════════════════════════════════════════════════════════════════════════
+var int[]   boxLeft    = array.new_int()
+var int[]   boxRight   = array.new_int()
+var float[] boxTop     = array.new_float()
+var float[] boxBottom  = array.new_float()
+var float[] boxScore   = array.new_float()
+var bool[]  boxActive  = array.new_bool()
+var box[]   boxObj     = array.new_box()
+var label[] boxLbl     = array.new_label()
+
+// Cluster detector deduplication state
+var int   clLastRight  = na
+var int   clLastLeft   = na
+var float clLastTop    = na
+var float clLastBottom = na
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ STEP 1 — UPDATE ACTIVE BOXES  (Extend or Terminate)
+// ════════════════════════════════════════════════════════════════════════════
+int nActive   = 0
+int nBoxTotal = array.size(boxActive)
+
+if nBoxTotal > 0
+    for i = 0 to nBoxTotal - 1
+        if array.get(boxActive, i)
+            float bt = array.get(boxTop,    i)
+            float bb = array.get(boxBottom, i)
+
+            if close > bt or close < bb or isBlockedTime
+                // ── Terminate ─────────────────────────────────────────────
+                array.set(boxActive, i, false)
+
+                int   bLeft   = array.get(boxLeft, i)
+                int   dist    = bar_index - bLeft
+                int   distCap = math.min(dist, 499)
+                float actTop  = bt
+                float actBot  = bb
+                for bOff = 1 to distCap
+                    if high[bOff] > actTop
+                        actTop := high[bOff]
+                    if low[bOff]  < actBot
+                        actBot := low[bOff]
+
+                box bx = array.get(boxObj, i)
+                if not na(bx)
+                    box.set_right (bx, bar_index - 1)
+                    box.set_top   (bx, actTop)
+                    box.set_bottom(bx, actBot)
+
+                array.set(boxRight,  i, bar_index - 1)
+                array.set(boxTop,    i, actTop)
+                array.set(boxBottom, i, actBot)
+
+            else
+                // ── Extend ────────────────────────────────────────────────
+                nActive += 1
+                box bx = array.get(boxObj, i)
+                if not na(bx)
+                    box.set_right(bx, bar_index)
+                array.set(boxRight, i, bar_index)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ STEP 2 — WINDOW SCORING ENGINE (WSE v2)
+//
+// Key changes versus v1:
+//  • Gated by inImpulseCooldown — no boxes created within cooldown window.
+//  • Per-window impulse-anchor check (i_rejectImpulseAnchor).
+//  • Three new scoring layers: internal vol, wick chaos, path quality.
+//
+// All per-bar computations that access offset arrays (close[k], high[k], etc.)
+// are done inside the window loop to avoid Pine look-back limit issues.
+// ════════════════════════════════════════════════════════════════════════════
+if nActive < i_maxBoxes and not isBlockedTime and not inImpulseCooldown and bar_index > i_maxBars + i_bodyAvgPeriod + 2
+
+    // ── Incremental high / low seed ───────────────────────────────────────
+    float wHi = high[1]
+    float wLo = low[1]
+    for k = 2 to i_minBars - 1
+        if high[k] > wHi
+            wHi := high[k]
+        if low[k]  < wLo
+            wLo := low[k]
+
+    // ── Per-bar best-candidate trackers ───────────────────────────────────
+    float bestScore = -999.0
+    int   bestW     = 0
+    float bestHi    = na
+    float bestLo    = na
+    float bestComp  = 0.0
+    float bestDisp  = 0.0
+    float bestEff   = 0.0
+    float bestBound = 0.0
+
+    // ─────────────────────────────────────────────────────────────────────
+    // WINDOW LOOP — w = window width (bars); right edge = bar_index − 1
+    // ─────────────────────────────────────────────────────────────────────
+    for w = i_minBars to i_maxBars
+
+        // Extend incremental extremes
+        if high[w] > wHi
+            wHi := high[w]
+        if low[w]  < wLo
+            wLo := low[w]
+
+        float rangeH = wHi - wLo
+        if rangeH <= 0.0
+            continue
+
+        // ── IST filter on oldest bar ──────────────────────────────────────
+        if i_timeFilter
+            int wIstMs = int(time[w]) + 19800000
+            int wIstHr = int(wIstMs / 3600000) % 24
+            if wIstHr < 6
+                continue
+
+        // ════════════════════════════════════════════════════════════════
+        // FIX 1A — IMPULSE ANCHOR REJECTION
+        //
+        // The OLDEST bar of the window (offset = w) is checked for impulse
+        // characteristics using the same ATR/body thresholds.
+        //
+        // WHY: a large impulse candle at the leftmost edge of a window means
+        // the box range was set by the impulse, not by balanced oscillation.
+        //
+        // The anchor bar's true range and body are evaluated against the ATR
+        // and average body AT THAT HISTORICAL OFFSET.  This correctly uses
+        // the ATR that was valid at that bar, not today's ATR.
+        //
+        // Note: atrMain[w] gives ATR i_atrPeriod bars from that bar.
+        // ════════════════════════════════════════════════════════════════
+        if i_rejectImpulseAnchor
+            float anchorBody  = math.abs(close[w] - open[w])
+            float anchorTR    = math.max(high[w] - low[w],
+                                math.max(math.abs(high[w] - close[w + 1]),
+                                         math.abs(low[w]  - close[w + 1])))
+            float anchorATR   = atrMain[w]   // historical ATR at that bar
+            float anchorAvgBd = avgBody[w]   // historical avg body at that bar
+
+            bool anchorIsImpulse = (anchorTR   > anchorATR   * i_impulseAtrMult ) or
+                                   (anchorBody > anchorAvgBd * i_impulseBodyMult  and anchorAvgBd > 0.0)
+            if anchorIsImpulse
+                continue  // discard this window — starts with an impulse candle
+
+        // ── Overlap check ─────────────────────────────────────────────────
+        int  wLeft   = bar_index - w
+        int  wRight  = bar_index - 1
+        bool skipWin = false
+        int  nBx     = array.size(boxActive)
+        if nBx > 0
+            for i = 0 to nBx - 1
+                bool isAct  = array.get(boxActive, i)
+                int  er     = array.get(boxRight,  i)
+                bool recent = not isAct and er >= bar_index - i_maxBars
+                if isAct or recent
+                    int   el    = array.get(boxLeft,   i)
+                    float et    = array.get(boxTop,    i)
+                    float eb    = array.get(boxBottom, i)
+                    bool  tOvlp = el <= wRight and er >= wLeft
+                    bool  pOvlp = et >= wLo    and eb <= wHi
+                    if tOvlp and pOvlp
+                        skipWin := true
+                        break
+        if skipWin
+            continue
+
+        // ════════════════════════════════════════════════════════════════
+        // DIMENSION 8: Wick Breach Penalty  (unchanged from v1)
+        // ════════════════════════════════════════════════════════════════
+        float breachSum = 0.0
+        for k = 1 to w
+            float ck = close[k]
+            float hk = high[k]
+            float lk = low[k]
+            if ck > wHi
+                breachSum += (ck - wHi) / rangeH * 3.0
+            else if ck < wLo
+                breachSum += (wLo - ck) / rangeH * 3.0
+            else
+                if hk > wHi
+                    breachSum += (hk - wHi) / rangeH * 0.5
+                if lk < wLo
+                    breachSum += (wLo - lk) / rangeH * 0.5
+        float wickPen = math.min(breachSum / float(w), 1.0)
+
+        if wickPen > 0.85
+            continue  // extreme breach — clearly not a consolidation
+
+        // ════════════════════════════════════════════════════════════════
+        // DIMENSIONS 6, 2, 4, 7: Single-pass close-series metrics (v1)
+        // ════════════════════════════════════════════════════════════════
+        int   maxRun  = 0
+        int   curRun  = 0
+        int   curDir  = 0
+        int   prevDir = 0
+        int   dirChgs = 0
+        float pathLen = 0.0
+        int   upMoves = 0   // NEW: for directional entropy (Fix 3)
+        int   dnMoves = 0   // NEW: for directional entropy (Fix 3)
+
+        for k = 1 to w - 1
+            float cNew  = close[k]
+            float cOld  = close[k + 1]
+            float delta = cNew - cOld
+            pathLen += math.abs(delta)
+
+            int dir = delta > 0.0 ? 1 : delta < 0.0 ? -1 : 0
+
+            if dir != 0
+                if dir == 1
+                    upMoves += 1
+                else
+                    dnMoves += 1
+
+                if dir == curDir
+                    curRun += 1
+                else
+                    if curRun > maxRun
+                        maxRun := curRun
+                    curRun := 1
+                    curDir := dir
+                if prevDir != 0 and dir != prevDir
+                    dirChgs += 1
+                prevDir := dir
+            else
+                if curRun > maxRun
+                    maxRun := curRun
+                curRun := 0
+
+        if curRun > maxRun
+            maxRun := curRun
+
+        float runPen   = math.min(float(maxRun) / float(i_maxConsecDir), 1.0)
+        float oscScore = math.min(float(dirChgs) / math.max(float(w - 1) * 0.5, 1.0), 1.0)
+        float netDisp  = math.abs(close[1] - close[w])
+        float dispPen  = math.min((netDisp / rangeH) / i_maxNetMove, 1.0)
+        float noiseScore = 1.0 - math.min(netDisp / (pathLen + 1e-9), 1.0)
+
+        // ════════════════════════════════════════════════════════════════
+        // DIMENSION 1: Compression Score  (unchanged from v1)
+        // ════════════════════════════════════════════════════════════════
+        float compRef   = atrMain * i_atrScale
+        float compScore = 1.0 - math.min(rangeH / compRef, 1.0)
+
+        // ════════════════════════════════════════════════════════════════
+        // DIMENSION 3: Boundary Interaction Score  (unchanged from v1)
+        // ════════════════════════════════════════════════════════════════
+        float touchThr   = rangeH * 0.08
+        int   topTch     = 0
+        int   botTch     = 0
+        for k = 1 to w
+            if high[k] >= wHi - touchThr
+                topTch += 1
+            if low[k]  <= wLo + touchThr
+                botTch += 1
+        float boundScore = math.min(float(topTch + botTch) / math.max(float(w) * 0.4, 1.0), 1.0)
+
+        // ════════════════════════════════════════════════════════════════
+        // FVG PENALTY  (unchanged from v1)
+        // ════════════════════════════════════════════════════════════════
+        float fvgPen = 0.0
+        for k = 1 to w - 2
+            float bodyK  = math.abs(close[k] - open[k])
+            bool  bullFg = low[k]  > high[k + 2]
+            bool  bearFg = high[k] < low[k + 2]
+            if bullFg or bearFg
+                float fvgSz = bullFg ? low[k] - high[k + 2] : low[k + 2] - high[k]
+                if fvgSz >= bodyK * i_fvgThresh
+                    fvgPen := i_fvgPenalty
+                    break
+
+        // ════════════════════════════════════════════════════════════════
+        // FIX 2 — INTERNAL VOLATILITY ANALYSIS
+        //
+        // Computes four sub-metrics that diagnose chaotic internal structure:
+        //
+        // 2a) ATR Drift Penalty
+        //     Compare ATR at the START of the window vs END of the window.
+        //     If ATR is expanding (end > start × threshold), the window is
+        //     in a volatility expansion phase — NOT a consolidation.
+        //     Score: 0 (stable) → 1 (expanding volatility).
+        //
+        // 2b) Range Uniformity (Stddev of candle ranges)
+        //     True consolidations have relatively consistent candle sizes.
+        //     Large stddev = chaotic mix of tiny and massive candles.
+        //     Score: normalised stddev / rangeH. Capped at 1.
+        //
+        // 2c) Volatility Compression Ratio
+        //     Compare average internal candle range to the ATR BEFORE the
+        //     window (pre-box volatility). Good consolidations show contraction.
+        //     Score: avg_internal_range / pre_box_ATR. Capped at 1.
+        //     If ratio < 1, volatility is compressed (good). If ≥ 1, it is NOT.
+        //
+        // 2d) Wick Chaos Score
+        //     Fraction of bars whose full range (high − low) spans more than
+        //     i_wickChaosThresh of the total box height.
+        //     High fraction = chaotic auction with violent single-bar swings.
+        //     Score: fraction of chaos candles, capped at 1.
+        //
+        // Combined: internalVolPenalty = weighted average of the four sub-metrics.
+        // Applied as: score -= internalVolPenalty × i_volPenWeight
+        // ════════════════════════════════════════════════════════════════
+
+        // 2a) ATR Drift: compare ATR at oldest vs newest end of the window
+        //     atrMain[w] = ATR value w bars ago (window start)
+        //     atrMain[1] = ATR value 1 bar ago  (window end)
+        float atrStart     = atrMain[w]   // ATR at leftmost bar of window
+        float atrEnd       = atrMain[1]   // ATR at rightmost bar of window
+        float atrDriftRatio = atrEnd / math.max(atrStart, 1e-9)
+        // Penalty is 0 if ratio ≤ threshold; grows linearly to 1 at 2× threshold
+        float atrDriftPen  = math.max(atrDriftRatio - i_atrDriftThresh, 0.0) /
+                             math.max(i_atrDriftThresh - 1.0, 0.001)
+        atrDriftPen       := math.min(atrDriftPen, 1.0)
+
+        // 2b) Range Uniformity — compute mean and variance of per-bar ranges
+        float sumRanges  = 0.0
+        float sumRangeSq = 0.0
+        int   wickChaos  = 0  // count of chaos candles (shared loop — efficiency)
+        for k = 1 to w
+            float barRange  = high[k] - low[k]
+            sumRanges      += barRange
+            sumRangeSq     += barRange * barRange
+            // 2d) Wick Chaos — count while we are already iterating
+            if barRange >= rangeH * i_wickChaosThresh
+                wickChaos += 1
+        float meanRange   = sumRanges  / float(w)
+        float meanRangeSq = sumRangeSq / float(w)
+        float rangeVar    = math.max(meanRangeSq - meanRange * meanRange, 0.0)
+        float rangeStdDev = math.sqrt(rangeVar)
+        // Normalise stddev by box height; high relative stddev = chaotic
+        float rangeUniformityPen = math.min(rangeStdDev / math.max(rangeH, 1e-9), 1.0)
+
+        // 2c) Volatility Compression Ratio
+        //     Pre-box ATR = ATR at bar_index − w − 1 (one bar before window starts)
+        //     If that historical value is not available, fall back to atrMain[w].
+        float preBoxATR    = atrMain[w + 1]  // ATR one bar before window
+        float comprRatio   = meanRange / math.max(preBoxATR, 1e-9)
+        // If comprRatio < 1 → compressed (good). If ≥ 1 → not compressed (bad).
+        // Map: 0 penalty at comprRatio ≤ 0.8, full penalty at comprRatio ≥ 1.5
+        float comprPen     = math.min(math.max(comprRatio - 0.8, 0.0) / 0.7, 1.0)
+
+        // 2d) Wick Chaos fraction (already counted above)
+        float wickChaosPen = math.min(float(wickChaos) / math.max(float(w) * 0.5, 1.0), 1.0)
+
+        // Combined internal volatility penalty (average of 4 sub-metrics)
+        float internalVolPenalty = (atrDriftPen + rangeUniformityPen + comprPen + wickChaosPen) * 0.25
+
+        // ════════════════════════════════════════════════════════════════
+        // FIX 3 — INTERNAL PATH QUALITY
+        //
+        // 3a) Path Smoothness Ratio (EXTENDED from v1's noiseScore)
+        //     v1 measured path/netDisp as a reward (noiseScore).
+        //     v2 adds a DIRECTIONAL use of the same ratio:
+        //       Very high path with VERY low net displacement = choppy rotation.
+        //       This is different from a tight oscillation because it implies
+        //       price visited the same levels many times with no net progress
+        //       AND the oscillations were large relative to the box.
+        //     pathRatio = pathLen / max(netDisp, rangeH × 0.01)
+        //     smoothBonus: high ratio → good (many oscillations relative to net)
+        //     Capped and normalised to [0, 1].
+        //
+        // 3b) Mean Reversion Quality
+        //     Count the fraction of bars where the close CROSSES the box midpoint
+        //     (i.e., the close on this bar is on the opposite side of mid vs last).
+        //     More crossings → price keeps returning to equilibrium → genuine balance.
+        //     midCrossFrac = crossings / (w − 1)
+        //     Bonus when fraction ≥ i_midCrossMin.
+        //
+        // 3c) Directional Entropy
+        //     upMoves and dnMoves are already counted in the main close-series loop.
+        //     A perfectly balanced consolidation has upMoves ≈ dnMoves.
+        //     Imbalance = dominant directional pressure = trend or rotation.
+        //     entropy = 1 − |upMoves − dnMoves| / (upMoves + dnMoves)
+        //     entropy → 1 when balanced; → 0 when completely one-directional.
+        //
+        // Combined: pathQualityBonus = weighted average of 3 metrics × i_entropyWeight
+        // Applied as: score += pathQualityBonus
+        // ════════════════════════════════════════════════════════════════
+
+        // 3a) Path Smoothness normalised to [0, 1]
+        float pathRatio      = pathLen / math.max(netDisp, rangeH * 0.01)
+        float smoothScore    = math.min(pathRatio / math.max(i_pathSmoothRef, 1.0), 1.0)
+
+        // 3b) Mean Reversion Quality — count midpoint crossings
+        float boxMid         = (wHi + wLo) * 0.5
+        int   midCrossings   = 0
+        for k = 1 to w - 1
+            // Cross occurs when consecutive closes are on opposite sides of mid
+            bool  aboveMid_k  = close[k]     >= boxMid
+            bool  aboveMid_k1 = close[k + 1] >= boxMid
+            if aboveMid_k != aboveMid_k1
+                midCrossings += 1
+        float midCrossFrac   = float(midCrossings) / math.max(float(w - 1), 1.0)
+        // Bonus: 0 if fraction is below minimum; scales to 1 at 2× minimum
+        float midRevScore    = math.min(midCrossFrac / math.max(i_midCrossMin * 2.0, 0.001), 1.0)
+
+        // 3c) Directional Entropy
+        int   totalMoves     = upMoves + dnMoves
+        float entropyScore   = totalMoves > 0 ?
+                               1.0 - float(math.abs(upMoves - dnMoves)) / float(totalMoves) : 0.5
+
+        // Combined path quality bonus [0, 1] → scaled by weight
+        float pathQualityBonus = (smoothScore + midRevScore + entropyScore) * 0.3333 * i_entropyWeight
+
+        // ════════════════════════════════════════════════════════════════
+        // COMPOSITE SCORE  (10 dimensions)
+        //
+        // Theoretical range:
+        //   Max ≈ 3.5 + 2.0 + 1.5 + 1.0 + i_entropyWeight  =  ~9.5
+        //   Min ≈ −2.0 − 2.0 − 3.0 − i_volPenWeight − i_fvgPenalty  (negative)
+        //
+        // Positive dimensions:
+        //   compScore      × 3.5   compression quality
+        //   oscScore       × 2.0   oscillation frequency
+        //   boundScore     × 1.5   rail touch interaction
+        //   noiseScore     × 1.0   path-to-displacement
+        //   pathQualityBonus       NEW: mean-reversion + entropy + smoothness
+        //
+        // Negative dimensions:
+        //   runPen         × 2.0   monotonic run length
+        //   dispPen        × 2.0   net displacement ratio
+        //   wickPen        × 3.0   wick/close breach of rails
+        //   internalVolPen × 2.5   internal chaos (ATR drift, range variance,
+        //                          compression, wick chaos)
+        //   fvgPen                 fair value gap structural violation
+        // ════════════════════════════════════════════════════════════════
+        float score = compScore           * 3.5 +
+                      oscScore            * 2.0 +
+                      boundScore          * 1.5 +
+                      noiseScore          * 1.0 +
+                      pathQualityBonus         -
+                      runPen             * 2.0 -
+                      dispPen            * 2.0 -
+                      wickPen            * 3.0 -
+                      internalVolPenalty * i_volPenWeight -
+                      fvgPen
+
+        if score >= i_scoreThresh and score > bestScore
+            bestScore := score
+            bestW     := w
+            bestHi    := wHi
+            bestLo    := wLo
+            bestComp  := compScore
+            bestDisp  := dispPen
+            bestEff   := noiseScore
+            bestBound := boundScore
+
+    // ── Activate the best window as a new live box ────────────────────────
+    if bestW >= i_minBars
+
+        int   wLeft = bar_index - bestW
+        int   wRight = bar_index - 1
+        float wTop   = bestHi
+        float wBot   = bestLo
+
+        // ── Classification ─────────────────────────────────────────────
+        // TIGHT: high compression + strong boundary interaction
+        //        → genuine low-volatility auction balance
+        // DRIFT: high net displacement + low noise
+        //        → disguised trend (monotonic drift inside a rectangle)
+        // LOOSE: accepted but not premium quality
+        string boxType = "LOOSE"
+        if bestComp > 0.65 and bestBound > 0.45
+            boxType := "TIGHT"
+        else if bestDisp > 0.55 and bestEff < 0.35
+            boxType := "DRIFT"
+
+        color bgCol = switch boxType
+            "TIGHT" => i_colTightBg
+            "DRIFT" => i_colDriftBg
+            =>         i_colLooseBg
+        color bdCol = switch boxType
+            "TIGHT" => i_colTightBd
+            "DRIFT" => i_colDriftBd
+            =>         i_colLooseBd
+
+        float scoreRnd = math.round(bestScore * 100.0) / 100.0
+
+        box newBox = box.new(
+             left         = wLeft,
+             top          = wTop,
+             right        = bar_index,
+             bottom       = wBot,
+             border_color = bdCol,
+             bgcolor      = bgCol,
+             border_width = 1,
+             xloc         = xloc.bar_index,
+             extend       = extend.none
+        )
+
+        label newLbl = na
+        if i_showLabels
+            string lbTxt = boxType + (i_showScore ? " (" + str.tostring(scoreRnd) + ")" : "")
+            newLbl := label.new(
+                 x         = wLeft,
+                 y         = wTop,
+                 text      = lbTxt,
+                 color     = color.new(bdCol, 80),
+                 textcolor = bdCol,
+                 style     = label.style_label_right,
+                 size      = size.tiny,
+                 xloc      = xloc.bar_index
+            )
+
+        array.push(boxLeft,   wLeft)
+        array.push(boxRight,  bar_index)
+        array.push(boxTop,    wTop)
+        array.push(boxBottom, wBot)
+        array.push(boxScore,  bestScore)
+        array.push(boxActive, true)
+        array.push(boxObj,    newBox)
+        array.push(boxLbl,    newLbl)
+
+// ════════════════════════════════════════════════════════════════════════════
+// ▌ STEP 3 — ATR CLUSTER DETECTOR  (architecture preserved from v1)
+// ════════════════════════════════════════════════════════════════════════════
+if i_clEnable and not isBlockedTime
+
+    int   clBestN     = 0
+    float clBestHi    = na
+    float clBestLo    = na
+    float clBestScore = na
+
+    for n = i_clMinBars to i_clMaxBars
+        float wHi = high[1]
+        float wLo = low[1]
+        for idx = 2 to n
+            if high[idx] > wHi
+                wHi := high[idx]
+            if low[idx]  < wLo
+                wLo := low[idx]
+
+        float wHt = wHi - wLo
+
+        if wHt > 0 and wHt < atr14 * i_clAtrMult
+            int clStart = bar_index - n
+            int clEnd   = bar_index - 1
+
+            bool tOvlp     = not na(clLastLeft)   and not na(clLastRight)  and
+                             clStart <= clLastRight and clEnd >= clLastLeft
+            bool pOvlp     = not na(clLastTop)    and not na(clLastBottom) and
+                             wHi >= clLastBottom   and wLo <= clLastTop
+            bool overlapLst = tOvlp and pOvlp
+
+            if not overlapLst
+                int   clMaxRun = 0
+                int   clCurRun = 0
+                int   clCurDir = 0
+                for k = 1 to n - 1
+                    float cp = close[n - (k - 1)]
+                    float cc = close[n - k]
+                    int   dd = cc < cp ? -1 : cc > cp ? 1 : 0
+                    if dd != 0
+                        if dd == clCurDir
+                            clCurRun += 1
+                        else
+                            clCurRun := 1
+                            clCurDir := dd
+                        if clCurRun > clMaxRun
+                            clMaxRun := clCurRun
+                    else
+                        clCurRun := 0
+
+                float clNet   = math.abs(close[1] - close[n])
+                float clRatio = clNet / wHt
+
+                bool clTrending = clMaxRun >= i_clMaxCDir or clRatio > i_clMaxNet
+
+                if not clTrending
+                    float clTouchThr = wHt * 0.10
+                    int   clTouches  = 0
+                    for k = 1 to n
+                        if wHi - high[k] <= clTouchThr
+                            clTouches += 1
+                        if low[k] - wLo  <= clTouchThr
+                            clTouches += 1
+
+                    float clPath = 0.0
+                    for k = 1 to n - 1
+                        clPath += math.abs(close[k] - close[k + 1])
+
+                    float clEff        = clPath > 0 ? clNet / clPath : 1.0
+                    float clCompact    = 1.0 - math.min(wHt / (atr14 * i_clAtrMult), 1.0)
+                    float clOsc        = 1.0 - math.min(clRatio, 1.0)
+                    float clRunPenalty = float(clMaxRun) / float(i_clMaxCDir)
+                    float clScore = clCompact * 3.0 +
+                     clOsc     * 2.0 +
+                     float(clTouches) * 0.25 +
+                     float(n)  * 0.05 -
+                     clEff     * 1.5 -
+                     clRunPenalty
+
+                    if na(clBestScore) or clScore > clBestScore
+                        clBestScore := clScore
+                        clBestN     := n
+                        clBestHi    := wHi
+                        clBestLo    := wLo
+
+    if clBestN >= i_clMinBars
+        int clStart = bar_index - clBestN
+        int clEnd   = bar_index - 1
+
+        box.new(
+             left         = clStart,
+             top          = clBestHi,
+             right        = clEnd,
+             bottom       = clBestLo,
+             border_color = i_clBd,
+             bgcolor      = i_clBg,
+             border_width = 1,
+             xloc         = xloc.bar_index,
+             extend       = extend.none
+        )
+
+        clLastLeft   := clStart
+        clLastRight  := clEnd
+        clLastTop    := clBestHi
+        clLastBottom := clBestLo
+
+        if i_showLabels
+            label.new(
+                 x         = clStart,
+                 y         = clBestHi,
+                 text      = "CLUSTER",
+                 color     = color.new(i_clBd, 80),
+                 textcolor = i_clBd,
+                 style     = label.style_label_right,
+                 size      = size.tiny,
+                 xloc      = xloc.bar_index
+            )

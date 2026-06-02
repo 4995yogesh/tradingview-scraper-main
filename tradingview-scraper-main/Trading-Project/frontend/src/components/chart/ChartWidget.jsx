@@ -519,8 +519,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     const borderVisible = chartSettings?.showBorders !== false;
     const wickVisible = chartSettings?.showWick !== false;
 
-    let upColor = showBody ? baseUpColor : 'transparent';
-    let downColor = showBody ? baseDownColor : 'transparent';
+    let upColor = showBody ? baseUpColor : 'rgba(0,0,0,0)';
+    let downColor = showBody ? baseDownColor : 'rgba(0,0,0,0)';
     const borderUp = chartSettings?.borderUpColor || baseUpColor;
     const borderDown = chartSettings?.borderDownColor || baseDownColor;
     const wickUp = chartSettings?.wickUpColor || baseUpColor;
@@ -539,7 +539,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       mainSeries = chart.addSeries(BarSeries, { upColor, downColor, priceFormat });
     } else if (chartType === 'hollow') {
       mainSeries = chart.addSeries(CandlestickSeries, { 
-        upColor: 'transparent', downColor, 
+        upColor: 'rgba(0,0,0,0)', downColor, 
         borderUpColor: borderUp, borderDownColor: borderDown, 
         wickUpColor: wickUp, wickDownColor: wickDown, 
         borderVisible, wickVisible, priceFormat 
