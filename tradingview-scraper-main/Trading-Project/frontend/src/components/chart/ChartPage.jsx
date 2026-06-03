@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { useChartMemory } from '../../hooks/useChartMemory';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import ChartWidget from './ChartWidget';
@@ -34,10 +35,11 @@ const AUTO_REFRESH_INTERVAL = 5;
 const JPY_PAIRS = new Set(['USDJPY','EURJPY','GBPJPY','AUDJPY','CHFJPY','NZDJPY','CADJPY']);
 
 export function getSymbolPrecision(symbol) {
+  if (symbol === 'XAUUSD') return 2;
   return JPY_PAIRS.has(symbol) ? 3 : 5;
 }
 
-const DEFAULT_SYMBOL = 'USDJPY';
+const DEFAULT_SYMBOL = 'EURUSD';
 
 const defaultPanes = [
   { symbol: DEFAULT_SYMBOL, timeframe: '1d', chartType: 'hollow', indicators: [] },
@@ -85,6 +87,7 @@ const ResizeHandle = ({ direction = 'horizontal', onDoubleClick }) => (
 );
 
 const ChartPage = () => {
+  const { symbol: urlSymbol } = useParams();
   const chartWidgetRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -121,9 +124,55 @@ const ChartPage = () => {
   const [liveTickKey, setLiveTickKey] = useState(0);
   const [showML, setShowML] = useState(false);
   const [showNN, setShowNN] = useState(false);
+  const [showPM, setShowPM] = useState(true);
 
 
   const symbolPrecision = getSymbolPrecision(symbol);
+
+  // ── Shared data polling — fetches once for ALL panes, not per-ChartWidget ───────
+  // Prevents N-chart × 4-endpoint = 16+ concurrent requests every 5 seconds.
+  const [sharedConsolidations, setSharedConsolidations] = useState([]);
+  const [sharedSwings,         setSharedSwings        ] = useState([]);
+  const [sharedAutoLabels,     setSharedAutoLabels    ] = useState([]);
+  const [sharedNNZones,        setSharedNNZones       ] = useState([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const [cRes, sRes, aRes] = await Promise.all([
+          fetch('http://localhost:8000/consolidations'),
+          fetch('http://localhost:8000/swings'),
+          fetch('http://localhost:8000/api/ml/quality/auto-labels'),
+        ]);
+        if (!cancelled) {
+          if (cRes.ok) { const d = await cRes.json(); if (d.status === 'ok') setSharedConsolidations(d.zones || []); }
+          if (sRes.ok) { const d = await sRes.json(); if (d.status === 'ok') setSharedSwings(d.swings || []); }
+          if (aRes.ok) { const d = await aRes.json(); setSharedAutoLabels(d || []); }
+        }
+      } catch (_) {}
+    };
+    poll();
+    const iv = setInterval(poll, 5000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, []);
+
+  // NN zones are per-symbol+timeframe — fetch once for the active pane's symbol
+  useEffect(() => {
+    let cancelled = false;
+    const fetchNN = async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/nn/refined_zones?symbol=${symbol}&timeframe=${timeframe}`);
+        if (res.ok && !cancelled) {
+          const d = await res.json();
+          setSharedNNZones(d || []);
+        }
+      } catch (_) {}
+    };
+    fetchNN();
+    const iv = setInterval(fetchNN, 5000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [symbol, timeframe]);
 
   // ── 5-Second Auto Refresh ───────────────────────────────────────────────
   useEffect(() => {
@@ -192,6 +241,16 @@ const ChartPage = () => {
     setSymbol(newSymbol);
     setPanes(prev => prev.map(p => ({ ...p, symbol: newSymbol })));
   }, [setSymbol, setPanes]);
+
+  // Sync URL symbol parameter to active symbol
+  useEffect(() => {
+    if (urlSymbol) {
+      const normalized = urlSymbol.toUpperCase();
+      if (normalized !== symbol) {
+        handleSymbolChange(normalized);
+      }
+    }
+  }, [urlSymbol, symbol, handleSymbolChange]);
 
   // Sync pane state — symbol + chartType kept in sync across panes
   const updatePane = useCallback((idx, key, value) => {
@@ -402,6 +461,12 @@ const ChartPage = () => {
           liveTickKey={liveTickKey}
           aiMode={showML}
           nnMode={showNN}
+          pmMode={showPM}
+          paneIndex={idx}
+          sharedConsolidations={sharedConsolidations}
+          sharedSwings={sharedSwings}
+          sharedAutoLabels={sharedAutoLabels}
+          sharedNNZones={sharedNNZones}
         />
         {/* Show mini toolbar for every pane in multi-layout */}
         {activeLayout !== '1' && (
@@ -479,6 +544,12 @@ const ChartPage = () => {
             liveTickKey={liveTickKey}
             aiMode={showML}
             nnMode={showNN}
+            pmMode={showPM}
+            paneIndex={0}
+            sharedConsolidations={sharedConsolidations}
+            sharedSwings={sharedSwings}
+            sharedAutoLabels={sharedAutoLabels}
+            sharedNNZones={sharedNNZones}
           />
         </div>
       );
@@ -520,6 +591,8 @@ const ChartPage = () => {
         onToggleML={() => setShowML(prev => !prev)}
         nnMode={showNN}
         onToggleNN={() => setShowNN(prev => !prev)}
+        pmMode={showPM}
+        onTogglePM={() => setShowPM(prev => !prev)}
       />
 
 

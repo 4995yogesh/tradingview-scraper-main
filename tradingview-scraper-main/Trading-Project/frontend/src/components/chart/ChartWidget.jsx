@@ -165,15 +165,20 @@ function prepareChartData(rawCandles, timeframe) {
     .filter(c => {
       const basic = Number.isFinite(c.time);
       if (!basic) return false;
-      const isCandle = 'open' in c && 'high' in c && 'low' in c && 'close' in c;
-      if (isCandle) {
-        return Number.isFinite(c.open) && Number.isFinite(c.high) && Number.isFinite(c.low) && Number.isFinite(c.close);
+
+      const hasCandlePrices = c.open !== undefined && c.high !== undefined && c.low !== undefined && c.close !== undefined &&
+                              c.open !== null && c.high !== null && c.low !== null && c.close !== null;
+      if (hasCandlePrices) {
+        const o = Number(c.open), h = Number(c.high), l = Number(c.low), cl = Number(c.close);
+        return Number.isFinite(o) && Number.isFinite(h) && Number.isFinite(l) && Number.isFinite(cl);
       }
-      const isVolume = 'value' in c;
-      if (isVolume) {
-        return Number.isFinite(c.value);
+
+      const hasVolume = c.value !== undefined && c.value !== null;
+      if (hasVolume) {
+        return Number.isFinite(Number(c.value));
       }
-      return true;
+
+      return false;
     });
 
   // STAGE 1 DEDUPE (raw)
@@ -223,7 +228,7 @@ function mapOverlayTime(realTime, tf) {
 
 
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, neuralSettings, liveTickKey, aiMode, nnMode, isSubchart, initialBars }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, neuralSettings, liveTickKey, aiMode, nnMode, pmMode, isSubchart, initialBars, paneIndex = 0, sharedConsolidations, sharedSwings, sharedAutoLabels, sharedNNZones }, ref) => {
   const chartContainerRef      = useRef(null);
   const chartRef               = useRef(null);
   const seriesRef              = useRef(null);
@@ -234,6 +239,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const consolidationPrimitiveRef = useRef(null); // Fast native shape plugin
   const aiPrimitiveRef = useRef(null); // Separate AI-predicted box layer
   const nnPrimitiveRef = useRef(null); // Separate Neural-predicted box layer
+  const pendingScrollBoxRef = useRef(null);
+  const isFetchingOlderRef = useRef(false);
+  const loadedContextRef = useRef(null);
+  const pmPrimitiveRef = useRef(null); // Pattern Memory box layer
   const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
 
   const [domZones, setDomZones] = useState([]);
@@ -281,6 +290,12 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
   const lastContextRef = useRef(`${symbol}:${timeframe}`);
   const hasDataRef = useRef(false);
+  // Refs so initChart's scroll handler always sees the latest symbol/timeframe
+  // without needing them as useCallback dependencies (avoids full canvas teardown).
+  const symbolRef = useRef(symbol);
+  const timeframeRef = useRef(timeframe);
+  useEffect(() => { symbolRef.current = symbol; }, [symbol]);
+  useEffect(() => { timeframeRef.current = timeframe; }, [timeframe]);
 
   // ── Fetch live candles whenever symbol, timeframe, or refreshKey changes ─
   useEffect(() => {
@@ -299,6 +314,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       .then((data) => {
         if (!cancelled) {
           setChartData(data);
+          loadedContextRef.current = `${symbol}:${timeframe}`;
           setLoading(false);
           hasDataRef.current = true;
         }
@@ -330,9 +346,13 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     if (loading || error || typeof liveTickKey === 'undefined' || liveTickKey === 0) return;
     if (!seriesRef.current || !chartRef.current) return;
 
+    let active = true;
+
     (async () => {
       try {
         const latest = await fetchLiveCandles(symbol, timeframe, 10);
+        if (!active) return;
+        if (!seriesRef.current || !chartRef.current) return;
         if (!latest || latest.candleData.length === 0) return;
 
         // Normalise timestamps the same way prepareChartData does
@@ -352,11 +372,17 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
             t = mon.toISOString().slice(0, 10);
           }
           return { ...c, time: t };
-        }).filter(c => c.open != null && c.high != null && c.low != null && c.close != null);
+        }).filter(c => {
+          const hasPrices = c.open !== undefined && c.high !== undefined && c.low !== undefined && c.close !== undefined &&
+                            c.open !== null && c.high !== null && c.low !== null && c.close !== null;
+          if (!hasPrices) return false;
+          return Number.isFinite(Number(c.open)) && Number.isFinite(Number(c.high)) && Number.isFinite(Number(c.low)) && Number.isFinite(Number(c.close));
+        });
 
         // Push each candle via series.update() — the correct LightweightCharts live-update API
         for (const candle of mapped) {
           try {
+            if (!active || !seriesRef.current) break;
             if (chartType === 'line' || chartType === 'area') {
               seriesRef.current.update({ time: candle.time, value: candle.close });
             } else {
@@ -364,6 +390,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
             }
           } catch (_) { /* silently skip duplicate/out-of-order candles */ }
         }
+
+        if (!active) return;
 
         // Keep chartData state in sync so other effects (consolidations, swings) stay current
         setChartData(prev => {
@@ -383,7 +411,54 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         console.warn('[LiveTick] fetch failed:', err?.message);
       }
     })();
+
+    return () => {
+      active = false;
+    };
   }, [liveTickKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const performScrollToBox = useCallback((box) => {
+    const chart = chartRef.current;
+    const candles = chartDataRef.current?.candleData;
+    if (!chart || !candles?.length) return false;
+    if (loadedContextRef.current !== `${symbol}:${timeframe}`) return false;
+
+    const startMs = box.time_start_ms || box.timeStart;
+    if (!startMs) return false;
+
+    const targetUnix = Math.floor(startMs / 1000);
+    const getUnix = (t) => typeof t === 'string' ? new Date(t + (t.length === 10 ? 'T00:00:00Z' : '')).getTime() / 1000 : Number(t);
+
+    // Find nearest candle in current cache
+    let nearestIdx = -1;
+    let minDiff = Infinity;
+    candles.forEach((c, i) => {
+      const diff = Math.abs(getUnix(c.time) - targetUnix);
+      if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
+    });
+
+    const daySecs = 86400;
+    if (nearestIdx === -1 || minDiff > daySecs) {
+      // Out of range? Just scroll to extreme left and let data load
+      chart.timeScale().scrollToPosition(-100000, true);
+      return true;
+    }
+
+    // Center view: show ~80 candles around the target
+    const half = 40;
+    const from = Math.max(0, nearestIdx - half);
+    const to   = Math.min(candles.length - 1, nearestIdx + half);
+
+    try {
+      chart.timeScale().setVisibleRange({
+        from: candles[from].time,
+        to:   candles[to].time,
+      });
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }, [symbol, timeframe]);
 
   // ── Navigate chart to a box when FP/FN entry is clicked in Monitor ─────────
   useEffect(() => {
@@ -403,66 +478,140 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         }));
         return;
       }
-      console.log(`[ML/Nav] Scrolling to box ${box.box_id} on ${timeframe}`);
+      console.log(`[ML/Nav] Target box ${box.box_id} on ${timeframe}`);
 
-      const chart = chartRef.current;
-      const candles = chartDataRef.current?.candleData;
-      if (!chart || !candles?.length) return;
-
-      // Set highlights
+      // Set highlights immediately
       setHighlightedBoxId(box.box_id);
-      setSpecialHighlightedBox(box); // Keep full meta for drawing if data hasn't arrived
+      setSpecialHighlightedBox(box);
       setTimeout(() => {
         setHighlightedBoxId(null);
         setSpecialHighlightedBox(null);
       }, 8000); // 8s visibility
 
-      const targetUnix = Math.floor(startMs / 1000);
-      const getUnix = (t) => typeof t === 'string' ? new Date(t + (t.length === 10 ? 'T00:00:00Z' : '')).getTime() / 1000 : Number(t);
-
-      // Find nearest candle in current cache
-      let nearestIdx = -1;
-      let minDiff = Infinity;
-      candles.forEach((c, i) => {
-        const diff = Math.abs(getUnix(c.time) - targetUnix);
-        if (diff < minDiff) { minDiff = diff; nearestIdx = i; }
-      });
-
-      // If nearest is more than 1 day away, assume it's out of current cache range
-      const daySecs = 86400;
-      if (nearestIdx === -1 || minDiff > daySecs) {
-          // Out of range? Just scroll to extreme left and let indicators catch up
-          chart.timeScale().scrollToPosition(-100000, true);
-          return;
+      if (loadedContextRef.current !== `${symbol}:${timeframe}`) {
+        console.log(`[ML/Nav] Context mismatch (${loadedContextRef.current} vs ${symbol}:${timeframe}), storing pending scroll`);
+        pendingScrollBoxRef.current = box;
+        return;
       }
 
-      // Center view: show ~80 candles around the target
-      const half = 40;
-      const from = Math.max(0, nearestIdx - half);
-      const to   = Math.min(candles.length - 1, nearestIdx + half);
+      // Check if target is in current candles range. If not, fetch more candles on-demand!
+      const candles = chartDataRef.current?.candleData;
+      let needsFetch = false;
+      let requiredCount = TF_CANDLE_COUNT[timeframe] || 500;
 
-      try {
-        chart.timeScale().setVisibleRange({
-          from: candles[from].time,
-          to:   candles[to].time,
-        });
-      } catch (_) {}
+      if (candles?.length) {
+        const getUnix = (t) => typeof t === 'string' ? new Date(t + (t.length === 10 ? 'T00:00:00Z' : '')).getTime() / 1000 : Number(t);
+        const firstUnix = getUnix(candles[0].time);
+        const lastUnix = getUnix(candles[candles.length - 1].time);
+        const targetUnix = Math.floor(startMs / 1000);
+
+        if (targetUnix < firstUnix) {
+          needsFetch = true;
+          const tfSecs = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400, '1w': 604800 }[timeframe] || 300;
+          const diffSecs = lastUnix - targetUnix;
+          requiredCount = Math.min(5000, Math.ceil(diffSecs / tfSecs) + 150);
+        }
+      } else {
+        needsFetch = true;
+      }
+
+      if (needsFetch) {
+        console.log(`[ML/Nav] Target box is older than loaded candles. Fetching ${requiredCount} candles...`);
+        setLoading(true);
+        isFetchingOlderRef.current = true;
+        pendingScrollBoxRef.current = box; // Ensure pending scroll is marked
+        fetchLiveCandles(symbol, timeframe, requiredCount)
+          .then((data) => {
+            isFetchingOlderRef.current = false;
+            setChartData(data);
+            loadedContextRef.current = `${symbol}:${timeframe}`;
+            setLoading(false);
+          })
+          .catch((err) => {
+            console.error('[ML/Nav] Failed to fetch older candles:', err);
+            isFetchingOlderRef.current = false;
+            setLoading(false);
+          });
+      } else {
+        // Try scrolling immediately
+        const scrolled = performScrollToBox(box);
+        if (!scrolled) {
+          console.log(`[ML/Nav] Candles not loaded yet, storing pending scroll for ${box.box_id}`);
+          pendingScrollBoxRef.current = box;
+        } else {
+          pendingScrollBoxRef.current = null;
+        }
+      }
     };
 
     window.addEventListener('ml-goto-box', handleGotoBox);
     return () => window.removeEventListener('ml-goto-box', handleGotoBox);
-  }, [timeframe]);  // FIXED: Need timeframe in deps to avoid stale closure during auto-switch retry
+  }, [timeframe, symbol, performScrollToBox]);
+
+  // Handle pending scroll to box once candles are loaded
+  useEffect(() => {
+    if (isFetchingOlderRef.current) {
+      console.log('[ML/Nav] Delaying pending scroll because older candles are currently fetching...');
+      return;
+    }
+    const box = pendingScrollBoxRef.current;
+    if (box && loadedContextRef.current === `${symbol}:${timeframe}`) {
+      const candles = chartData?.candleData;
+      if (candles?.length) {
+        const startMs = box.time_start_ms || box.timeStart;
+        const getUnix = (t) => typeof t === 'string' ? new Date(t + (t.length === 10 ? 'T00:00:00Z' : '')).getTime() / 1000 : Number(t);
+        const firstUnix = getUnix(candles[0].time);
+        const lastUnix = getUnix(candles[candles.length - 1].time);
+        const targetUnix = Math.floor(startMs / 1000);
+
+        if (targetUnix < firstUnix) {
+          // Needs fetch of older candles!
+          const tfSecs = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400, '1w': 604800 }[timeframe] || 300;
+          const diffSecs = lastUnix - targetUnix;
+          const requiredCount = Math.min(5000, Math.ceil(diffSecs / tfSecs) + 150);
+
+          console.log(`[ML/Nav] Target box is older than loaded candles. Fetching ${requiredCount} candles...`);
+          setLoading(true);
+          isFetchingOlderRef.current = true;
+          fetchLiveCandles(symbol, timeframe, requiredCount)
+            .then((data) => {
+              isFetchingOlderRef.current = false;
+              setChartData(data);
+              loadedContextRef.current = `${symbol}:${timeframe}`;
+              setLoading(false);
+            })
+            .catch((err) => {
+              console.error('[ML/Nav] Failed to fetch older candles:', err);
+              isFetchingOlderRef.current = false;
+              setLoading(false);
+            });
+          return;
+        }
+      }
+
+      console.log(`[ML/Nav] Executing pending scroll to box ${box.box_id}`);
+      const scrolled = performScrollToBox(box);
+      if (scrolled) {
+        pendingScrollBoxRef.current = null;
+      }
+    }
+  }, [chartData, performScrollToBox, symbol, timeframe]);
 
   // Structural Initialization of HTML Canvas ONLY
   const initChart = useCallback(() => {
     if (!chartContainerRef.current) return;
 
     if (chartRef.current) {
-      chartRef.current.remove();
+      try {
+        chartRef.current.remove();
+      } catch (e) {
+        console.warn('Error removing old chart in initChart:', e);
+      }
       chartRef.current = null;
     }
 
     // Clear indicator series refs since the chart (and all its series) is destroyed
+    seriesRef.current = null;
     swingSeriesRef.current = [];
     emaHighSeriesRef.current = null;
     emaLowSeriesRef.current = null;
@@ -599,15 +748,17 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         isLoadingMoreRef.current = true;
         try {
           const oldestTime = currentData.candleData[0].time;
-          const newData = await fetchLiveCandles(symbol, timeframe, TF_CANDLE_COUNT[timeframe] || 500, oldestTime);
+          const sym = symbolRef.current;
+          const tf  = timeframeRef.current;
+          const newData = await fetchLiveCandles(sym, tf, TF_CANDLE_COUNT[tf] || 500, oldestTime);
           if (newData.candleData.length > 0) {
             setChartData(prev => {
               const combinedCandles = prev.candleData.concat(newData.candleData);
               const combinedVolume  = prev.volumeData.concat(newData.volumeData);
 
               return {
-                candleData: prepareChartData(combinedCandles, timeframe),
-                volumeData: prepareChartData(combinedVolume, timeframe)
+                candleData: prepareChartData(combinedCandles, tf),
+                volumeData: prepareChartData(combinedVolume, tf)
               };
             });
           }
@@ -618,14 +769,24 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         }
       }
     });
-  }, [chartType, logScale, chartSettings, timeframe, symbol, symbolPrecision, onPriceUpdate]);
+  }, [chartType, logScale, chartSettings, symbolPrecision, onPriceUpdate]);
 
-  useEffect(() => { initChart(); }, [initChart]);
+  // Stagger chart canvas initialisation in multi-pane layouts so all 4 charts
+  // don't create their WebGL canvas simultaneously (causes browser jank / blank panes).
+  useEffect(() => {
+    const delay = paneIndex * 80; // 0ms, 80ms, 160ms, 240ms
+    if (delay === 0) {
+      initChart();
+    } else {
+      const t = setTimeout(initChart, delay);
+      return () => clearTimeout(t);
+    }
+  }, [initChart, paneIndex]);
 
-  // ── Fetch Consolidation Zones + Swing Levels from backend ─────────────────
   const [consolidations, setConsolidations] = useState([]);
   const [swingLevels, setSwingLevels]       = useState([]);
   const [nnZones, setNNZones]               = useState([]);
+  const [pmZones, setPMZones]               = useState([]);
 
   const globalZoneMap = React.useMemo(() => {
     const map = {};
@@ -637,7 +798,27 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     return map;
   }, [consolidations, chartData]);
 
+  // ── Sync shared data from parent when supplied (multi-pane mode) ─────────────
+  // When ChartPage passes pre-fetched shared data, we skip internal polling entirely
+  // to avoid N-pane × 4-endpoint = 16+ requests/5s hammering the backend.
   useEffect(() => {
+    if (sharedConsolidations !== undefined) setConsolidations(sharedConsolidations);
+  }, [sharedConsolidations]);
+  useEffect(() => {
+    if (sharedSwings !== undefined) setSwingLevels(sharedSwings);
+  }, [sharedSwings]);
+  useEffect(() => {
+    if (sharedAutoLabels !== undefined) setAutoLabels(sharedAutoLabels);
+  }, [sharedAutoLabels]);
+  useEffect(() => {
+    if (sharedNNZones !== undefined) setNNZones(sharedNNZones);
+  }, [sharedNNZones]);
+
+  // ── Internal polling — only runs when parent does NOT supply shared data ──────
+  useEffect(() => {
+    // Skip: parent is providing this data via props (multi-pane optimisation)
+    if (sharedConsolidations !== undefined) return;
+
     let iv;
     const poll = async () => {
       try {
@@ -649,30 +830,42 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         ]);
         if (cRes.ok) {
           const d = await cRes.json();
-          if (d.status === 'ok') {
-            setConsolidations(prev => JSON.stringify(prev) === JSON.stringify(d.zones) ? prev : (d.zones || []));
-          }
+          if (d.status === 'ok') setConsolidations(d.zones || []);
         }
         if (sRes.ok) {
           const d = await sRes.json();
-          if (d.status === 'ok') {
-            setSwingLevels(prev => JSON.stringify(prev) === JSON.stringify(d.swings) ? prev : (d.swings || []));
-          }
+          if (d.status === 'ok') setSwingLevels(d.swings || []);
         }
         if (aRes.ok) {
           const d = await aRes.json();
-          setAutoLabels(prev => JSON.stringify(prev) === JSON.stringify(d) ? prev : (d || []));
+          setAutoLabels(d || []);
         }
         if (nRes && nRes.ok) {
           const d = await nRes.json();
-          setNNZones(prev => JSON.stringify(prev) === JSON.stringify(d) ? prev : (d || []));
+          setNNZones(d || []);
         }
       } catch (_) {}
     };
     poll();
     iv = setInterval(poll, 5000);
     return () => clearInterval(iv);
-  }, [symbol, timeframe]);
+  }, [symbol, timeframe, sharedConsolidations]);
+
+  // ── Fetch Pattern Memory Zones from backend ───────────────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    const bareSymbol = symbol.split(':').pop().toUpperCase();
+    fetch(`http://localhost:8000/api/patterns?symbol=${bareSymbol}&timeframe=${timeframe}&limit=500`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!cancelled && d?.patterns) {
+          setPMZones(d.patterns);
+        }
+      })
+      .catch(err => console.warn('[PM] Failed to fetch pattern memory zones:', err));
+
+    return () => { cancelled = true; };
+  }, [symbol, timeframe, refreshKey]);
 
   // ── Consolidation Boxes Drawing ───────────────────────────────────────────
   const visibleZones = React.useMemo(() => {
@@ -713,7 +906,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   useEffect(() => {
     const chart = chartRef.current;
     const series = seriesRef.current;
-    if (!chart || !series || !chartDataRef.current?.candleData?.length || !consolidationSettings?.enabled) return;
+    if (!chart || !series || !chartDataRef.current?.candleData?.length) return;
+    if (!consolidationSettings?.enabled && !specialHighlightedBox) return;
 
     if (!consolidationPrimitiveRef.current) {
       consolidationPrimitiveRef.current = new ConsolidationBoxesPrimitive();
@@ -726,8 +920,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     const chartTfIdx = ALL_TFS.indexOf(timeframe.toLowerCase());
 
     const zones = visibleZones;
-    if (!zones.length) {
-      consolidationPrimitiveRef.current.setData([]);
+    if (!zones.length && !specialHighlightedBox) {
+      if (consolidationPrimitiveRef.current) {
+        consolidationPrimitiveRef.current.setData([]);
+      }
       activeBoxesRef.current = [];
       rawParsedZonesRef.current = { curr: [], htf: [] };
       return;
@@ -895,12 +1091,18 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       
       // If we have a special highlight from Monitor, ensure it's in the list even if not from server
       if (specialHighlightedBox && !withHighlights.some(b => b.box_id === specialHighlightedBox.box_id)) {
+          const tStart = specialHighlightedBox.time_start_ms || specialHighlightedBox.timeStart;
+          const tEnd   = specialHighlightedBox.time_end_ms   || specialHighlightedBox.timeEnd;
+          const tStartSec = tStart / 1000;
+          const tEndSec   = tEnd / 1000;
           withHighlights.push({
               ...specialHighlightedBox,
-              t1: specialHighlightedBox.time_start_ms / 1000,
-              t2: specialHighlightedBox.time_end_ms / 1000,
-              priceHigh: specialHighlightedBox.price_high,
-              priceLow: specialHighlightedBox.price_low,
+              t1: mapOverlayTime(tStartSec, timeframe),
+              t2: mapOverlayTime(tEndSec, timeframe),
+              drawT1: tStartSec,
+              drawT2: tEndSec,
+              priceHigh: specialHighlightedBox.price_high || specialHighlightedBox.priceHigh,
+              priceLow:  specialHighlightedBox.price_low  || specialHighlightedBox.priceLow,
               borderColor: '#2962FF',
               fillColor: '#2962FF10',
               highlighted: true
@@ -1124,6 +1326,84 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       }
     };
   }, [nnZones, timeframe, chartKey, nnMode, neuralSettings]);
+
+  // ── Pattern Memory (PM) Mode: Render saved patterns from DB ─────────────────
+  useEffect(() => {
+    const chart = chartRef.current;
+    const series = seriesRef.current;
+    if (!chart || !series || !chartDataRef.current?.candleData?.length) return;
+
+    if (!pmMode) {
+      if (pmPrimitiveRef.current) {
+        try { series.detachPrimitive(pmPrimitiveRef.current); } catch (_) {}
+        pmPrimitiveRef.current = null;
+      }
+      return;
+    }
+
+    if (!pmPrimitiveRef.current) {
+      pmPrimitiveRef.current = new ConsolidationBoxesPrimitive();
+      series.attachPrimitive(pmPrimitiveRef.current);
+    }
+
+    const candles  = chartDataRef.current.candleData;
+    const getUnix  = (t) => typeof t === 'string' ? new Date(t).getTime() / 1000 : Number(t);
+    const lastUnix = getUnix(candles[candles.length - 1].time);
+    const unixArr  = candles.map(c => getUnix(c.time));
+    const bisectLeft = (arr, target) => {
+      let lo = 0, hi = arr.length;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (arr[mid] < target) lo = mid + 1; else hi = mid; }
+      return lo;
+    };
+    const snapToChart = (unixSec) => {
+      if (!unixArr.length) return null;
+      const idx = bisectLeft(unixArr, unixSec);
+      if (idx === 0) return candles[0].time;
+      if (idx >= unixArr.length) return candles[candles.length - 1].time;
+      const before = unixArr[idx - 1], after = unixArr[idx];
+      return (unixSec - before <= after - unixSec) ? candles[idx - 1].time : candles[idx].time;
+    };
+
+    const pmBoxDefs = [];
+    pmZones.forEach(zone => {
+      const startUnix = Math.floor(zone.box_time_start / 1000);
+      const endUnix   = Math.floor(zone.box_time_end   / 1000);
+      const t1 = snapToChart(startUnix);
+      const t2 = endUnix >= lastUnix ? candles[candles.length - 1].time : snapToChart(endUnix);
+      if (!t1 || !t2 || t1 === t2) return;
+
+      const s1 = Math.min(getUnix(t1), getUnix(t2));
+      const s2 = Math.max(getUnix(t1), getUnix(t2));
+      const lo = bisectLeft(unixArr, s1);
+      const hi = bisectLeft(unixArr, s2 + 1);
+      const points = candles.slice(lo, hi).map(c => c.time);
+      if (points.length < 2) return;
+
+      pmBoxDefs.push({
+        box_id:      `pm_${zone.box_id}`,
+        t1:          points[0],
+        t2:          points[points.length - 1],
+        drawT1:      points[0],
+        drawT2:      points[points.length - 1],
+        priceHigh:   zone.price_high || zone.priceHigh,
+        priceLow:    zone.price_low  || zone.priceLow,
+        borderColor: '#AB47BC', // Purple
+        fillColor:   'rgba(171, 71, 188, 0.15)',
+        isDashed:    true,
+        s1, s2,
+        highlighted: zone.box_id === highlightedBoxId
+      });
+    });
+
+    pmPrimitiveRef.current.setData(pmBoxDefs);
+
+    return () => {
+      if (pmPrimitiveRef.current) {
+        try { series.detachPrimitive(pmPrimitiveRef.current); } catch (_) {}
+        pmPrimitiveRef.current = null;
+      }
+    };
+  }, [pmZones, timeframe, chartKey, pmMode, highlightedBoxId]);
 
   // ── Sync HTML Overlays to Chart Coordinates ────────────────────────────────
   useEffect(() => {
@@ -1374,7 +1654,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     onPriceUpdate?.(candleData[candleData.length - 1]);
 
     if (isFirstLoad) {
-      if (initialBars) {
+      if (pendingScrollBoxRef.current || isFetchingOlderRef.current) {
+        // Skip default zoom reset to let the pending scroll hook handle the zoom/scroll
+        console.log('[ChartWidget] Skipping default zoom reset because a pending scroll or fetch is active');
+      } else if (initialBars) {
         // Explicit override (e.g. canvas charts)
         chart.timeScale().setVisibleLogicalRange({
           from: candleData.length - initialBars,
@@ -1457,8 +1740,9 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
                 container.style.top = '-9999px';
                 document.body.appendChild(container);
 
+                let offChart = null;
                 try {
-                  const offChart = createChart(container, {
+                  offChart = createChart(container, {
                     width: 1200, height: 600,
                     layout: { background: { color: '#000000' }, textColor: '#D1D4DC' },
                     grid: { vertLines: { visible: false }, horzLines: { visible: false } },
@@ -1475,7 +1759,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
                   const candles = chartDataRef.current?.candleData;
                   if (!candles) throw new Error('No candles');
 
-                  offSeries.setData(candles);
+                  const cleaned = prepareChartData(candles, timeframe);
+                  offSeries.setData(cleaned);
 
                   const offPrimitive = new ConsolidationBoxesPrimitive();
                   offSeries.attachPrimitive(offPrimitive);
@@ -1487,11 +1772,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
                   }]);
 
                   const fromIdx = Math.max(0, localBox.startIndex - 5);
-                  const toIdx = Math.min(candles.length - 1, localBox.endIndex + 5);
+                  const toIdx = Math.min(cleaned.length - 1, localBox.endIndex + 5);
                   
                   offChart.timeScale().setVisibleRange({
-                    from: candles[fromIdx].time,
-                    to: candles[toIdx].time
+                    from: cleaned[fromIdx].time,
+                    to: cleaned[toIdx].time
                   });
 
                   // Force auto-scale for vertical fit
@@ -1512,7 +1797,16 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
                 } catch (err) {
                   console.warn(`[AutoSampler] Background capture failed for ${box.box_id}:`, err);
                 } finally {
-                  document.body.removeChild(container);
+                  if (offChart) {
+                    try {
+                      offChart.remove();
+                    } catch (e) {
+                      console.warn('Error removing offscreen chart:', e);
+                    }
+                  }
+                  if (document.body.contains(container)) {
+                    document.body.removeChild(container);
+                  }
                 }
               };
 
@@ -1533,14 +1827,29 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
   useEffect(() => {
     const handleResize = () => {
-      if (chartRef.current && chartContainerRef.current) {
-        chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth, height: chartContainerRef.current.clientHeight });
+      try {
+        if (chartRef.current && chartContainerRef.current) {
+          chartRef.current.applyOptions({ width: chartContainerRef.current.clientWidth, height: chartContainerRef.current.clientHeight });
+        }
+      } catch (err) {
+        console.warn('[ChartWidget] resize error:', err);
       }
     };
     window.addEventListener('resize', handleResize);
     const ro = new ResizeObserver(handleResize);
     if (chartContainerRef.current) ro.observe(chartContainerRef.current);
-    return () => { window.removeEventListener('resize', handleResize); ro.disconnect(); if (chartRef.current) { chartRef.current.remove(); chartRef.current = null; } };
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
+      if (chartRef.current) {
+        try {
+          chartRef.current.remove();
+        } catch (e) {
+          console.warn('[ChartWidget] error removing chart on unmount:', e);
+        }
+        chartRef.current = null;
+      }
+    };
   }, []);
 
   return (

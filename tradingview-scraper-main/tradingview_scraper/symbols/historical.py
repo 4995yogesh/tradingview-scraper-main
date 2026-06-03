@@ -127,11 +127,8 @@ class HistoricalFetcher:
                         series = data.get("p", [{}, {}])[1].get("sds_1", {}).get("s", [])
                         
                         if not series:
-                            consecutive_empty_responses += 1
-                            if consecutive_empty_responses >= 3:
-                                logger.info("Max backfill reached (No more old data on TV servers).")
-                                return self._format_and_sort(all_candles_map)
-                            continue
+                            logger.info("Max backfill reached (No more old data on TV servers).")
+                            return self._format_and_sort(all_candles_map)
                             
                         consecutive_empty_responses = 0
                         candles_added_this_batch = 0
@@ -178,6 +175,11 @@ class HistoricalFetcher:
                         # 2. Limit condition reached
                         if limit and total_candles >= limit:
                             logger.info(f"Candle limit of {limit} reached.")
+                            return self._format_and_sort(all_candles_map)
+
+                        # If this chunk was smaller than requested, we've hit the beginning of history
+                        if len(series) < chunk_size:
+                            logger.info("Reached the end of historical data (last chunk was partial).")
                             return self._format_and_sort(all_candles_map)
 
                         # Request next batch backward in time

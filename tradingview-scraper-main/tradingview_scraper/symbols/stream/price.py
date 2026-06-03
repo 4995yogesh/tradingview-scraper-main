@@ -73,16 +73,31 @@ class RealTimeData:
                     res.raise_for_status()
                     break  # Exit the retry loop on success
 
+                except requests.exceptions.ConnectionError as exc:
+                    # DNS failure — validation service unreachable, skip remote validation
+                    logging.warning(
+                        "[validate_symbols] Cannot reach TradingView validation endpoint "
+                        "(network error). Skipping remote validation for '%s': %s",
+                        item, exc,
+                    )
+                    break  # Don't retry DNS errors
+
                 except requests.RequestException as e:
-                    if res.status_code == 404:
-                        raise ValueError(f"Invalid exchange:symbol '{item}' after {retries} attempts") from e
+                    status = getattr(getattr(e, 'response', None), 'status_code', None)
+                    if status == 404:
+                        raise ValueError(f"Invalid exchange:symbol '{item}' (HTTP 404)") from e
 
                     logging.warning("Attempt %d failed to validate exchange:symbol '%s': %s", attempt + 1, item, e)
 
                     if attempt < retries - 1:
                         time.sleep(1)  # Optional: wait before retrying
                     else:
-                        raise ValueError(f"Invalid exchange:symbol '{item}' after {retries} attempts") from e
+                        logging.warning(
+                            "[validate_symbols] Validation unavailable for '%s' after %d attempts. "
+                            "Proceeding without remote validation.",
+                            item, retries,
+                        )
+                        break
         return True
 
 

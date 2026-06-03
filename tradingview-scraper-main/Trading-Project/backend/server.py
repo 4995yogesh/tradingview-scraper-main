@@ -106,15 +106,10 @@ TIMEFRAME_MAP = {
 # Timeframes stored in SQLite via routine gap-fill (intra-day are derived from 5m)
 PERSISTENT_TIMEFRAMES = ["1m", "5m", "15m", "1h", "4h", "1d", "1w"]
 
-# Symbols to pre-load and gap-fill on startup — all 7 major forex pairs
+# Symbols to pre-load and gap-fill on startup — configured symbols (EURUSD and XAUUSD)
 PERSISTENT_SYMBOLS = [
     ("OANDA", "EURUSD"),
-    ("OANDA", "USDJPY"),
-    ("OANDA", "GBPUSD"),
-    ("OANDA", "USDCHF"),
-    ("OANDA", "AUDUSD"),
-    ("OANDA", "USDCAD"),
-    ("OANDA", "NZDUSD"),
+    ("OANDA", "XAUUSD"),
 ]
 
 # Seconds per bar for each timeframe (used for gap calculation)
@@ -132,12 +127,7 @@ TF_FETCH_LIMIT = {
 # Watchlist symbols
 WATCHLIST_SYMBOLS = [
     {"exchange": "OANDA", "symbol": "EURUSD"},
-    {"exchange": "OANDA", "symbol": "USDJPY"},
-    {"exchange": "OANDA", "symbol": "GBPUSD"},
-    {"exchange": "OANDA", "symbol": "USDCHF"},
-    {"exchange": "OANDA", "symbol": "AUDUSD"},
-    {"exchange": "OANDA", "symbol": "USDCAD"},
-    {"exchange": "OANDA", "symbol": "NZDUSD"},
+    {"exchange": "OANDA", "symbol": "XAUUSD"},
 ]
 
 # Track which series are currently being gap-filled (to avoid double-fetching)
@@ -381,7 +371,8 @@ def _load_db_into_ram(exchange: str, symbol: str, timeframe: str):
     Pull all rows for a series from SQLite and push them into the RAM deque.
     Called at startup before the server begins accepting requests.
     """
-    db_rows = candle_db.get_candles(exchange, symbol, timeframe)
+    # Only load the latest 10,000 candles into RAM cache to save memory and ensure instant server startup
+    db_rows = candle_db.get_candles(exchange, symbol, timeframe, count=10000)
     if not db_rows:
         logger.info("DB empty for %s:%s [%s] — will be filled by gap-fill thread", exchange, symbol, timeframe)
         return
@@ -443,16 +434,20 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
         }
 
         db_count = candle_db.count(exchange, symbol, timeframe)
-        if latest_ts is None or db_count < FIRST_FETCH.get(timeframe, 5000):
+        is_deep_backfill = (latest_ts is None or db_count < FIRST_FETCH.get(timeframe, 5000))
+        
+        if is_deep_backfill:
             fetch_limit = FIRST_FETCH.get(timeframe, 5000)
             logger.info("[gap-fill] Deep backfill for %s:%s [%s] limit=%d",
                         exchange, symbol, timeframe, fetch_limit)
+            start_date = None
         else:
             gap_secs     = now_ts - latest_ts
             missing_bars = max(gap_secs // interval + 20, STARTUP_MIN.get(timeframe, 200))
             fetch_limit  = int(missing_bars)
             logger.info("[gap-fill] %s:%s [%s] gap=%ds → fetching %d bars (includes startup min)",
                         exchange, symbol, timeframe, gap_secs, fetch_limit)
+            start_date = latest_ts
 
         cookie_value = os.getenv("TRADINGVIEW_COOKIE", "").strip()
         jwt_value    = os.getenv("TV_JWT_TOKEN", "unauthorized_user_token")
@@ -463,7 +458,7 @@ def _gap_fill(exchange: str, symbol: str, timeframe: str):
             symbol     = symbol,
             timeframe  = timeframe,
             limit      = fetch_limit,
-            start_date = latest_ts if latest_ts else None,
+            start_date = start_date,
             chunk_size = min(fetch_limit, 5000),
             delay_ms   = 250,
         )
@@ -943,6 +938,24 @@ def parse_end_time(end_time):
         return None
 
 
+import time
+_OHLC_CACHE = {}
+
+def _cache_get(key: str, ttl_s: float):
+    if key in _OHLC_CACHE:
+        entry = _OHLC_CACHE[key]
+        if time.time() - entry['time'] < ttl_s:
+            return entry['data']
+    return None
+
+def _cache_set(key: str, data: dict):
+    _OHLC_CACHE[key] = {
+        'time': time.time(),
+        'data': data
+    }
+
+
+
 @app.get("/api/ohlc")
 def get_ohlc(
     exchange: str = Query("OANDA"),
@@ -958,10 +971,18 @@ def get_ohlc(
         exchange, symbol = symbol.split(":", 1)
 
     parsed_end = parse_end_time(end_time)
-    logger.info("OHLC (DB-First) → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
-    
     is_recent = end_time is None
 
+    # ── Short-lived response cache (8 s) to absorb burst requests ─────────────
+    # Hover prefetch + multi-pane identical requests all hit the same cache entry.
+    cache_key = f"ohlc:{exchange}:{symbol}:{timeframe}:{candles}:{end_time}"
+    cached = _cache_get(cache_key, ttl_s=8.0)
+    if cached is not None:
+        logger.debug("OHLC cache hit → %s:%s tf=%s", exchange, symbol, timeframe)
+        return cached
+
+    logger.debug("OHLC (DB-First) → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
+    
     # 1. Fetch CLOSED candles strictly from SQLite Database
     closed_candles = candle_db.get_candles(exchange, symbol, timeframe, count=candles, end_ts=parsed_end)
     
@@ -995,8 +1016,15 @@ def get_ohlc(
         if ram_ticks:
             closed_candles.append(ram_ticks[-1])
 
+    if not closed_candles:
+        # DB is empty, likely seeding in background via OANDA/TV scraper.
+        # Returning 'loading' tells the frontend to show a status overlay and retry.
+        return {"status": "loading"}
+
     cd, vd = _format_candles_for_ui(closed_candles, timeframe)
-    return {"status": "success", "candleData": cd, "volumeData": vd}
+    result = {"status": "success", "candleData": cd, "volumeData": vd}
+    _cache_set(cache_key, result)
+    return result
 
 
 @app.post("/api/fetch-symbol")
@@ -1923,10 +1951,17 @@ async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
         try:
             df = pd.DataFrame(raw_candles)
             if 'time' in df.columns:
-                # Robust conversion: if first value > 1e11, it's likely ms
-                first_t = df['time'].iloc[0]
-                unit = 'ms' if first_t > 1e11 else 's'
-                df['time'] = pd.to_datetime(df['time'], unit=unit)
+                use_timestamp = timeframe in ["1m", "5m", "15m", "1h", "4h"]
+                if use_timestamp:
+                    first_t = df['time'].iloc[0]
+                    try:
+                        first_t_num = float(first_t)
+                        unit = 'ms' if first_t_num > 1e11 else 's'
+                        df['time'] = pd.to_datetime(df['time'], unit=unit)
+                    except (ValueError, TypeError):
+                        df['time'] = pd.to_datetime(df['time'], unit='s')
+                else:
+                    df['time'] = pd.to_datetime(df['time'])
                 df.set_index('time', inplace=True)
             
             raw_zones = consolidation_boxes(df)[-20:].to_dict('records')
@@ -1990,6 +2025,118 @@ async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
 
 
 # ── Pattern Memory Endpoints (Phase 6) ───────────────────────────────────────
+
+@app.get("/api/patterns")
+async def list_patterns(
+    symbol:    Optional[str] = Query(None, description="Filter by symbol, e.g. EURUSD"),
+    timeframe: Optional[str] = Query(None, description="Filter by timeframe, e.g. 15m"),
+    direction: Optional[str] = Query(None, description="Filter by breakout direction: UP, DOWN, or NONE"),
+    min_quality: float = Query(0.0, description="Minimum quality score"),
+    limit: int = Query(100, le=500, description="Max rows to return"),
+    offset: int = Query(0, description="Pagination offset"),
+):
+    """
+    Return a list of patterns from pattern_memory.db as compact summaries
+    (no embedding blobs). Supports filtering by symbol, timeframe, direction,
+    and minimum quality score.
+    """
+    try:
+        from ml2.pattern_memory.pattern_db import PatternMemoryDB, EMBEDDING_VERSION
+        db = PatternMemoryDB()
+
+        clauses = ["embedding_version = ?"]
+        params: list = [EMBEDDING_VERSION]
+
+        if symbol:
+            clauses.append("symbol = ?")
+            params.append(symbol.upper())
+        if timeframe:
+            clauses.append("timeframe = ?")
+            params.append(timeframe)
+        if direction:
+            clauses.append("breakout_direction = ?")
+            params.append(direction.upper())
+        if min_quality > 0:
+            clauses.append("quality_score >= ?")
+            params.append(min_quality)
+
+        where = " AND ".join(clauses)
+        count_params = list(params)   # snapshot before appending limit/offset
+        params += [limit, offset]
+
+        with db._conn() as conn:
+            rows = conn.execute(f"""
+                SELECT
+                    pattern_id, box_id, symbol, exchange, timeframe,
+                    box_time_start, box_time_end, price_high, price_low,
+                    box_width_candles, quality_score, is_valid,
+                    breakout_direction, breakout_strength, breakout_confirmed,
+                    future_return_10, future_return_20, future_return_50, future_return_100,
+                    mfe, mae, time_to_breakout, post_breakout_follow,
+                    atr_at_box_end, box_height_atr, source, human_reviewed, created_at
+                FROM patterns
+                WHERE {where}
+                ORDER BY box_time_end DESC
+                LIMIT ? OFFSET ?
+            """, params).fetchall()
+
+            total = conn.execute(
+                f"SELECT COUNT(*) FROM patterns WHERE {where}",
+                count_params
+            ).fetchone()[0]
+
+        patterns = []
+        for r in rows:
+            d = dict(r)
+            d["win"] = (d.get("future_return_20") or 0) > 0.0015
+            d["loss"] = (d.get("future_return_20") or 0) < -0.0015
+            patterns.append(d)
+
+        return {"patterns": patterns, "total": total, "limit": limit, "offset": offset}
+
+    except Exception as e:
+        logger.error(f"[/api/patterns] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pattern/candles")
+async def get_pattern_candles(
+    symbol:    str = Query(...),
+    timeframe: str = Query(...),
+    time_start: int = Query(..., description="Box start time in milliseconds"),
+    time_end:   int = Query(..., description="Box end time in milliseconds"),
+    pre_candles: int = Query(60, description="Extra candles before box start"),
+    post_candles: int = Query(40, description="Extra candles after box end"),
+):
+    """
+    Return OHLCV candles around a pattern box window for mini-chart display.
+    """
+    try:
+        tf_secs = TF_INTERVAL_SECS.get(timeframe, 900)
+        start_sec = time_start // 1000
+        end_sec   = time_end   // 1000
+        query_start = start_sec - pre_candles * tf_secs
+        query_end   = end_sec   + post_candles * tf_secs
+
+        sym_bare = symbol.split(":")[-1] if ":" in symbol else symbol
+        candles = []
+        for sym in (symbol, sym_bare):
+            rows = candle_db.get_candles("OANDA", sym, timeframe, start_ts=query_start, end_ts=query_end)
+            if rows:
+                candles = [{"time": r["ts"], "open": r["open"], "high": r["high"],
+                             "low": r["low"], "close": r["close"], "volume": r.get("volume", 0)}
+                           for r in rows]
+                break
+
+        return {
+            "candles": candles,
+            "box_start_sec": start_sec,
+            "box_end_sec":   end_sec,
+        }
+    except Exception as e:
+        logger.error(f"[/api/pattern/candles] {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/api/pattern/stats")
 async def get_pattern_stats():

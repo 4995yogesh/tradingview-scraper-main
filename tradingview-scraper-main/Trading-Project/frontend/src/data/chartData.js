@@ -3,13 +3,8 @@ const API_BASE = "http://localhost:8000/api";
 
 // Symbol config for the 7 major forex pairs (price display + symbolInfo)
 const SYMBOL_CONFIG = {
-  'EURUSD': { basePrice: 1.08,  volatility: 0.005, name: 'EUR / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
-  'USDJPY': { basePrice: 149.5, volatility: 0.5,   name: 'USD / JPY', exchange: 'OANDA', type: 'Forex', currency: 'JPY' },
-  'GBPUSD': { basePrice: 1.27,  volatility: 0.006, name: 'GBP / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
-  'USDCHF': { basePrice: 0.895, volatility: 0.004, name: 'USD / CHF', exchange: 'OANDA', type: 'Forex', currency: 'CHF' },
-  'AUDUSD': { basePrice: 0.653, volatility: 0.004, name: 'AUD / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
-  'USDCAD': { basePrice: 1.361, volatility: 0.005, name: 'USD / CAD', exchange: 'OANDA', type: 'Forex', currency: 'CAD' },
-  'NZDUSD': { basePrice: 0.605, volatility: 0.004, name: 'NZD / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
+  'EURUSD': { basePrice: 1.08,   volatility: 0.005, name: 'EUR / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
+  'XAUUSD': { basePrice: 2320.0, volatility: 15.0,  name: 'Gold / USD', exchange: 'OANDA', type: 'Commodity', currency: 'USD' },
 };
 
 
@@ -25,25 +20,63 @@ const TF_CONFIG = {
   '1M':  { bars: 120, intervalMin: 43200, useTimestamp: false },
 };
 
+const candleCache = new Map();
+const activeRequests = new Map();
+const CACHE_TTL_MS = 30000; // 30 seconds — server refreshes every 5s, client caches longer
+
 export async function fetchLiveCandles(symbol, timeframe = "1d", candles = 1000, endTime = null) {
-  const { exchange, tvSymbol } = resolveSymbol(symbol);
-  try {
-    let url = `${API_BASE}/ohlc?exchange=${exchange}&symbol=${tvSymbol}&timeframe=${timeframe}&candles=${candles}&_t=${Date.now()}`;
-    if (endTime) {
-      url += `&end_time=${endTime}`;
-    }
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`OHLC request failed: ${res.status}`);
-    const json = await res.json();
-    // Backend returns status='loading' when initial gap-fill is still in progress
-    if (json.status === 'loading') {
-      throw new Error('initial_load');
-    }
-    return { candleData: json.candleData || [], volumeData: json.volumeData || [] };
-  } catch (err) {
-    console.error("[API] fetchLiveCandles error:", err);
-    throw err;  // Re-throw so ChartWidget can distinguish between errors and empty data
+  const cacheKey = `${symbol}-${timeframe}-${candles}-${endTime || 'latest'}`;
+  const now = Date.now();
+
+  // 1. Check cache first
+  const cached = candleCache.get(cacheKey);
+  if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
+    return cached.data;
   }
+
+  // 2. Check if there's an active request in progress
+  if (activeRequests.has(cacheKey)) {
+    return activeRequests.get(cacheKey);
+  }
+
+  const { exchange, tvSymbol } = resolveSymbol(symbol);
+  
+  // Create the fetch promise
+  const fetchPromise = (async () => {
+    try {
+      let url = `${API_BASE}/ohlc?exchange=${exchange}&symbol=${tvSymbol}&timeframe=${timeframe}&candles=${candles}`;
+      if (endTime) {
+        url += `&end_time=${endTime}`;
+      }
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`OHLC request failed: ${res.status}`);
+      const json = await res.json();
+      
+      // Backend returns status='loading' when initial gap-fill is still in progress
+      if (json.status === 'loading') {
+        throw new Error('initial_load');
+      }
+      
+      const result = { candleData: json.candleData || [], volumeData: json.volumeData || [] };
+      
+      // Store in cache
+      candleCache.set(cacheKey, {
+        timestamp: Date.now(),
+        data: result
+      });
+      
+      return result;
+    } catch (err) {
+      console.error("[API] fetchLiveCandles error:", err);
+      throw err;  // Re-throw so ChartWidget can distinguish between errors and empty data
+    } finally {
+      // Clean up active request when done
+      activeRequests.delete(cacheKey);
+    }
+  })();
+
+  activeRequests.set(cacheKey, fetchPromise);
+  return fetchPromise;
 }
 
 export async function fetchIndicators(symbol, timeframe = "1d", indicators = ["RSI"]) {

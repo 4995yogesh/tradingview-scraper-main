@@ -1,15 +1,10 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Search, X, ChevronRight, ChevronLeft, Star, TrendingUp, Loader2 } from 'lucide-react';
 
-// ── 7 Major forex pairs only ──────────────────────────────────────────────────
+// ── Configured symbols ────────────────────────────────────────────────────────
 const MAJOR_PAIRS = [
   { symbol: 'EURUSD', label: 'EUR/USD', flag: '🇪🇺🇺🇸', base: 'EUR', quote: 'USD' },
-  { symbol: 'USDJPY', label: 'USD/JPY', flag: '🇺🇸🇯🇵', base: 'USD', quote: 'JPY' },
-  { symbol: 'GBPUSD', label: 'GBP/USD', flag: '🇬🇧🇺🇸', base: 'GBP', quote: 'USD' },
-  { symbol: 'USDCHF', label: 'USD/CHF', flag: '🇺🇸🇨🇭', base: 'USD', quote: 'CHF' },
-  { symbol: 'AUDUSD', label: 'AUD/USD', flag: '🇦🇺🇺🇸', base: 'AUD', quote: 'USD' },
-  { symbol: 'USDCAD', label: 'USD/CAD', flag: '🇺🇸🇨🇦', base: 'USD', quote: 'CAD' },
-  { symbol: 'NZDUSD', label: 'NZD/USD', flag: '🇳🇿🇺🇸', base: 'NZD', quote: 'USD' },
+  { symbol: 'XAUUSD', label: 'XAU/USD', flag: '🪙🇺🇸', base: 'XAU', quote: 'USD' },
 ];
 
 const API_BASE = 'http://localhost:8000/api';
@@ -33,8 +28,7 @@ const ForexPairSidebar = ({ activeSymbol, onSymbolChange }) => {
 
   const [collapsed, setCollapsed]   = useState(saved?.collapsed ?? false);
   const [query, setQuery]           = useState('');
-  const [favorites, setFavorites]   = useState(saved?.favorites ?? ['EURUSD', 'USDJPY', 'GBPUSD']);
-  const [loading, setLoading]       = useState(null); // symbol being fetched
+  const [favorites, setFavorites]   = useState(saved?.favorites ?? ['EURUSD', 'XAUUSD']);
   const searchRef = useRef(null);
 
   // Persist state
@@ -57,25 +51,28 @@ const ForexPairSidebar = ({ activeSymbol, onSymbolChange }) => {
     );
   }, []);
 
-  // ── Switch symbol — triggers on-demand seeding if needed ───────────────────
-  const handleSelect = useCallback(async (symbol) => {
+  // ── Switch symbol — fire-and-forget seeding, switch chart immediately ─────
+  const handleSelect = useCallback((symbol) => {
     if (symbol === activeSymbol) return;
 
-    // Fire-and-forget: tell backend to seed this pair if it doesn't have data
-    try {
-      setLoading(symbol);
-      await fetch(
-        `${API_BASE}/fetch-symbol?exchange=OANDA&symbol=${symbol}`,
-        { method: 'POST' }
-      );
-    } catch (_) {
-      // Backend may be offline — proceed anyway (chart will show empty or cached)
-    } finally {
-      setLoading(null);
-    }
+    // Fire-and-forget: tell backend to seed this pair — do NOT await it.
+    // The chart switches immediately; seeding runs in background.
+    fetch(`${API_BASE}/fetch-symbol?exchange=OANDA&symbol=${symbol}`, { method: 'POST' })
+      .catch(() => {}); // ignore errors silently
 
     onSymbolChange(symbol);
   }, [activeSymbol, onSymbolChange]);
+
+  // ── Prefetch on hover — warms the backend cache before click ──────────────
+  const handleHover = useCallback((symbol) => {
+    if (symbol === activeSymbol) return;
+    // Pre-warm the OHLC cache for all pane timeframes silently
+    const tfs = ['1d', '4h', '1h', '15m'];
+    tfs.forEach(tf => {
+      fetch(`${API_BASE}/ohlc?exchange=OANDA&symbol=${symbol}&timeframe=${tf}&candles=750`)
+        .catch(() => {});
+    });
+  }, [activeSymbol]);
 
   // ── Sorted list: favorites first, then rest ─────────────────────────────────
   const sortedPairs = [...filteredPairs].sort((a, b) => {
@@ -171,15 +168,13 @@ const ForexPairSidebar = ({ activeSymbol, onSymbolChange }) => {
           </div>
         ) : (
           sortedPairs.map(pair => {
-            const isActive  = pair.symbol === activeSymbol;
-            const isFav     = favorites.includes(pair.symbol);
-            const isLoading = loading === pair.symbol;
-
+            const isActive = pair.symbol === activeSymbol;
+            const isFav    = favorites.includes(pair.symbol);
             return (
               <button
                 key={pair.symbol}
                 onClick={() => handleSelect(pair.symbol)}
-                disabled={isLoading}
+                onMouseEnter={() => handleHover(pair.symbol)}
                 className={`w-full flex items-center justify-between px-2.5 py-[6px] text-left transition-all group border-l-2 ${
                   isActive
                     ? 'bg-[#2962FF14] border-[#2962FF]'
@@ -197,23 +192,19 @@ const ForexPairSidebar = ({ activeSymbol, onSymbolChange }) => {
                   </div>
                 </div>
 
-                {/* Right: spinner / star */}
+                {/* Right: star */}
                 <div className="flex items-center gap-0.5 shrink-0">
-                  {isLoading ? (
-                    <Loader2 size={10} className="text-[#2962FF] animate-spin" />
-                  ) : (
-                    <button
-                      onClick={e => toggleFavorite(pair.symbol, e)}
-                      className={`w-4 h-4 flex items-center justify-center rounded transition-colors ${
-                        isFav
-                          ? 'text-[#F5A623]'
-                          : 'text-transparent group-hover:text-[#4A4E59] hover:!text-[#F5A623]'
-                      }`}
-                      title={isFav ? 'Unfavorite' : 'Favorite'}
-                    >
-                      <Star size={9} fill={isFav ? 'currentColor' : 'none'} />
-                    </button>
-                  )}
+                  <button
+                    onClick={e => toggleFavorite(pair.symbol, e)}
+                    className={`w-4 h-4 flex items-center justify-center rounded transition-colors ${
+                      isFav
+                        ? 'text-[#F5A623]'
+                        : 'text-transparent group-hover:text-[#4A4E59] hover:!text-[#F5A623]'
+                    }`}
+                    title={isFav ? 'Unfavorite' : 'Favorite'}
+                  >
+                    <Star size={9} fill={isFav ? 'currentColor' : 'none'} />
+                  </button>
                 </div>
               </button>
             );

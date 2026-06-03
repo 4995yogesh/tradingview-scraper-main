@@ -369,7 +369,7 @@ class DashboardLauncher:
         threading.Thread(
             target=self._poll_ready,
             args=(URL_BACKEND, "backend", self._stop_backend_poll),
-            kwargs={"timeout_s": 60},
+            kwargs={"timeout_s": 180},
             daemon=True,
         ).start()
 
@@ -459,7 +459,7 @@ class DashboardLauncher:
             if self.process_backend is None or self.process_backend.poll() is not None:
                 self.root.after(0, self._start_backend)
             self._log_ts("Waiting for backend to become ready...\n", C_YELLOW)
-            for _ in range(60):   # max 30s (60 × 0.5s)
+            for _ in range(360):  # max 180s (360 × 0.5s)
                 if _http_ok(URL_BACKEND):
                     self._log_ts("INFO  Backend ready.\n", C_GREEN)
                     return

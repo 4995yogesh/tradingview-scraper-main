@@ -53,17 +53,28 @@ def validate_symbols(exchange_symbol):
         exchange, symbol = parts
         retries = 3
 
+        validation_reachable = False
         for attempt in range(retries):
             try:
                 res = requests.get(
                     validate_url.format(exchange=exchange, symbol=symbol), timeout=5
                 )
                 res.raise_for_status()
+                validation_reachable = True
+            except requests.exceptions.ConnectionError as exc:
+                # DNS failure or network unreachable — validation service is offline.
+                # The symbol format is already checked above; skip remote validation.
+                logging.warning(
+                    "[validate_symbols] Cannot reach TradingView validation endpoint "
+                    "(network error). Skipping remote validation for '%s': %s",
+                    item, exc,
+                )
+                break  # Don't retry a DNS failure — it won't fix itself in 1 second
             except requests.RequestException as exc:
-                status = getattr(exc.response, "status_code", None)
+                status = getattr(getattr(exc, 'response', None), 'status_code', None)
                 if status == 404:
                     raise ValueError(
-                        f"Invalid exchange:symbol '{item}' after {retries} attempts"
+                        f"Invalid exchange:symbol '{item}' (HTTP 404)"
                     ) from exc
 
                 logging.warning(
@@ -76,9 +87,13 @@ def validate_symbols(exchange_symbol):
                 if attempt < retries - 1:
                     time.sleep(1)  # Wait briefly before retrying
                 else:
-                    raise ValueError(
-                        f"Invalid exchange:symbol '{item}' after {retries} attempts"
-                    ) from exc
+                    # Non-404 repeated failure — log warning but don't block the caller
+                    logging.warning(
+                        "[validate_symbols] Validation unavailable for '%s' after %d attempts. "
+                        "Proceeding without remote validation.",
+                        item, retries,
+                    )
+                    break
             else:
                 break  # Successful request; exit retry loop
 

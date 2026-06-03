@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  ChevronDown, Menu, Settings, Maximize2, Layout, RotateCw, Keyboard, Activity
+  ChevronDown, Menu, Settings, Maximize2, Layout, RotateCw, Keyboard, Activity, Brain
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { symbolInfo, timeframes } from '../../data/chartData';
 import LayoutSelector from './LayoutSelector';
 
@@ -22,8 +23,10 @@ const ChartToolbar = ({
   activeLayout, onLayoutChange, showLayout, onToggleLayout,
   showIndicators, onToggleIndicators, panes,
   countdown, aiMode, onToggleML,
-  nnMode, onToggleNN
+  nnMode, onToggleNN,
+  pmMode, onTogglePM
 }) => {
+  const navigate = useNavigate();
   const [showTimeframes, setShowTimeframes] = useState(false);
   const [showTfInput, setShowTfInput] = useState(false);
   const [tfInputVal, setTfInputVal] = useState('');
@@ -195,6 +198,29 @@ const ChartToolbar = ({
           }`}
         >
           NEURAL
+        </button>
+
+        <button
+          onClick={onTogglePM}
+          title="Toggle Saved Patterns from Database"
+          className={`h-[26px] px-2 flex items-center justify-center rounded-[4px] border transition-all text-[11px] font-bold tracking-wide mr-1 ${
+            pmMode
+              ? 'border-[#AB47BC] bg-[#AB47BC15] text-[#AB47BC] shadow-[0_0_8px_rgba(171,71,188,0.15)]'
+              : 'border-[#2A2E39] text-[#787B86] hover:bg-[#2A2E3960] hover:text-[#D1D4DC]'
+          }`}
+        >
+          MEM PATTERNS
+        </button>
+
+        {/* Pattern Explorer shortcut */}
+        <button
+          id="toolbar-patterns-btn"
+          onClick={() => navigate('/patterns')}
+          title="Pattern Memory Explorer"
+          className="h-[26px] px-2 flex items-center gap-1 justify-center rounded-[4px] border transition-all text-[11px] font-bold tracking-wide mr-1 border-[#2A2E39] text-[#787B86] hover:bg-[#2A2E3960] hover:text-[#D1D4DC] hover:border-[#787B86]"
+        >
+          <Brain size={11} />
+          PATTERNS
         </button>
         
         {/* Indicators button */}

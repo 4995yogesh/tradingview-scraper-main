@@ -24,7 +24,8 @@ class Config:
             self.WATCHLIST_SYMBOLS = [{"exchange": s.split(":")[0], "symbol": s.split(":")[1]} for s in symbols if ":" in s]
         else:
             self.WATCHLIST_SYMBOLS = [
-                {"exchange": "OANDA",   "symbol": "EURUSD"}
+                {"exchange": "OANDA",   "symbol": "EURUSD"},
+                {"exchange": "OANDA",   "symbol": "XAUUSD"},
             ]
 
 config = Config()
