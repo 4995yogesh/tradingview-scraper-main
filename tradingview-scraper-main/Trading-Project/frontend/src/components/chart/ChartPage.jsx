@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useChartMemory } from '../../hooks/useChartMemory';
+import { clearHotStore } from '../../data/chartData';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import ChartWidget from './ChartWidget';
 import ChartToolbar from './ChartToolbar';
@@ -40,6 +41,13 @@ export function getSymbolPrecision(symbol) {
 }
 
 const DEFAULT_SYMBOL = 'EURUSD';
+
+// ── Layout → pane count map ──────────────────────────────────────────────────
+// Used to divide the 1000-candle initial budget equally per visible pane.
+const LAYOUT_PANE_COUNT = { '1': 1, '2h': 2, '2v': 2, '3r': 3, '4': 4 };
+function getPaneCount(layout) {
+  return LAYOUT_PANE_COUNT[layout] || 1;
+}
 
 const defaultPanes = [
   { symbol: DEFAULT_SYMBOL, timeframe: '1d', chartType: 'hollow', indicators: [] },
@@ -125,6 +133,7 @@ const ChartPage = () => {
   const [showML, setShowML] = useState(false);
   const [showNN, setShowNN] = useState(false);
   const [showPM, setShowPM] = useState(true);
+  const [zenMode, setZenMode] = useState(false);
 
 
   const symbolPrecision = getSymbolPrecision(symbol);
@@ -211,6 +220,7 @@ const ChartPage = () => {
   const handlePriceUpdate = useCallback((data) => { setPriceData(data); }, []);
   
   const handleRefresh = useCallback(() => {
+    clearHotStore(); // evict hot cache so next fetch re-budgets fresh candles
     setRefreshKey(prev => prev + 1);
     showToast('Refreshing chart data...');
   }, [showToast]);
@@ -317,6 +327,25 @@ const ChartPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [updatePane, setTimeframe]);
 
+  // ── Shift+F: Zen Mode (hide all chrome, show only charts) ───────────────────
+  useEffect(() => {
+    const handleZen = (e) => {
+      if (e.shiftKey && e.key === 'F') {
+        setZenMode(prev => {
+          const next = !prev;
+          showToast(next ? 'Zen mode — press Shift+F or Esc to exit' : 'Zen mode off');
+          return next;
+        });
+      }
+      if (e.key === 'Escape') {
+        setZenMode(prev => { if (prev) showToast('Zen mode off'); return false; });
+      }
+    };
+    window.addEventListener('keydown', handleZen);
+    return () => window.removeEventListener('keydown', handleZen);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showToast]);
+
   const lastTfSwitchRef = useRef(0);
   // ── ML auto-timeframe switch listener ──────────────────────────────────────
   useEffect(() => {
@@ -347,63 +376,30 @@ const ChartPage = () => {
 
   const PaneMiniToolbar = ({ pane, idx }) => {
     const [showTf, setShowTf] = useState(false);
-    const [tfInput, setTfInput] = useState('');
-    const [showInput, setShowInput] = useState(false);
-    const inputRef = useRef(null);
     const tfLabels = { '1m': '1m', '5m': '5m', '15m': '15m','1h': '1H', '4h': '4H', '1d': '1D', '1w': '1W', '1M': '1M' };
-
-    const commitTfInput = () => {
-      const raw = tfInput.trim().toUpperCase();
-      const resolved = TF_SHORTCUT_MAP[raw];
-      if (resolved) {
-        updatePane(idx, 'timeframe', resolved);
-        if (idx === 0) setTimeframe(resolved);
-      }
-      setTfInput('');
-      setShowInput(false);
-    };
 
     // Active indicator badges for this pane
     const activeIndicators = pane.indicators || [];
 
     return (
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-1 px-2 py-1 bg-[#000000E0] border-b border-[#2A2E39]" onClick={e => e.stopPropagation()}>
-        <span className="text-[6px] font-semibold text-white">{pane.symbol || symbol}</span>
-        <div className="relative">
-          <button onClick={() => { setShowTf(!showTf); setShowInput(false); }} className="text-[5px] text-[#787B86] hover:text-white bg-[#2A2E39] px-1.5 py-0.5 rounded transition-colors">
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center gap-1.5 px-2 py-1.5 pointer-events-none" onClick={e => e.stopPropagation()}
+        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.55) 0%, transparent 100%)' }}>
+        <span className="text-[11px] font-semibold text-white pointer-events-auto" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>{pane.symbol || symbol}</span>
+        <div className="relative pointer-events-auto">
+          <button onClick={() => { setShowTf(!showTf); }} className="text-[11px] font-medium text-[#787B86] hover:text-white bg-[#2A2E3980] hover:bg-[#2A2E39] px-2 py-0.5 rounded transition-colors">
             {tfLabels[pane.timeframe] || '1D'}
           </button>
           {showTf && (
-            <div className="absolute top-full left-0 mt-1 bg-[#1E222D] border border-[#363A45] rounded shadow-xl z-50 py-1 w-[60px]">
+            <div className="absolute top-full left-0 mt-1 bg-[#1E222D] border border-[#363A45] rounded shadow-xl z-50 py-1 w-[70px]">
               {Object.entries(tfLabels).map(([val, lbl]) => (
                 <button key={val} onClick={() => { updatePane(idx, 'timeframe', val); setShowTf(false); }}
-                  className={`w-full px-2 py-1 text-[10px] text-left hover:bg-[#2A2E39] ${pane.timeframe === val ? 'text-[#2962FF]' : 'text-[#D1D4DC]'}`}>
+                  className={`w-full px-2 py-1 text-[12px] text-left hover:bg-[#2A2E39] ${pane.timeframe === val ? 'text-[#2962FF]' : 'text-[#D1D4DC]'}`}>
                   {lbl}
                 </button>
               ))}
             </div>
           )}
         </div>
-        {/* Manual TF input button */}
-        <button
-          title="Type timeframe (e.g. 5, 15, 4H, D)"
-          onClick={() => { setShowInput(s => !s); setShowTf(false); setTimeout(() => inputRef.current?.focus(), 50); }}
-          className="text-[4px] text-[#787B86] hover:text-[#2962FF] bg-[#1E222D] border border-[#363A45] px-1 py-0.5 rounded transition-colors"
-        >T</button>
-        {showInput && (
-          <input
-            ref={inputRef}
-            value={tfInput}
-            onChange={e => setTfInput(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') { commitTfInput(); }
-              if (e.key === 'Escape') { setShowInput(false); setTfInput(''); }
-            }}
-            onBlur={commitTfInput}
-            placeholder="5m…"
-            className="w-[40px] text-[10px] bg-[#1E222D] border border-[#2962FF60] rounded px-1 py-0.5 text-white outline-none"
-          />
-        )}
         {activeIndicators.map((ind, i) => {
           const isCb = ind.type === 'consolidationBoxes';
           const isNb = ind.type === 'neuralBoxes';
@@ -414,7 +410,7 @@ const ChartPage = () => {
           return (
             <span
               key={ind.id || i}
-              className={`text-[4px] font-bold px-1 py-0.5 rounded leading-none uppercase transition-opacity ${
+              className={`text-[9px] font-bold px-1.5 py-0.5 rounded leading-none uppercase transition-opacity pointer-events-auto ${
                 ind.enabled ? 'opacity-100' : 'opacity-40'
               }`}
               style={{ backgroundColor: `${color}20`, color, border: `1px solid ${color}40` }}
@@ -437,6 +433,7 @@ const ChartPage = () => {
     const swingSettings = getSwingSettings(effectivePane);
     const consolidationSettings = getConsolidationSettings(effectivePane);
     const neuralSettings = getNeuralSettings(effectivePane);
+    const paneCount = getPaneCount(activeLayout);
     return (
       <div
         key={`pane-${idx}-${effectivePane.timeframe}-${symbol}`}
@@ -463,6 +460,7 @@ const ChartPage = () => {
           nnMode={showNN}
           pmMode={showPM}
           paneIndex={idx}
+          paneCount={paneCount}
           sharedConsolidations={sharedConsolidations}
           sharedSwings={sharedSwings}
           sharedAutoLabels={sharedAutoLabels}
@@ -546,6 +544,7 @@ const ChartPage = () => {
             nnMode={showNN}
             pmMode={showPM}
             paneIndex={0}
+            paneCount={1}
             sharedConsolidations={sharedConsolidations}
             sharedSwings={sharedSwings}
             sharedAutoLabels={sharedAutoLabels}
@@ -568,60 +567,66 @@ const ChartPage = () => {
         </div>
       )}
 
-      <ChartToolbar
-        symbol={symbol}
-        timeframe={timeframe}
-        onTimeframeChange={setTimeframe}
-        chartType={chartType}
-        onChartTypeChange={setChartType}
-        priceData={priceData}
-        symbolPrecision={symbolPrecision}
-        onFullscreen={handleFullscreen}
-        onSettings={() => setShowSettings(true)}
-        onRefresh={handleRefresh}
-        activeLayout={activeLayout}
-        onLayoutChange={setActiveLayout}
-        showLayout={showLayout}
-        onToggleLayout={() => setShowLayout(prev => !prev)}
-        showIndicators={showIndicators}
-        onToggleIndicators={() => setShowIndicators(prev => !prev)}
-        countdown={countdown}
-        panes={panes}
-        aiMode={showML}
-        onToggleML={() => setShowML(prev => !prev)}
-        nnMode={showNN}
-        onToggleNN={() => setShowNN(prev => !prev)}
-        pmMode={showPM}
-        onTogglePM={() => setShowPM(prev => !prev)}
-      />
+      {!zenMode && (
+        <ChartToolbar
+          symbol={symbol}
+          timeframe={timeframe}
+          onTimeframeChange={setTimeframe}
+          chartType={chartType}
+          onChartTypeChange={setChartType}
+          priceData={priceData}
+          symbolPrecision={symbolPrecision}
+          onFullscreen={handleFullscreen}
+          onSettings={() => setShowSettings(true)}
+          onRefresh={handleRefresh}
+          activeLayout={activeLayout}
+          onLayoutChange={setActiveLayout}
+          showLayout={showLayout}
+          onToggleLayout={() => setShowLayout(prev => !prev)}
+          showIndicators={showIndicators}
+          onToggleIndicators={() => setShowIndicators(prev => !prev)}
+          countdown={countdown}
+          panes={panes}
+          aiMode={showML}
+          onToggleML={() => setShowML(prev => !prev)}
+          nnMode={showNN}
+          onToggleNN={() => setShowNN(prev => !prev)}
+          pmMode={showPM}
+          onTogglePM={() => setShowPM(prev => !prev)}
+        />
+      )}
 
 
       <div className="flex flex-1 overflow-hidden min-w-0">
-        <ForexPairSidebar
-          activeSymbol={symbol}
-          onSymbolChange={handleSymbolChange}
-        />
+        {!zenMode && (
+          <ForexPairSidebar
+            activeSymbol={symbol}
+            onSymbolChange={handleSymbolChange}
+          />
+        )}
         <div className="flex flex-1 overflow-hidden min-w-0">
           {getLayoutCharts()}
         </div>
       </div>
 
-      <div className="h-[26px] bg-[#000000] border-t border-[#2A2E39] flex items-center px-2 justify-between shrink-0">
-        <div className="flex items-center gap-1">
-          {['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '5Y', 'All'].map((r) => (
-            <button key={r} onClick={() => handleBottomRange(r === 'All' ? 'all' : r)}
-              className="px-1.5 py-0.5 text-[10px] text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960] rounded transition-colors">{r}</button>
-          ))}
+      {!zenMode && (
+        <div className="h-[26px] bg-[#000000] border-t border-[#2A2E39] flex items-center px-2 justify-between shrink-0">
+          <div className="flex items-center gap-1">
+            {['1D', '5D', '1M', '3M', '6M', 'YTD', '1Y', '5Y', 'All'].map((r) => (
+              <button key={r} onClick={() => handleBottomRange(r === 'All' ? 'all' : r)}
+                className="px-1.5 py-0.5 text-[10px] text-[#787B86] hover:text-[#D1D4DC] hover:bg-[#2A2E3960] rounded transition-colors">{r}</button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 text-[10px] text-[#787B86]">
+            <span>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })} UTC</span>
+            <div className="w-px h-3 bg-[#2A2E39]" />
+            <button onClick={() => chartWidgetRef.current?.fitContent()} className="hover:text-[#D1D4DC] transition-colors">Auto</button>
+            <button onClick={() => { setLogScale(prev => !prev); showToast(logScale ? 'Linear scale' : 'Log scale'); }}
+              className={`transition-colors ${logScale ? 'text-[#2962FF]' : 'hover:text-[#D1D4DC]'}`}>Log</button>
+            <button className="hover:text-[#D1D4DC] transition-colors">ADJ</button>
+          </div>
         </div>
-        <div className="flex items-center gap-3 text-[10px] text-[#787B86]">
-          <span>{new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })} UTC</span>
-          <div className="w-px h-3 bg-[#2A2E39]" />
-          <button onClick={() => chartWidgetRef.current?.fitContent()} className="hover:text-[#D1D4DC] transition-colors">Auto</button>
-          <button onClick={() => { setLogScale(prev => !prev); showToast(logScale ? 'Linear scale' : 'Log scale'); }}
-            className={`transition-colors ${logScale ? 'text-[#2962FF]' : 'hover:text-[#D1D4DC]'}`}>Log</button>
-          <button className="hover:text-[#D1D4DC] transition-colors">ADJ</button>
-        </div>
-      </div>
+      )}
 
       {showSettings && (
         <SettingsPanel settings={chartSettings} onSettingsChange={setChartSettings} onClose={() => setShowSettings(false)} />

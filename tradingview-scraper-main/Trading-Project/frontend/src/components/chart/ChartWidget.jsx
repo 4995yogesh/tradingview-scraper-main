@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import { createChart, CandlestickSeries, LineSeries, AreaSeries, BarSeries, BaselineSeries } from 'lightweight-charts';
-import { fetchLiveCandles } from '../../data/chartData';
+import { fetchLiveCandles, fetchInitialCandles, INITIAL_CANDLE_BUDGET } from '../../data/chartData';
 import { ChevronsRight } from 'lucide-react';
 import {
   aggregateCandles, detectSwings, getHigherTfs, ALL_TFS,
@@ -228,7 +228,7 @@ function mapOverlayTime(realTime, tf) {
 
 
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, neuralSettings, liveTickKey, aiMode, nnMode, pmMode, isSubchart, initialBars, paneIndex = 0, sharedConsolidations, sharedSwings, sharedAutoLabels, sharedNNZones }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, neuralSettings, liveTickKey, aiMode, nnMode, pmMode, isSubchart, initialBars, paneIndex = 0, paneCount = 1, sharedConsolidations, sharedSwings, sharedAutoLabels, sharedNNZones }, ref) => {
   const chartContainerRef      = useRef(null);
   const chartRef               = useRef(null);
   const seriesRef              = useRef(null);
@@ -297,7 +297,14 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   useEffect(() => { symbolRef.current = symbol; }, [symbol]);
   useEffect(() => { timeframeRef.current = timeframe; }, [timeframe]);
 
-  // ── Fetch live candles whenever symbol, timeframe, or refreshKey changes ─
+  // ── Initial candle fetch (budget-limited) ─────────────────────────────────
+  // Loads exactly Math.floor(1000 / paneCount) candles for the first paint,
+  // for EVERY pair — not just the first one opened. The hot in-memory store
+  // (hotCandleStore) returns cached slices instantly (O(1)) on revisits.
+  // Historical candles beyond the budget are loaded on-demand by the
+  // infinite-scroll handler below (user pans left), which calls fetchLiveCandles
+  // with the full TF_CANDLE_COUNT — matching the original "rest load at normal
+  // speed" intent.
   useEffect(() => {
     let cancelled = false;
     const newContext = `${symbol}:${timeframe}`;
@@ -310,14 +317,14 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       hasDataRef.current = false;
     }
 
-    fetchLiveCandles(symbol, timeframe, TF_CANDLE_COUNT[timeframe] || 500)
+    const perPaneBudget = Math.max(50, Math.floor(INITIAL_CANDLE_BUDGET / paneCount));
+    fetchInitialCandles(symbol, timeframe, perPaneBudget)
       .then((data) => {
-        if (!cancelled) {
-          setChartData(data);
-          loadedContextRef.current = `${symbol}:${timeframe}`;
-          setLoading(false);
-          hasDataRef.current = true;
-        }
+        if (cancelled) return;
+        setChartData(data);
+        loadedContextRef.current = `${symbol}:${timeframe}`;
+        setLoading(false);
+        hasDataRef.current = true;
       })
       .catch((err) => {
         if (cancelled) return;
@@ -331,7 +338,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       });
 
     return () => { cancelled = true; };
-  }, [symbol, timeframe, refreshKey, retryCount]);
+  }, [symbol, timeframe, refreshKey, retryCount, paneCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!error) return;
@@ -1900,7 +1907,6 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           className={`absolute ${isSubchart ? 'bottom-2 right-2' : 'bottom-6 left-1/2 -translate-x-1/2'} z-20 flex items-center gap-1.5 ${isSubchart ? 'px-2 py-1' : 'px-3 py-1.5'} bg-[#1E222D] hover:bg-[#2A2E39] text-[#D1D4DC] hover:text-white border border-[#363A45] rounded-full shadow-lg transition-all active:scale-95 group`}
           title="Back to Latest"
         >
-          <span className={`${isSubchart ? 'text-[9px]' : 'text-[11px]'} font-medium`}>Latest</span>
           <ChevronsRight size={isSubchart ? 10 : 14} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
       )}

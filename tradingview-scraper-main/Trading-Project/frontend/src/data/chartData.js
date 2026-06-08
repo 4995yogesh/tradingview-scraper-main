@@ -1,6 +1,11 @@
 // API base URL – the FastAPI backend
 const API_BASE = "http://localhost:8000/api";
 
+// ── Initial candle budget ────────────────────────────────────────────────────
+// Total candles to load across ALL panes on first paint. Callers divide this
+// by pane count (e.g. 4 panes → 250 each) so charts appear instantly.
+export const INITIAL_CANDLE_BUDGET = 1000;
+
 // Symbol config for the 7 major forex pairs (price display + symbolInfo)
 const SYMBOL_CONFIG = {
   'EURUSD': { basePrice: 1.08,   volatility: 0.005, name: 'EUR / USD', exchange: 'OANDA', type: 'Forex', currency: 'USD' },
@@ -23,6 +28,66 @@ const TF_CONFIG = {
 const candleCache = new Map();
 const activeRequests = new Map();
 const CACHE_TTL_MS = 30000; // 30 seconds — server refreshes every 5s, client caches longer
+
+// ── Hot candle store ─────────────────────────────────────────────────────────
+// Session-lifetime Map (no TTL). Keyed by "symbol-timeframe".
+// Entries: { data: {candleData, volumeData}, isComplete: bool }
+// isComplete=false → only the initial budget slice is cached.
+// isComplete=true  → full history is cached; repeat visits are instant.
+const hotCandleStore = new Map();
+
+/**
+ * fetchInitialCandles
+ * ───────────────────
+ * Returns exactly `budget` recent candles for the chart's first paint.
+ * Hits the hot-store first (O(1), zero network), then falls back to the API.
+ * Stores the result in the hot-store with isComplete=false.
+ *
+ * @param {string} symbol
+ * @param {string} timeframe
+ * @param {number} budget  – per-pane slice of INITIAL_CANDLE_BUDGET
+ */
+export async function fetchInitialCandles(symbol, timeframe, budget) {
+  const hotKey = `${symbol}-${timeframe}`;
+  const hit = hotCandleStore.get(hotKey);
+  if (hit) {
+    // Hot cache hit: return immediately (instant render)
+    return hit.data;
+  }
+
+  // Cache miss: fetch the initial slice from the API
+  const data = await fetchLiveCandles(symbol, timeframe, budget);
+  hotCandleStore.set(hotKey, { data, isComplete: false });
+  return data;
+}
+
+/**
+ * fetchFullHistory
+ * ────────────────
+ * Fetches the complete candle history from the database (at normal speed).
+ * Called in the background after the chart has already painted its initial slice.
+ * Promotes the hot-store entry to isComplete=true so future visits are instant.
+ *
+ * @param {string} symbol
+ * @param {string} timeframe
+ * @param {number} fullCount – total candles to load (from TF_CANDLE_COUNT)
+ */
+export async function fetchFullHistory(symbol, timeframe, fullCount) {
+  const data = await fetchLiveCandles(symbol, timeframe, fullCount);
+  // Promote the hot-store entry regardless of whether it existed before
+  hotCandleStore.set(`${symbol}-${timeframe}`, { data, isComplete: true });
+  return data;
+}
+
+/**
+ * clearHotStore
+ * ─────────────
+ * Evict all hot-store entries (e.g. after a hard refresh button). Exported so
+ * ChartPage can call it from the toolbar Refresh button if needed.
+ */
+export function clearHotStore() {
+  hotCandleStore.clear();
+}
 
 export async function fetchLiveCandles(symbol, timeframe = "1d", candles = 1000, endTime = null) {
   const cacheKey = `${symbol}-${timeframe}-${candles}-${endTime || 'latest'}`;
