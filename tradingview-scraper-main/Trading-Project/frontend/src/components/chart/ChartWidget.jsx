@@ -228,7 +228,7 @@ function mapOverlayTime(realTime, tf) {
 
 
 
-const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolPrecision = 4, swingSettings, consolidationSettings, neuralSettings, liveTickKey, aiMode, nnMode, pmMode, isSubchart, initialBars, paneIndex = 0, paneCount = 1, sharedConsolidations, sharedSwings, sharedAutoLabels, sharedNNZones }, ref) => {
+const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, logScale, chartSettings, refreshKey, symbolKey = 0, symbolPrecision = 4, swingSettings, consolidationSettings, neuralSettings, liveTickKey, aiMode, nnMode, pmMode, isSubchart, initialBars, paneIndex = 0, paneCount = 1, sharedConsolidations, sharedSwings, sharedAutoLabels, sharedNNZones }, ref) => {
   const chartContainerRef      = useRef(null);
   const chartRef               = useRef(null);
   const seriesRef              = useRef(null);
@@ -780,15 +780,22 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
   // Stagger chart canvas initialisation in multi-pane layouts so all 4 charts
   // don't create their WebGL canvas simultaneously (causes browser jank / blank panes).
+  // Depends on symbolKey (not the full initChart callback) so the canvas is only
+  // destroyed/rebuilt when the user explicitly switches pairs — not on every
+  // chartSettings/chartType/logScale prop update.
   useEffect(() => {
-    const delay = paneIndex * 80; // 0ms, 80ms, 160ms, 240ms
+    const delay = paneIndex * 120; // 0ms, 120ms, 240ms, 360ms — slightly wider gap
+    let t;
     if (delay === 0) {
       initChart();
     } else {
-      const t = setTimeout(initChart, delay);
-      return () => clearTimeout(t);
+      t = setTimeout(initChart, delay);
     }
-  }, [initChart, paneIndex]);
+    return () => {
+      clearTimeout(t);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbolKey, paneIndex]); // ← symbolKey is the only hard-reset signal
 
   const [consolidations, setConsolidations] = useState([]);
   const [swingLevels, setSwingLevels]       = useState([]);
@@ -1634,7 +1641,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     const candleData = prepareChartData(chartData.candleData, timeframe);
 
-    if (!Array.isArray(candleData) || candleData.length < 2) return;
+    if (!Array.isArray(candleData)) return;
+    if (candleData.length === 0) {
+      seriesRef.current.setData([]);
+      return;
+    }
 
     if (chartType === 'line' || chartType === 'area') {
       seriesRef.current.setData(candleData.map(d => ({ time: d.time, value: d.close })));
@@ -1713,7 +1724,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         }
       }
     }
-  }, [chartData, chartType, timeframe, onPriceUpdate]);
+  // chartKey is incremented by initChart after each canvas rebuild — adding it here
+  // ensures data is re-applied to the new seriesRef whenever the canvas is recreated
+  // (e.g. after a pair switch stagger fires for panes 1/2/3).
+  }, [chartData, chartKey, chartType, timeframe, onPriceUpdate]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Auto-Sampler: Capture Focused Canvas Screenshots for Refinement Training ──
   useEffect(() => {

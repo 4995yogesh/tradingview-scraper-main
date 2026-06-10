@@ -327,12 +327,13 @@ def _seed_storage(exchange: str, symbol: str, timeframe: str,
                     continue
             closed_candles.append(c)
 
-    if not closed_candles:
-        return
-
     # ── 1. Strict Closed-Candles Write to SQLite ──────────────────────────────
-    candle_db.upsert_candles(exchange, symbol, timeframe, closed_candles)
-    candle_db.log_refresh(exchange, symbol, timeframe, int(time.time()))
+    if closed_candles:
+        candle_db.upsert_candles(exchange, symbol, timeframe, closed_candles)
+        candle_db.log_refresh(exchange, symbol, timeframe, int(time.time()))
+    
+    if not raw_candles:
+        return
 
     # ── 2. Format and push to RAM ─────────────────────────────────────────────
     use_timestamp = timeframe in ["1m", "5m", "15m", "1h", "4h"]
@@ -618,50 +619,46 @@ def _synthesize_htf_candles(exchange: str, symbol: str):
             logger.error("[synth] %s:%s [%s] failed: %s", exchange, symbol, tf, exc)
 
 
-def _fetch_latest_candles(exchange: str, symbol: str, timeframe: str, limit: int = 20):
-    """
-    Fetch the very latest 1m candles from TradingView via HistoricalFetcher
-    and merge into SQLite + RAM cache.
-    Dynamic limit covers any gap since the last stored candle.
-    """
-    key = (exchange, symbol, timeframe)
-    with _gap_filling_lock:
-        if key in _gap_filling:
-            return   # gap-fill already running; skip
-        _gap_filling.add(key)
-    try:
-        interval  = TF_INTERVAL_SECS.get(timeframe, 60)
-        latest_ts = candle_db.get_latest_ts(exchange, symbol, timeframe)
-        if latest_ts is not None:
-            gap_secs      = max(0, int(time.time()) - latest_ts)
-            missing_bars  = gap_secs // interval + 5
-            dynamic_limit = max(limit, int(missing_bars))
-        else:
-            dynamic_limit = limit
-        dynamic_limit = min(dynamic_limit, 1500)
-
-        if dynamic_limit > limit:
-            logger.info("[1m-fetch] %s:%s gap=%ds → fetching %d bars",
-                        exchange, symbol,
-                        int(time.time()) - (latest_ts or 0), dynamic_limit)
-
-        cookie_value = os.getenv("TRADINGVIEW_COOKIE", "").strip()
-        jwt_value    = os.getenv("TV_JWT_TOKEN", "unauthorized_user_token")
-        fetcher      = HistoricalFetcher(websocket_jwt_token=jwt_value, cookie=cookie_value)
-        raw = fetcher.fetch_historical_data(
-            exchange=exchange, symbol=symbol, timeframe=timeframe,
-            limit=dynamic_limit, chunk_size=dynamic_limit, delay_ms=100,
-        )
-        if raw:
-            _seed_storage(exchange, symbol, timeframe, raw)
-            logger.info("[1m-fetch] ✓ %s:%s refreshed %d 1m candles", exchange, symbol, len(raw))
-        else:
-            logger.warning("[1m-fetch] %s:%s — TV returned no 1m candles", exchange, symbol)
-    except Exception as exc:
-        logger.error("[1m-fetch] %s:%s failed: %s", exchange, symbol, exc)
-    finally:
-        with _gap_filling_lock:
-            _gap_filling.discard(key)
+def _live_stream_worker(exchange: str, symbol: str):
+    """Background worker that streams live 1m ticks from TradingView WebSockets."""
+    from tradingview_scraper.symbols.stream.price import RealTimeData
+    while not _stop_refresh.is_set():
+        try:
+            logger.info("[ws-stream] Starting WebSocket stream for %s:%s", exchange, symbol)
+            rtd = RealTimeData()
+            generator = rtd.get_ohlcv(f"{exchange}:{symbol}")
+            
+            for packet in generator:
+                if _stop_refresh.is_set():
+                    break
+                    
+                m = packet.get("m")
+                if m in ("timescale_update", "du"):
+                    series = packet.get("p", [{}, {}])[1].get("sds_1", {}).get("s", [])
+                    if not series:
+                        continue
+                        
+                    raw_candles = []
+                    for entry in series:
+                        v = entry.get("v", [])
+                        if len(v) >= 5:
+                            candle = {
+                                "timestamp": v[0],
+                                "open": v[1],
+                                "high": v[2],
+                                "low": v[3],
+                                "close": v[4]
+                            }
+                            if len(v) > 5:
+                                candle["volume"] = v[5]
+                            raw_candles.append(candle)
+                            
+                    if raw_candles:
+                        _seed_storage(exchange, symbol, "1m", raw_candles)
+                        
+        except Exception as exc:
+            logger.error("[ws-stream] Stream error for %s:%s : %s", exchange, symbol, exc)
+            time.sleep(5) # backoff before reconnecting
 
 
 _stop_refresh = threading.Event()
@@ -669,12 +666,12 @@ _stop_refresh = threading.Event()
 def _periodic_refresh_loop():
     """
     Delta-Engine background thread:
-    1. Every 5 seconds: fetch only 1m candles from TradingView.
-    2. After each 1m fetch: synthesize all HTF candles from DB.
+    1. Every 5 seconds: synthesize all HTF candles from DB.
        - 5m/15m/1h/4h → from today's 1m candles (intraday only).
        - 1d/1w        → from 5m candles (last 10 days).
     No external TradingView calls are made for any HTF.
     """
+    last_synth_ts = {}
     time.sleep(30)  # let gap-fill settle first
     while not _stop_refresh.is_set():
         now = time.time()
@@ -684,11 +681,15 @@ def _periodic_refresh_loop():
             break
 
         for exchange, symbol in PERSISTENT_SYMBOLS:
-            # Step 1: fetch only 1m from TradingView
-            _fetch_latest_candles(exchange, symbol, "1m", limit=10)
+            latest_1m = candle_db.get_latest_ts(exchange, symbol, "1m")
+            if latest_1m and latest_1m == last_synth_ts.get((exchange, symbol)):
+                continue # No new closed 1m candle; skip expensive HTF synthesis
+            
+            last_synth_ts[(exchange, symbol)] = latest_1m
+            
             # Step 2: synthesize all HTFs from DB (background, always)
-            _synthesize_htf_candles(exchange, symbol)
-            logger.info("[delta] ✓ %s:%s cycle complete", exchange, symbol)
+            # Run asynchronously to avoid blocking the 5s refresh loop
+            threading.Thread(target=_synthesize_htf_candles, args=(exchange, symbol), daemon=True).start()
 
 def _auto_label_loop():
     """
@@ -794,7 +795,7 @@ async def lifespan(app: FastAPI):
     gap_thread.start()
     logger.info("=== Gap-fill thread started — server accepting requests ===")
 
-    # 4. Start periodic live refresh (fires at the top of every minute)
+    # 4. Start periodic HTF synthesis loop
     _stop_refresh.clear()
     refresh_thread = threading.Thread(
         target=_periodic_refresh_loop,
@@ -802,17 +803,24 @@ async def lifespan(app: FastAPI):
         daemon=True,
     )
     refresh_thread.start()
-    logger.info("=== Periodic refresh thread started ===")
+    logger.info("=== Periodic HTF refresh thread started ===")
+
+    # 4.5 Start WebSocket streaming for live ticks
+    for exchange, symbol in PERSISTENT_SYMBOLS:
+        ws_thread = threading.Thread(
+            target=_live_stream_worker,
+            args=(exchange, symbol),
+            name=f"live-stream-{symbol}",
+            daemon=True,
+        )
+        ws_thread.start()
+    logger.info("=== WebSocket live streams started ===")
 
     # 5. Init ML DB and load promoted model
     if _ML_AVAILABLE:
         try:
             _ml_init_db()
             _ml_scorer.load_model()
-            
-            # Restore persistent FP/FN boxes from DB
-            from ml import trainer as _trainer
-            _trainer.reload_error_boxes()
             
             logger.info("=== ML system initialized ===")
             
@@ -832,6 +840,9 @@ async def lifespan(app: FastAPI):
 # ── App ───────────────────────────────────────────────────────────────────────
 
 app = FastAPI(title="TradingView Scraper API", lifespan=lifespan)
+
+from fastapi.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 app.add_middleware(
     CORSMiddleware,
@@ -941,7 +952,7 @@ def parse_end_time(end_time):
 import time
 _OHLC_CACHE = {}
 
-def _cache_get(key: str, ttl_s: float):
+def _cache_get(key: str, ttl_s: float = 8.0):
     if key in _OHLC_CACHE:
         entry = _OHLC_CACHE[key]
         if time.time() - entry['time'] < ttl_s:
@@ -973,51 +984,52 @@ def get_ohlc(
     parsed_end = parse_end_time(end_time)
     is_recent = end_time is None
 
-    # ── Short-lived response cache (8 s) to absorb burst requests ─────────────
+    # ── Short-lived response cache to absorb burst requests ─────────────
     # Hover prefetch + multi-pane identical requests all hit the same cache entry.
+    # Use 2.0s for recent/live data so the 5s frontend poll gets fresh data.
+    # Use 8.0s for historical requests.
     cache_key = f"ohlc:{exchange}:{symbol}:{timeframe}:{candles}:{end_time}"
-    cached = _cache_get(cache_key, ttl_s=8.0)
+    cached_ttl = 2.0 if is_recent else 8.0
+    cached = _cache_get(cache_key, ttl_s=cached_ttl)
     if cached is not None:
         logger.debug("OHLC cache hit → %s:%s tf=%s", exchange, symbol, timeframe)
         return cached
 
-    logger.debug("OHLC (DB-First) → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
+    logger.debug("OHLC (RAM-First) → %s:%s tf=%s candles=%d end=%s", exchange, symbol, timeframe, candles, end_time)
     
-    # 1. Fetch CLOSED candles strictly from SQLite Database
-    closed_candles = candle_db.get_candles(exchange, symbol, timeframe, count=candles, end_ts=parsed_end)
+    # 1. Fetch CLOSED candles strictly from RAM cache (O(1) list slice)
+    closed_candles_iter = storage.get_candles(exchange, symbol, timeframe, count=candles, end_time=parsed_end)
+    closed_candles = list(closed_candles_iter)
     
-    # 2. Bridge Live HTF Segment using 1m DB & RAM partials
+    # 2. Bridge Live HTF Segment instantly using 1m RAM partials
     if is_recent and timeframe != "1m" and closed_candles:
         latest_closed_ts = int(float(closed_candles[-1].get("ts", closed_candles[-1].get("time", 0))))
         tf_secs = TF_INTERVAL_SECS.get(timeframe, 60)
         unclosed_boundary = latest_closed_ts + tf_secs
         
-        # Pull any closed 1m segments bridging the gap out of DB securely
-        live_1m = candle_db.get_candles(exchange, symbol, "1m", count=4000, start_ts=unclosed_boundary)
-        
-        # Extract purely unclosed live 1m tick from RAM cache
-        latest_1m_ram = storage.get_candles(exchange, symbol, "1m", count=5)
-        ram_ticks = []
-        for c in latest_1m_ram:
+        # Pull all recent 1m candles strictly from RAM (instant)
+        recent_1m = storage.get_candles(exchange, symbol, "1m", count=1500)
+        unclosed_ticks = []
+        for c in recent_1m:
             ts = int(float(c.get("timestamp", c.get("ts", c.get("time", 0)))))
             if ts >= unclosed_boundary:
-                ram_ticks.append(c)
+                unclosed_ticks.append(c)
                 
         # Consolidate arrays
-        unclosed_ticks = live_1m + ram_ticks
         if unclosed_ticks:
             bridge = resample_candles(unclosed_ticks, timeframe)
             if bridge:
                 closed_candles.append(bridge[0])
 
-    elif timeframe == "1m" and is_recent and closed_candles:
-        # 1m just appends its active floating tick cleanly
-        ram_ticks = storage.get_candles(exchange, symbol, "1m", count=1)
-        if ram_ticks:
-            closed_candles.append(ram_ticks[-1])
+    total_in_storage = 0
+    with storage.lock:
+        try:
+            total_in_storage = len(storage.candles[exchange][symbol][timeframe])
+        except KeyError:
+            pass
 
-    if not closed_candles:
-        # DB is empty, likely seeding in background via OANDA/TV scraper.
+    if not closed_candles or (total_in_storage < 50 and timeframe != "1m"):
+        # DB is empty or still seeding in background via OANDA/TV scraper.
         # Returning 'loading' tells the frontend to show a status overlay and retry.
         return {"status": "loading"}
 

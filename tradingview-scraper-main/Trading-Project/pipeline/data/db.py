@@ -38,6 +38,7 @@ class CandleDB:
         self.db_path = db_path
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._local = threading.local()
+        self._write_lock = threading.Lock()
         self._setup_schema()
 
     # ── Connection management ─────────────────────────────────────────────────
@@ -126,23 +127,25 @@ class CandleDB:
             ))
 
         conn = self._conn()
-        conn.executemany(
-            "INSERT OR REPLACE INTO candles "
-            "(exchange, symbol, timeframe, ts, open, high, low, close, volume) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
-            rows,
-        )
-        conn.commit()
+        with self._write_lock:
+            conn.executemany(
+                "INSERT OR REPLACE INTO candles "
+                "(exchange, symbol, timeframe, ts, open, high, low, close, volume) "
+                "VALUES (?,?,?,?,?,?,?,?,?)",
+                rows,
+            )
+            conn.commit()
         logger.debug("Upserted %d candles → %s:%s [%s]", len(rows), exchange, symbol, timeframe)
 
     def log_refresh(self, exchange: str, symbol: str, timeframe: str, fetched_at: int):
         """Record the wall-clock time of the last successful TV fetch."""
         conn = self._conn()
-        conn.execute(
-            "INSERT OR REPLACE INTO refresh_log VALUES (?,?,?,?)",
-            (exchange, symbol, timeframe, fetched_at),
-        )
-        conn.commit()
+        with self._write_lock:
+            conn.execute(
+                "INSERT OR REPLACE INTO refresh_log VALUES (?,?,?,?)",
+                (exchange, symbol, timeframe, fetched_at),
+            )
+            conn.commit()
 
     # ── Read ──────────────────────────────────────────────────────────────────
 

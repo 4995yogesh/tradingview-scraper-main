@@ -95,7 +95,9 @@ export async function fetchLiveCandles(symbol, timeframe = "1d", candles = 1000,
 
   // 1. Check cache first
   const cached = candleCache.get(cacheKey);
-  if (cached && (now - cached.timestamp < CACHE_TTL_MS)) {
+  // For small live tick polls (candles <= 10), use a much shorter TTL to ensure fresh data
+  const ttl = candles <= 10 ? 2000 : CACHE_TTL_MS;
+  if (cached && (now - cached.timestamp < ttl)) {
     return cached.data;
   }
 

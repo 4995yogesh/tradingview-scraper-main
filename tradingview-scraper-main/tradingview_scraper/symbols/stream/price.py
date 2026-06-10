@@ -274,20 +274,21 @@ class RealTimeData:
                 try:
                     sleep(1)
                     result = self.ws.recv()
-                    # Check if the result is a heartbeat or actual data
-                    if re.match(r"~m~\d+~m~~h~\d+$", result):
-                        self.ws.recv()  # Echo back the message
-                        logging.debug(f"Received heartbeat: {result}")
-                        self.ws.send(result)
-                    else:
-                        split_result = [x for x in re.split(r'~m~\d+~m~', result) if x]
-                        for item in split_result:
-                           if item:
-                                try:
-                                    yield json.loads(item)  # Yield parsed JSON data
-                                except Exception as e:
-                                    logging.error(f"Failed to parse JSON data: {item} - Error: {e}")
-                                    continue
+                    split_result = [x for x in re.split(r'~m~\d+~m~', result) if x]
+                    for item in split_result:
+                        item = item.strip()
+                        if not item:
+                            continue
+                        if item.startswith("~h~"):
+                            heartbeat_msg = f"~m~{len(item)}~m~{item}"
+                            logging.debug(f"Received heartbeat: {heartbeat_msg}")
+                            self.ws.send(heartbeat_msg)
+                        else:
+                            try:
+                                yield json.loads(item)
+                            except Exception as e:
+                                logging.error(f"Failed to parse JSON data: {item} - Error: {e}")
+                                continue
 
                 except WebSocketConnectionClosedException:
                     logging.error("WebSocket connection closed. Attempting to reconnect...")

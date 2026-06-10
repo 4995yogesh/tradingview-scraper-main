@@ -121,6 +121,10 @@ const ChartPage = () => {
   // ── Transient state (not persisted) ─────────────────────────────────────────
   const [activePaneIdx, setActivePaneIdx] = useState(0);
   const [layoutResetKey, setLayoutResetKey] = useState(0);
+  // pairSwitchKey: increments only when the user picks a different pair.
+  // ChartWidgets use this as their canvas reset signal instead of symbol,
+  // so the canvas is only destroyed once (not on every prop re-render).
+  const [pairSwitchKey, setPairSwitchKey] = useState(0);
   const [priceData, setPriceData] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showLayout, setShowLayout] = useState(false);
@@ -246,10 +250,13 @@ const ChartPage = () => {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
-  // Handle symbol switch: update all panes to new symbol
+  // Handle symbol switch: update all panes to new symbol.
+  // Increments pairSwitchKey so ChartWidgets know to do a hard canvas reset
+  // exactly once, instead of remounting on every symbol-related re-render.
   const handleSymbolChange = useCallback((newSymbol) => {
     setSymbol(newSymbol);
     setPanes(prev => prev.map(p => ({ ...p, symbol: newSymbol })));
+    setPairSwitchKey(k => k + 1);
   }, [setSymbol, setPanes]);
 
   // Sync URL symbol parameter to active symbol
@@ -436,7 +443,7 @@ const ChartPage = () => {
     const paneCount = getPaneCount(activeLayout);
     return (
       <div
-        key={`pane-${idx}-${effectivePane.timeframe}-${symbol}`}
+        key={`pane-${idx}-${effectivePane.timeframe}`}
         className={`h-full w-full relative border border-[#2A2E39] ${
           activePaneIdx === idx && activeLayout !== '1' ? 'ring-1 ring-[#2962FF60]' : ''
         }`}
@@ -451,6 +458,7 @@ const ChartPage = () => {
           logScale={logScale}
           chartSettings={chartSettings}
           refreshKey={refreshKey}
+          symbolKey={pairSwitchKey}
           symbolPrecision={panePrecision}
           swingSettings={swingSettings}
           consolidationSettings={consolidationSettings}
@@ -527,7 +535,7 @@ const ChartPage = () => {
         <div className="flex-1 relative min-w-0">
           <ChartWidget
             ref={chartWidgetRef}
-            key={`main-${symbol}`}
+            key="main"
             symbol={symbol}
             timeframe={timeframe}
             chartType={chartType}
@@ -535,6 +543,7 @@ const ChartPage = () => {
             logScale={logScale}
             chartSettings={chartSettings}
             refreshKey={refreshKey}
+            symbolKey={pairSwitchKey}
             symbolPrecision={symbolPrecision}
             swingSettings={getSwingSettings(panes[0] || {})}
             consolidationSettings={getConsolidationSettings(panes[0] || {})}
