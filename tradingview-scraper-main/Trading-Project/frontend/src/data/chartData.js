@@ -297,3 +297,101 @@ export const timeframes = [
 
 
 export default generateCandlestickData;
+
+export class LivePriceFeed {
+  static subscribers = new Set();
+  static isPolling = false;
+  static currentDelay = 5000;
+  static consecutiveStalls = 0;
+  static lastPrices = {};
+  
+  static subscribe(symbol, callback) {
+    const entry = { symbol, callback };
+    this.subscribers.add(entry);
+    if (!this.isPolling) {
+      this.isPolling = true;
+      setTimeout(() => this.poll(), 100);
+    }
+    return () => {
+      this.subscribers.delete(entry);
+    };
+  }
+
+  static async poll() {
+    if (!this.isPolling || this.subscribers.size === 0) {
+      this.isPolling = false;
+      return;
+    }
+    
+    const activeSymbols = Array.from(new Set([...this.subscribers].map(s => s.symbol)));
+    if (activeSymbols.length === 0) {
+      setTimeout(() => this.poll(), this.currentDelay);
+      return;
+    }
+    
+    const symbolsQuery = activeSymbols.join(',');
+    
+    try {
+      const start = performance.now();
+      const res = await fetch(`${API_BASE}/latest-prices?symbols=${symbolsQuery}`);
+      if (!res.ok) throw new Error('Network error');
+      const data = await res.json();
+      const end = performance.now();
+      const latency = end - start;
+      
+      if (latency > 5000) {
+        console.warn(`[LivePriceFeed] High latency detected: ${latency.toFixed(0)}ms. Overlapping polls may occur.`);
+      }
+
+      this.currentDelay = 5000;
+      
+      let allStalled = true;
+      let hasData = false;
+      
+      if (data.status === 'success' && data.prices) {
+        for (const sym in data.prices) {
+          hasData = true;
+          const current = data.prices[sym];
+          const last = this.lastPrices[sym];
+          if (!last || last.timestamp !== current.timestamp || last.price !== current.price) {
+            allStalled = false;
+          }
+          this.lastPrices[sym] = current;
+          
+          for (const sub of this.subscribers) {
+            // Need to match exactly, or match the symbol suffix (e.g. OANDA:EURUSD matches EURUSD)
+            if (sub.symbol === sym || sub.symbol.split(':').pop() === sym.split(':').pop()) {
+              sub.callback({
+                 price: current.price,
+                 timestamp: current.timestamp,
+                 volume: current.volume,
+                 color: current.color,
+                 latency,
+                 dataAge: data.serverTime - current.backend_generation_ts,
+                 error: null
+              });
+            }
+          }
+        }
+      }
+      
+      if (hasData && allStalled) {
+        this.consecutiveStalls++;
+        if (this.consecutiveStalls >= 5) {
+          for (const sub of this.subscribers) {
+             sub.callback({ error: 'STALLED' });
+          }
+        }
+      } else {
+        this.consecutiveStalls = 0;
+      }
+
+    } catch (e) {
+      console.error('[LivePriceFeed] Fetch failed:', e);
+      this.currentDelay = Math.min(this.currentDelay * 2, 60000); 
+    }
+    
+    setTimeout(() => this.poll(), this.currentDelay);
+  }
+}
+

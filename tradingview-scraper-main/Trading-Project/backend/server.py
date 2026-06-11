@@ -967,6 +967,44 @@ def _cache_set(key: str, data: dict):
 
 
 
+@app.get("/api/latest-prices")
+def get_latest_prices(symbols: str = Query(..., description="Comma separated symbols e.g. OANDA:EURUSD")):
+    """
+    Returns the instantaneous 1m tick for multiple symbols directly from RAM.
+    Used by the frontend LivePriceFeed for synchronized live chart ticking.
+    """
+    result = {}
+    now_ms = int(time.time() * 1000)
+    for sym_pair in symbols.split(","):
+        sym_pair = sym_pair.strip()
+        if not sym_pair: continue
+        if ":" in sym_pair:
+            ex, sym = sym_pair.split(":", 1)
+        else:
+            ex, sym = "OANDA", sym_pair
+
+        latest_1m = storage.get_candles(ex, sym, "1m", count=1)
+        if latest_1m:
+            c = latest_1m[0]
+            t_val = c.get("ts", c.get("time", c.get("timestamp", 0)))
+            if isinstance(t_val, str) and "-" in t_val:
+                import datetime as dt
+                if "T" in t_val:
+                    ts = int(dt.datetime.fromisoformat(t_val.replace("Z", "+00:00")).timestamp())
+                else:
+                    ts = int(dt.datetime.strptime(t_val[:10], "%Y-%m-%d").replace(tzinfo=dt.timezone.utc).timestamp())
+            else:
+                ts = int(float(t_val))
+            result[sym_pair] = {
+                "price": float(c.get("close", 0)),
+                "timestamp": ts,
+                "volume": float(c.get("volume", 0)),
+                "color": "rgba(38,166,154,0.5)" if float(c.get("close", 0)) >= float(c.get("open", 0)) else "rgba(239,83,80,0.5)",
+                "backend_generation_ts": ts * 1000,
+            }
+            
+    return {"status": "success", "prices": result, "serverTime": now_ms}
+
 @app.get("/api/ohlc")
 def get_ohlc(
     exchange: str = Query("OANDA"),
@@ -1003,7 +1041,15 @@ def get_ohlc(
     
     # 2. Bridge Live HTF Segment instantly using 1m RAM partials
     if is_recent and timeframe != "1m" and closed_candles:
-        latest_closed_ts = int(float(closed_candles[-1].get("ts", closed_candles[-1].get("time", 0))))
+        def _parse_ts(t_val):
+            if isinstance(t_val, str) and "-" in t_val:
+                import datetime as dt
+                if "T" in t_val:
+                    return int(dt.datetime.fromisoformat(t_val.replace("Z", "+00:00")).timestamp())
+                return int(dt.datetime.strptime(t_val[:10], "%Y-%m-%d").replace(tzinfo=dt.timezone.utc).timestamp())
+            return int(float(t_val))
+
+        latest_closed_ts = _parse_ts(closed_candles[-1].get("ts", closed_candles[-1].get("time", 0)))
         tf_secs = TF_INTERVAL_SECS.get(timeframe, 60)
         unclosed_boundary = latest_closed_ts + tf_secs
         
@@ -1011,7 +1057,7 @@ def get_ohlc(
         recent_1m = storage.get_candles(exchange, symbol, "1m", count=1500)
         unclosed_ticks = []
         for c in recent_1m:
-            ts = int(float(c.get("timestamp", c.get("ts", c.get("time", 0)))))
+            ts = _parse_ts(c.get("timestamp", c.get("ts", c.get("time", 0))))
             if ts >= unclosed_boundary:
                 unclosed_ticks.append(c)
                 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useCallback, useState, forwardRef, useImperativeHandle } from 'react';
 import { createChart, CandlestickSeries, LineSeries, AreaSeries, BarSeries, BaselineSeries } from 'lightweight-charts';
-import { fetchLiveCandles, fetchInitialCandles, INITIAL_CANDLE_BUDGET } from '../../data/chartData';
+import { fetchLiveCandles, fetchInitialCandles, INITIAL_CANDLE_BUDGET, LivePriceFeed } from '../../data/chartData';
 import { ChevronsRight } from 'lucide-react';
 import {
   aggregateCandles, detectSwings, getHigherTfs, ALL_TFS,
@@ -11,6 +11,14 @@ import { ConsolidationBoxesPrimitive } from './plugins/BoxPrimitive';
 
 let globalLastBarSpacing = null;
 let globalLastCenterTime = null;
+
+// ── Per-Timeframe View State Store ───────────────────────────────────────────
+// Keyed by timeframe (e.g. '5m', '1h'). Saves the user's last barSpacing so
+// that switching pairs restores the same zoom level for each timeframe pane.
+// Session-scoped (no persistence across page reloads).
+const viewStateStore = new Map();
+// shape: Map<timeframe, { barSpacing: number }>
+
 
 // Sensible number of bars to fetch per timeframe so candles are visible at the initial zoom
 const TF_CANDLE_COUNT = {
@@ -243,6 +251,12 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const isFetchingOlderRef = useRef(false);
   const loadedContextRef = useRef(null);
   const pmPrimitiveRef = useRef(null); // Pattern Memory box layer
+  // Tracks how many bars were prepended during the last infinite-scroll load.
+  // The data-rendering effect uses this to shift the visible range so the user
+  // stays at the same position instead of snapping back to the right edge.
+  const prependedBarsRef = useRef(0);
+  // Tracks whether the backend had no older candles (reached history limit).
+  const noMoreHistoryRef = useRef(false);
   const [chartKey, setChartKey] = useState(0); // increments when chart is re-initialised
 
   const [domZones, setDomZones] = useState([]);
@@ -312,9 +326,18 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     lastContextRef.current = newContext;
 
     if (isContextChange || !hasDataRef.current) {
+      setChartData(null);
+      setSwingLevels([]);
+      setConsolidations([]);
+      setNNZones([]);
+      setPMZones([]);
+      seriesRef.current?.setData([]);
       setLoading(true);
       setError(null);
       hasDataRef.current = false;
+      // Reset infinite-scroll guards so the new context can load older candles
+      noMoreHistoryRef.current = false;
+      prependedBarsRef.current = 0;
     }
 
     const perPaneBudget = Math.max(50, Math.floor(INITIAL_CANDLE_BUDGET / paneCount));
@@ -349,80 +372,153 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   }, [error]);
 
   // ── Live Polling: Fetch latest candles and push directly to series ──
+  // Fires for EVERY pane on every tick — not gated by loading/error state.
+  // Only requirement: the canvas and series must exist (seriesRef/chartRef).
+  // Uses symbolRef/timeframeRef to always get the latest values even if
+  // the liveTickKey closure captured stale symbol/timeframe props.
+  // ── Live Polling: Centralized Shared Feed ──
+  // chartKey in deps ensures we re-subscribe after initChart reassigns seriesRef.
   useEffect(() => {
-    if (loading || error || typeof liveTickKey === 'undefined' || liveTickKey === 0) return;
-    if (!seriesRef.current || !chartRef.current) return;
-
     let active = true;
+    // NOTE: Do NOT guard on seriesRef here — the callback already guards.
+    // Guarding here causes a race condition where the effect fires before initChart
+    // assigns seriesRef, returns early, and NEVER subscribes.
+    const sym = symbolRef.current;
+    const tf  = timeframeRef.current;
 
-    (async () => {
+    const unsubscribe = LivePriceFeed.subscribe(sym, (update) => {
+      if (!seriesRef.current || !chartRef.current) return;
+
+      if (update.error === 'STALLED') {
+        console.warn(`🚨 LIVE FEED STALLED for ${sym}`);
+        // Optionally update UI overlay here via state
+        return;
+      }
+
+      if (update.latency > 5000) {
+        console.warn(`[LivePriceFeed] High latency (${update.latency.toFixed(0)}ms) for ${sym}. Using dataAge: ${update.dataAge}ms`);
+      }
+
+      if (window.DEBUG_LIVE_TICKS) {
+         console.log(`%c[Live Feed Diagnostic] %c${sym} %c| Latency: ${update.latency?.toFixed(0)}ms | Age: ${update.dataAge}ms | Price: ${update.price}`, 'color: #8be9fd', 'color: #ffb86c', 'color: #50fa7b');
+      }
+
       try {
-        const latest = await fetchLiveCandles(symbol, timeframe, 10);
-        if (!active) return;
-        if (!seriesRef.current || !chartRef.current) return;
-        if (!latest || latest.candleData.length === 0) return;
+        let t = update.timestamp;
 
-        // Normalise timestamps the same way prepareChartData does
-        const mapped = latest.candleData.map(c => {
-          let t = c.time;
-          if (typeof t === 'string' && t.includes('-')) {
-            t = timeframe === '1d' ? t : new Date(t).getTime() / 1000;
-          } else {
-            t = Number(t);
-          }
-          if (timeframe === '1d') t = typeof c.time === 'string' ? c.time : new Date(c.time * 1000).toISOString().slice(0, 10);
-          if (timeframe === '1w') {
-            const d = typeof c.time === 'string' ? new Date(c.time) : new Date(c.time * 1000);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            const mon = new Date(d.setDate(diff));
-            t = mon.toISOString().slice(0, 10);
-          }
-          return { ...c, time: t };
-        }).filter(c => {
-          const hasPrices = c.open !== undefined && c.high !== undefined && c.low !== undefined && c.close !== undefined &&
-                            c.open !== null && c.high !== null && c.low !== null && c.close !== null;
-          if (!hasPrices) return false;
-          return Number.isFinite(Number(c.open)) && Number.isFinite(Number(c.high)) && Number.isFinite(Number(c.low)) && Number.isFinite(Number(c.close));
-        });
+        // ── Critical: produce a time value in the SAME format the series was seeded with ──
+        // prepareChartData runs toDayString() for 1D → "2026-06-10" strings.
+        // prepareChartData runs toWeekString() for 1W → "2026-06-09" (Monday) strings.
+        // Intraday → Unix number timestamps (floored to the TF boundary).
+        // Using a {year,month,day} object for 1D while the series holds strings causes
+        // Lightweight Charts to silently reject update() — the chart appears frozen.
+        const TF_SECS = {
+          '1m': 60, '5m': 300, '15m': 900, '30m': 1800,
+          '1h': 3600, '4h': 14400, '1d': 86400, '1w': 604800, '1M': 2592000
+        };
 
-        // Push each candle via series.update() — the correct LightweightCharts live-update API
-        for (const candle of mapped) {
-          try {
-            if (!active || !seriesRef.current) break;
-            if (chartType === 'line' || chartType === 'area') {
-              seriesRef.current.update({ time: candle.time, value: candle.close });
-            } else {
-              seriesRef.current.update(candle);
-            }
-          } catch (_) { /* silently skip duplicate/out-of-order candles */ }
+        if (tf === '1d') {
+          // Must match toDayString(unix): "YYYY-MM-DD" UTC
+          const d = new Date(t * 1000);
+          t = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+        } else if (tf === '1w') {
+          // Must match toWeekString(unix): align to Monday "YYYY-MM-DD" UTC
+          const d = new Date(t * 1000);
+          const dow = d.getUTCDay();
+          const diff = (dow === 0 ? -6 : 1 - dow);
+          d.setUTCDate(d.getUTCDate() + diff);
+          d.setUTCHours(0, 0, 0, 0);
+          t = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+        } else if (tf === '1M') {
+          // Monthly: first day of month string
+          const d = new Date(t * 1000);
+          t = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-01`;
+        } else {
+          // Intraday: floor raw 1m timestamp to nearest TF boundary
+          const interval = TF_SECS[tf] || 60;
+          t = Math.floor(t / interval) * interval;
         }
 
-        if (!active) return;
 
-        // Keep chartData state in sync so other effects (consolidations, swings) stay current
-        setChartData(prev => {
-          if (!prev) return latest;
-          try {
-            const combined = prev.candleData.concat(latest.candleData);
-            const combinedVol = prev.volumeData.concat(latest.volumeData);
-            return {
-              candleData: prepareChartData(combined, timeframe),
-              volumeData: prepareChartData(combinedVol, timeframe),
-            };
-          } catch (_) {
-            return prev; // keep old data on any pipeline error — never crash
+        const candleUpdate = { time: t, close: update.price };
+        
+        // Lightweight Charts throws error if time is exactly identical but older, 
+        // or if format is rejected. We catch and log to avoid silent failures.
+        try {
+          if (chartType === 'line' || chartType === 'area') {
+            seriesRef.current.update(candleUpdate);
+          } else {
+            // For candlesticks, we need open/high/low/close.
+            // If the feed only sends price, we merge with the last known candle in chartDataRef.
+            const currentData = chartDataRef.current?.candleData;
+            let fullCandle = candleUpdate;
+            if (currentData?.length > 0) {
+               const lastC = currentData[currentData.length - 1];
+               // Normalize both sides to a comparable string key.
+               // t may be {year,month,day} for 1D/1W, while lastC.time may be "2026-06-10" string.
+               const _normTime = (v) => {
+                 if (typeof v === 'object' && v !== null && 'year' in v)
+                   return `${v.year}-${String(v.month).padStart(2,'0')}-${String(v.day).padStart(2,'0')}`;
+                 if (typeof v === 'string') return v.slice(0, 10);
+                 return String(v);
+               };
+               const isSameBar = _normTime(t) === _normTime(lastC.time);
+                  
+               if (isSameBar) {
+                 fullCandle = { ...lastC, close: update.price, high: Math.max(lastC.high, update.price), low: Math.min(lastC.low, update.price) };
+               } else {
+                 // New bar
+                 fullCandle = { time: t, open: update.price, high: update.price, low: update.price, close: update.price };
+               }
+            }
+            seriesRef.current.update(fullCandle);
+            candleUpdate.open = fullCandle.open;
+            candleUpdate.high = fullCandle.high;
+            candleUpdate.low = fullCandle.low;
           }
-        });
+        } catch (err) {
+          console.error(`[LiveTick Error] ${sym} tf=${tf} time=${JSON.stringify(t)}:`, err.message);
+        }
+
+        if (volumeSeriesRef.current && update.volume !== undefined) {
+          try {
+            volumeSeriesRef.current.update({ time: t, value: update.volume, color: update.color });
+          } catch (e) {}
+        }
+
+        onPriceUpdate?.(candleUpdate);
+
+        // Immutable update of chartDataRef for crosshair tooltips
+        if (chartDataRef.current && chartDataRef.current.candleData) {
+          const currentData = chartDataRef.current.candleData;
+          const lastC = currentData[currentData.length - 1];
+          if (lastC) {
+             const _normTime2 = (v) => {
+               if (typeof v === 'object' && v !== null && 'year' in v)
+                 return `${v.year}-${String(v.month).padStart(2,'0')}-${String(v.day).padStart(2,'0')}`;
+               if (typeof v === 'string') return v.slice(0, 10);
+               return String(v);
+             };
+             const isSameBar = _normTime2(t) === _normTime2(lastC.time);
+             
+             if (isSameBar) {
+               currentData[currentData.length - 1] = { ...lastC, ...candleUpdate };
+             } else if (typeof t === 'number' ? t > lastC.time : t > lastC.time) {
+               // new bar: push only if time is strictly after the last known bar
+               currentData.push({ time: t, ...candleUpdate });
+             }
+          }
+        }
       } catch (err) {
-        console.warn('[LiveTick] fetch failed:', err?.message);
+        console.warn(`[LiveTick] processing failed for ${sym}:`, err?.message);
       }
-    })();
+    });
 
     return () => {
-      active = false;
+      unsubscribe();
     };
-  }, [liveTickKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // chartKey added: re-subscribe every time initChart rebuilds the canvas/series
+  }, [symbol, timeframe, chartType, chartKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const performScrollToBox = useCallback((box) => {
     const chart = chartRef.current;
@@ -623,6 +719,9 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     emaHighSeriesRef.current = null;
     emaLowSeriesRef.current = null;
     consolidationPrimitiveRef.current = null;
+    aiPrimitiveRef.current = null;
+    nnPrimitiveRef.current = null;
+    pmPrimitiveRef.current = null;
 
     const container = chartContainerRef.current;
     const bg = chartSettings?.background || '#000000';
@@ -740,16 +839,19 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     chart.timeScale().subscribeVisibleLogicalRangeChange(async (logicalRange) => {
       if (!logicalRange) return;
-      globalLastBarSpacing = chart.timeScale().options().barSpacing;
-      
-      const currentData = chartDataRef.current;
-      if (currentData && currentData.candleData.length > 0) {
-        const midLogical = (logicalRange.from + logicalRange.to) / 2;
-        const idx = Math.max(0, Math.min(currentData.candleData.length - 1, Math.round(midLogical)));
-        globalLastCenterTime = currentData.candleData[idx].time;
+      const bs = chart.timeScale().options().barSpacing;
+      globalLastBarSpacing = bs;
+
+      // ── Persist view state per timeframe ──────────────────────────────────
+      // Saves the current barSpacing so switching pairs restores the same zoom.
+      const tf = timeframeRef.current;
+      if (tf && bs > 0) {
+        viewStateStore.set(tf, { barSpacing: bs });
       }
 
-      if (logicalRange.from < -5 && !isLoadingMoreRef.current) {
+      const currentData = chartDataRef.current;
+
+      if (logicalRange.from < -5 && !isLoadingMoreRef.current && !noMoreHistoryRef.current) {
         if (!currentData || currentData.candleData.length === 0) return;
         
         isLoadingMoreRef.current = true;
@@ -757,22 +859,33 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           const oldestTime = currentData.candleData[0].time;
           const sym = symbolRef.current;
           const tf  = timeframeRef.current;
+          const prevCount = currentData.candleData.length;
           const newData = await fetchLiveCandles(sym, tf, TF_CANDLE_COUNT[tf] || 500, oldestTime);
           if (newData.candleData.length > 0) {
             setChartData(prev => {
-              const combinedCandles = prev.candleData.concat(newData.candleData);
-              const combinedVolume  = prev.volumeData.concat(newData.volumeData);
-
+              // Prepend older candles BEFORE existing ones so sort works correctly
+              const combinedCandles = newData.candleData.concat(prev.candleData);
+              const combinedVolume  = newData.volumeData.concat(prev.volumeData);
+              const prepared = prepareChartData(combinedCandles, tf);
+              const preparedVol = prepareChartData(combinedVolume, tf);
+              // Record how many new bars were added at the left so the render
+              // effect can shift the visible range to keep the user's position.
+              prependedBarsRef.current = Math.max(0, prepared.length - prevCount);
               return {
-                candleData: prepareChartData(combinedCandles, tf),
-                volumeData: prepareChartData(combinedVolume, tf)
+                candleData: prepared,
+                volumeData: preparedVol
               };
             });
+          } else {
+            // No older data available — stop triggering further fetches
+            noMoreHistoryRef.current = true;
+            console.log('[InfiniteScroll] No older candles available for', sym, tf);
           }
         } catch (err) {
           console.warn('Infinite scroll fetch failed:', err?.message);
         } finally {
-          setTimeout(() => { isLoadingMoreRef.current = false; }, 500);
+          // Longer cooldown to prevent rapid-fire fetches while user keeps scrolling
+          setTimeout(() => { isLoadingMoreRef.current = false; }, 1500);
         }
       }
     });
@@ -1639,6 +1752,18 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     // Determine if series is empty prior to adding data
     const isFirstLoad = seriesRef.current.data().length === 0;
 
+    // ── Infinite-scroll position preservation ────────────────────────────────
+    // If bars were prepended (left-scroll load), capture the current logical
+    // range so we can shift it right by the prepended-bar count after setData.
+    const prepended = prependedBarsRef.current;
+    let rangeBeforeSetData = null;
+    if (!isFirstLoad && prepended > 0) {
+      try {
+        rangeBeforeSetData = chart.timeScale().getVisibleLogicalRange();
+      } catch (_) {}
+      prependedBarsRef.current = 0; // reset
+    }
+
     const candleData = prepareChartData(chartData.candleData, timeframe);
 
     if (!Array.isArray(candleData)) return;
@@ -1651,6 +1776,19 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       seriesRef.current.setData(candleData.map(d => ({ time: d.time, value: d.close })));
     } else {
       seriesRef.current.setData(candleData);
+    }
+
+    // ── Restore scroll position after prepend ────────────────────────────────
+    // After setData, lightweight-charts resets the scroll. Shift the visible
+    // range right by the number of newly prepended bars so the user's view
+    // stays at the same position (i.e. the same candle remains in the center).
+    if (rangeBeforeSetData && prepended > 0) {
+      try {
+        chart.timeScale().setVisibleLogicalRange({
+          from: rangeBeforeSetData.from + prepended,
+          to:   rangeBeforeSetData.to   + prepended,
+        });
+      } catch (_) {}
     }
 
     // --- Update EMA Channel Data ---
@@ -1687,34 +1825,20 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
           to: candleData.length + 3 
         });
       } else {
-        // if (globalLastBarSpacing && globalLastCenterTime) {
-        //   chart.timeScale().applyOptions({ barSpacing: globalLastBarSpacing });
-        //   ...
-        if (false) { // Disabled global restoration to prevent zoom fighting
-          
-          let centerIdx = candleData.length - 1;
-          let lo = 0, hi = candleData.length - 1;
-          
-          const gt = typeof globalLastCenterTime === 'string' ? new Date(globalLastCenterTime).getTime()/1000 : globalLastCenterTime;
-          
-          while (lo <= hi) {
-            const mid = (lo + hi) >>> 1;
-            const ct = typeof candleData[mid].time === 'string' ? new Date(candleData[mid].time).getTime()/1000 : candleData[mid].time;
-            if (ct < gt) lo = mid + 1;
-            else if (ct > gt) hi = mid - 1;
-            else { centerIdx = mid; break; }
-          }
-          if (lo > hi) centerIdx = Math.min(candleData.length - 1, lo);
-          
-          const containerWidth = chartContainerRef.current?.clientWidth || 800;
-          const logicalWidth = containerWidth / globalLastBarSpacing;
-          
+        // ── Restore saved view state for this timeframe ──────────────────────
+        // If the user previously zoomed/scrolled this pane's timeframe, restore
+        // that barSpacing so switching pairs preserves the same zoom level.
+        const saved = viewStateStore.get(timeframe);
+        if (saved?.barSpacing > 0) {
+          // Apply barSpacing and anchor the view to the most recent candle
+          chart.timeScale().applyOptions({ barSpacing: saved.barSpacing });
+          const barsVisible = Math.floor((chartContainerRef.current?.clientWidth || 800) / saved.barSpacing);
           chart.timeScale().setVisibleLogicalRange({
-            from: centerIdx - (logicalWidth / 2),
-            to: centerIdx + (logicalWidth / 2)
+            from: candleData.length - barsVisible,
+            to:   candleData.length + 3,
           });
-
         } else {
+          // No saved state — fall back to default 300-bar view
           const initBars = 300;
           if (candleData.length > initBars) {
             chart.timeScale().setVisibleLogicalRange({ from: candleData.length - initBars, to: candleData.length + 3 });
