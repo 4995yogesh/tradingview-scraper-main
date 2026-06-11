@@ -795,7 +795,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       },
       layout: { background: { type: 'solid', color: bg }, textColor: chartSettings?.priceScaleColor || '#787B86', fontSize: 9, fontFamily: 'Inter, -apple-system, sans-serif' },
       grid: { vertLines: { visible: false }, horzLines: { visible: false } },
-      crosshair: { mode: crosshairMode, vertLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' }, horzLine: { width: 1, color: '#787B8650', style: 2, labelBackgroundColor: '#2962FF' } },
+      crosshair: { mode: crosshairMode, vertLine: { width: 1, color: 'rgba(255, 255, 255, 0.8)', style: 2, labelBackgroundColor: '#2962FF' }, horzLine: { width: 1, color: 'rgba(255, 255, 255, 0.8)', style: 2, labelBackgroundColor: '#2962FF' } },
       timeScale: {
         borderColor: chartSettings?.priceScaleColor || '#2A2E39', 
         timeVisible: ['1m', '5m', '15m', '1h', '4h'].includes(timeframe),
@@ -881,12 +881,30 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     });
 
     chart.subscribeCrosshairMove((param) => {
+      // 1. Clear crosshair
       if (!param || !param.time) {
         if (chartDataRef.current?.candleData.length > 0) onPriceUpdate?.(chartDataRef.current.candleData[chartDataRef.current.candleData.length - 1]);
+        if (param && param.sourceEvent !== undefined) {
+          window.dispatchEvent(new CustomEvent('sync-crosshair', {
+            detail: { sourcePaneIndex: paneIndex }
+          }));
+        }
         return;
       }
+      
+      // 2. Update price and broadcast sync
       const d = param.seriesData?.get(mainSeries);
       if (d) onPriceUpdate?.(d);
+
+      if (param.sourceEvent !== undefined) {
+        window.dispatchEvent(new CustomEvent('sync-crosshair', {
+          detail: {
+            sourcePaneIndex: paneIndex,
+            time: param.time,
+            price: param.point ? mainSeries.coordinateToPrice(param.point.y) : (d?.close || 0)
+          }
+        }));
+      }
     });
 
     // Signal that a new series instance is ready (triggers swing re-draw)
@@ -1746,30 +1764,44 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       const startIdx = bisectLeft(unixArr, swUnixSec);
       if (startIdx >= candles.length) return;
 
-      // 3-state line length:
-      // active unmitigated   → extend to latest candle
-      // inactive unmitigated → short 5-bar stub at pivot
-      // mitigated            → terminate at mitigation candle
-      let endIdx;
-      if (sw.active) {
-        endIdx = candles.length - 1;
-      } else if (!sw.mitigated) {
-        // short stub: pivot candle + next 5 bars
-        endIdx = Math.min(startIdx + 5, candles.length - 1);
-      } else {
-        // mitigated: scan for fill candle
-        endIdx = candles.length - 1;
-        let movedAway = false;
-        for (let i = startIdx + 1; i < candles.length; i++) {
-          const c = candles[i];
-          if (sw.type === 'high') {
-            if (!movedAway && c.low  < sw.price)  movedAway = true;
-            if ( movedAway && c.high >= sw.price) { endIdx = i; break; }
-          } else {
-            if (!movedAway && c.high > sw.price)   movedAway = true;
-            if ( movedAway && c.low  <= sw.price)  { endIdx = i; break; }
+      // Scan for mitigation using frontend's candles (catches live crosses & lower-TF touches)
+      let isMitigated = sw.mitigated;
+      let fillIdx = -1;
+      let movedAway = false;
+      for (let i = startIdx + 1; i < candles.length; i++) {
+        const c = candles[i];
+        if (sw.type === 'high') {
+          if (!movedAway && c.low < sw.price) movedAway = true;
+          if (movedAway && c.high >= sw.price) {
+            isMitigated = true;
+            fillIdx = i;
+            break;
+          }
+        } else {
+          if (!movedAway && c.high > sw.price) movedAway = true;
+          if (movedAway && c.low <= sw.price) {
+            isMitigated = true;
+            fillIdx = i;
+            break;
           }
         }
+      }
+
+      // Only respect showMitigated if the backend originally knew it was mitigated 
+      // or if we want to hide live-mitigated lines. The user requested it to "stop", 
+      // not "vanish". But to respect the toggle:
+      if (isMitigated && !(settings.showMitigated ?? false)) return;
+
+      let endIdx;
+      if (isMitigated) {
+        // Terminate exactly at the candle that pierced it
+        endIdx = fillIdx !== -1 ? fillIdx : candles.length - 1;
+      } else if (sw.active) {
+        // Unmitigated active: extend to current price
+        endIdx = candles.length - 1;
+      } else {
+        // Unmitigated inactive: short stub
+        endIdx = Math.min(startIdx + 5, candles.length - 1);
       }
 
       const pts = candles.slice(startIdx, endIdx + 1).map(c => ({
@@ -2051,6 +2083,28 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       }
     };
   }, []);
+
+  // ── Sync Crosshair Across All Panes ──────────────────────────────────────
+  useEffect(() => {
+    const handleSyncCrosshair = (e) => {
+      const { sourcePaneIndex, time, price } = e.detail;
+      // Ignore events dispatched by ourselves
+      if (sourcePaneIndex === paneIndex) return;
+
+      const chart = chartRef.current;
+      const series = seriesRef.current;
+      if (!chart || !series) return;
+
+      if (time === undefined) {
+        try { chart.clearCrosshairPosition(); } catch (_) {}
+      } else {
+        try { chart.setCrosshairPosition(price || 0, time, series); } catch (_) {}
+      }
+    };
+
+    window.addEventListener('sync-crosshair', handleSyncCrosshair);
+    return () => window.removeEventListener('sync-crosshair', handleSyncCrosshair);
+  }, [paneIndex]);
 
   return (
     <div className="w-full h-full relative">
