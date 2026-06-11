@@ -65,12 +65,13 @@ class DataStorage:
                         inserted = True
                         break
                     elif dq[i]["time"] < candle["time"]:
-                        # If we wanted to forcefully insert out-of-order candles we'd insert here
-                        # using dq.insert(). But since our data arrives fully sorted from HistoricalFetcher,
-                        # this usually just means it's a bulk refill updating old history.
-                        # For performance reasons we aren't enforcing strict in-place insertion here,
-                        # just updating matches.
+                        # Insert out-of-order candle in sorted position
+                        dq.insert(i + 1, candle)
+                        inserted = True
                         break
+                if not inserted:
+                    # Older than all elements in deque, prepend it
+                    dq.appendleft(candle)
 
     def get_candles(self, exchange: str, symbol: str, timeframe: str, count: int = 100, end_time=None) -> List[dict]:
         """Fetch the last 'count' candles, optionally older than end_time."""

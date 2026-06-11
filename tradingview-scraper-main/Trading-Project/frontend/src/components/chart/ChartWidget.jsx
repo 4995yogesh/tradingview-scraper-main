@@ -240,8 +240,14 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   const chartContainerRef      = useRef(null);
   const chartRef               = useRef(null);
   const seriesRef              = useRef(null);
+  
+  useEffect(() => {
+    console.log("LIVE_SYNC_BUILD_2026_06_11");
+  }, []);
+  
   const isLoadingMoreRef       = useRef(false);
   const swingSeriesRef         = useRef([]); // swing level LineSeries
+  const volumeSeriesRef        = useRef(null);
   const emaHighSeriesRef       = useRef(null);
   const emaLowSeriesRef        = useRef(null);
   const consolidationPrimitiveRef = useRef(null); // Fast native shape plugin
@@ -382,9 +388,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     let active = true;
     // NOTE: Do NOT guard on seriesRef here — the callback already guards.
     // Guarding here causes a race condition where the effect fires before initChart
-    // assigns seriesRef, returns early, and NEVER subscribes.
+    // assign seriesRef, returns early, and NEVER subscribes.
     const sym = symbolRef.current;
-    const tf  = timeframeRef.current;
 
     const unsubscribe = LivePriceFeed.subscribe(sym, (update) => {
       if (!seriesRef.current || !chartRef.current) return;
@@ -405,6 +410,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
       try {
         let t = update.timestamp;
+        const tf = timeframeRef.current; // Read fresh inside callback to avoid stale closure
+
+        // ── DIAGNOSTIC: LIVE_CALLBACK ──────────────────────────────────
+        console.log("[LIVE_CALLBACK]", { symbol: sym, timeframe: tf, update });
+        // ───────────────────────────────────────────────────────────────
 
         // ── Critical: produce a time value in the SAME format the series was seeded with ──
         // prepareChartData runs toDayString() for 1D → "2026-06-10" strings.
@@ -446,6 +456,11 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
         // or if format is rejected. We catch and log to avoid silent failures.
         try {
           if (chartType === 'line' || chartType === 'area') {
+            const currentData = chartDataRef.current?.candleData;
+            if (currentData?.length > 0) {
+              const lastC = currentData[currentData.length - 1];
+              if (typeof t === 'number' && typeof lastC?.time === 'number' && t < lastC.time) return;
+            }
             seriesRef.current.update(candleUpdate);
           } else {
             // For candlesticks, we need open/high/low/close.
@@ -454,6 +469,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
             let fullCandle = candleUpdate;
             if (currentData?.length > 0) {
                const lastC = currentData[currentData.length - 1];
+               
+               // Prevent time regression exception from lightweight-charts
+               if (typeof t === 'number' && typeof lastC?.time === 'number' && t < lastC.time) return;
+               
                // Normalize both sides to a comparable string key.
                // t may be {year,month,day} for 1D/1W, while lastC.time may be "2026-06-10" string.
                const _normTime = (v) => {
@@ -464,14 +483,50 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
                };
                const isSameBar = _normTime(t) === _normTime(lastC.time);
                   
+               // ── DIAGNOSTIC: TIME_CHECK ─────────────────────────────────────
+               console.log("[TIME_CHECK]", { incoming: t, last: lastC?.time, sameBar: isSameBar });
+               // ───────────────────────────────────────────────────────────────
+
                if (isSameBar) {
-                 fullCandle = { ...lastC, close: update.price, high: Math.max(lastC.high, update.price), low: Math.min(lastC.low, update.price) };
+                 fullCandle = { 
+                    ...lastC, 
+                    close: update.price, 
+                    high: update.high != null ? update.high : Math.max(lastC.high, update.price), 
+                    low: update.low != null ? update.low : Math.min(lastC.low, update.price) 
+                 };
                } else {
                  // New bar
-                 fullCandle = { time: t, open: update.price, high: update.price, low: update.price, close: update.price };
+                 const barOpen = update.open ?? update.price;
+                 fullCandle = { 
+                    time: t, 
+                    open: barOpen, 
+                    high: update.high ?? barOpen, 
+                    low: update.low ?? barOpen, 
+                    close: update.price 
+                 };
                }
+            } else {
+               // New bar, empty series
+               const barOpen = update.open ?? update.price;
+               fullCandle = {
+                  time: t,
+                  open: barOpen,
+                  high: update.high ?? barOpen,
+                  low: update.low ?? barOpen,
+                  close: update.price
+               };
             }
-            seriesRef.current.update(fullCandle);
+            
+            // ── DIAGNOSTIC: SERIES_UPDATE ─────────────────────────────────
+            console.log("[SERIES_UPDATE]", fullCandle);
+            try {
+              seriesRef.current.update(fullCandle);
+            } catch (err) {
+              console.error("[SERIES_ERROR]", err, fullCandle);
+              throw err; // rethrow to be caught by outer try/catch
+            }
+            // ──────────────────────────────────────────────────────────────
+            
             candleUpdate.open = fullCandle.open;
             candleUpdate.high = fullCandle.high;
             candleUpdate.low = fullCandle.low;
@@ -503,7 +558,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
              
              if (isSameBar) {
                currentData[currentData.length - 1] = { ...lastC, ...candleUpdate };
-             } else if (typeof t === 'number' ? t > lastC.time : t > lastC.time) {
+             } else if (t > lastC.time) {
                // new bar: push only if time is strictly after the last known bar
                currentData.push({ time: t, ...candleUpdate });
              }
@@ -774,8 +829,8 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     const borderVisible = chartSettings?.showBorders !== false;
     const wickVisible = chartSettings?.showWick !== false;
 
-    let upColor = showBody ? baseUpColor : 'rgba(0,0,0,0)';
-    let downColor = showBody ? baseDownColor : 'rgba(0,0,0,0)';
+    let upColor = showBody ? baseUpColor : bg;
+    let downColor = showBody ? baseDownColor : bg;
     const borderUp = chartSettings?.borderUpColor || baseUpColor;
     const borderDown = chartSettings?.borderDownColor || baseDownColor;
     const wickUp = chartSettings?.wickUpColor || baseUpColor;
@@ -794,7 +849,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       mainSeries = chart.addSeries(BarSeries, { upColor, downColor, priceFormat });
     } else if (chartType === 'hollow') {
       mainSeries = chart.addSeries(CandlestickSeries, { 
-        upColor: 'rgba(0,0,0,0)', downColor, 
+        upColor: bg, downColor, 
         borderUpColor: borderUp, borderDownColor: borderDown, 
         wickUpColor: wickUp, wickDownColor: wickDown, 
         borderVisible, wickVisible, priceFormat 
@@ -950,10 +1005,10 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
     const poll = async () => {
       try {
         const [cRes, sRes, aRes, nRes] = await Promise.all([
-          fetch('http://localhost:8000/consolidations'),
-          fetch('http://localhost:8000/swings'),
-          fetch('http://localhost:8000/api/ml/quality/auto-labels'),
-          fetch(`http://localhost:8000/api/nn/refined_zones?symbol=${symbol}&timeframe=${timeframe}`),
+          fetch('http://127.0.0.1:8000/consolidations'),
+          fetch('http://127.0.0.1:8000/swings'),
+          fetch('http://127.0.0.1:8000/api/ml/quality/auto-labels'),
+          fetch(`http://127.0.0.1:8000/api/nn/refined_zones?symbol=${symbol}&timeframe=${timeframe}`),
         ]);
         if (cRes.ok) {
           const d = await cRes.json();
@@ -974,7 +1029,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
       } catch (_) {}
     };
     poll();
-    iv = setInterval(poll, 5000);
+    iv = setInterval(poll, 10000);
     return () => clearInterval(iv);
   }, [symbol, timeframe, sharedConsolidations]);
 
@@ -982,7 +1037,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
   useEffect(() => {
     let cancelled = false;
     const bareSymbol = symbol.split(':').pop().toUpperCase();
-    fetch(`http://localhost:8000/api/patterns?symbol=${bareSymbol}&timeframe=${timeframe}&limit=500`)
+    fetch(`http://127.0.0.1:8000/api/patterns?symbol=${bareSymbol}&timeframe=${timeframe}&limit=500`)
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (!cancelled && d?.patterns) {
@@ -1859,7 +1914,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
 
     const captureInterval = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/training/needs_screenshot?symbol=${symbol}&timeframe=${timeframe}`);
+        const res = await fetch(`http://127.0.0.1:8000/api/training/needs_screenshot?symbol=${symbol}&timeframe=${timeframe}`);
         const data = await res.json();
         if (data.status === 'ok' && data.boxes?.length > 0) {
           const chart = chartRef.current;
@@ -1932,7 +1987,7 @@ const ChartWidget = forwardRef(({ symbol, timeframe, chartType, onPriceUpdate, l
                   const canvas = offChart.takeScreenshot();
                   const b64 = canvas.toDataURL('image/png');
 
-                  await fetch('http://localhost:8000/api/training/upload_screenshot', {
+                  await fetch('http://127.0.0.1:8000/api/training/upload_screenshot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ box_id: box.box_id, screenshot_b64: b64 })

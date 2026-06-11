@@ -132,7 +132,7 @@ def _open_browser():
     import urllib.request
     for _ in range(120):
         try:
-            urllib.request.urlopen("http://localhost:8000/api/health", timeout=1)
+            urllib.request.urlopen("http://localhost:8000/api/health", timeout=5)
             webbrowser.open("http://localhost:3000")
             return
         except Exception:

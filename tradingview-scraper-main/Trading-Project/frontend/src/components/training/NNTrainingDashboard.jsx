@@ -21,8 +21,8 @@ const NNTrainingDashboard = ({ ml2Result }) => {
       try {
         // training_progress_nn has live max_iterations; nn_status is DB-only
         const [liveRes, dbRes] = await Promise.all([
-          fetch('http://localhost:8000/api/training/training_progress_nn'),
-          fetch('http://localhost:8000/api/training/nn_status'),
+          fetch('http://127.0.0.1:8000/api/training/training_progress_nn'),
+          fetch('http://127.0.0.1:8000/api/training/nn_status'),
         ]);
         const live = await liveRes.json();
         const db   = await dbRes.json();
@@ -80,7 +80,7 @@ const NNTrainingDashboard = ({ ml2Result }) => {
 
   const handleStop = async () => {
     try {
-      const resp = await fetch('http://localhost:8000/api/training/stop_nn', {
+      const resp = await fetch('http://127.0.0.1:8000/api/training/stop_nn', {
         method: 'POST'
       });
       const res = await resp.json();

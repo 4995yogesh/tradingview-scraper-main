@@ -36,7 +36,7 @@ try:
     import urllib.request as _urllib
     def _http_ok(url: str) -> bool:
         try:
-            _urllib.urlopen(url, timeout=2)
+            _urllib.urlopen(url, timeout=5)
             return True
         except Exception:
             return False

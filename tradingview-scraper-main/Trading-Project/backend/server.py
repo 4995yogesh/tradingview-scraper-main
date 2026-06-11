@@ -329,6 +329,42 @@ def _seed_storage(exchange: str, symbol: str, timeframe: str,
 
     # ── 1. Strict Closed-Candles Write to SQLite ──────────────────────────────
     if closed_candles:
+        # Automatic Gap-Healing logic:
+        # If we are on 1m live stream and detect a gap between DB latest and incoming oldest, trigger gap repair.
+        thread_name = threading.current_thread().name
+        if timeframe == "1m" and not (
+            thread_name in ("gap-filler", "manual-gap-fill") or
+            thread_name.startswith("on-demand-") or
+            thread_name.startswith("auto-gap-fill-")
+        ):
+            try:
+                latest_db_ts = candle_db.get_latest_ts(exchange, symbol, "1m")
+                if latest_db_ts:
+                    incoming_ts = []
+                    for c in closed_candles:
+                        ts_val = int(float(c.get("timestamp", c.get("ts", c.get("time", 0)))))
+                        if ts_val > 4_102_444_800:
+                            ts_val //= 1000
+                        incoming_ts.append(_snap_to_bucket(ts_val, "1m"))
+                    
+                    if incoming_ts:
+                        oldest_incoming = min(incoming_ts)
+                        # Gap of more than 2 minutes (120s)
+                        if oldest_incoming - latest_db_ts > 120:
+                            logger.warning(
+                                "[gap-detector] Detected gap of %ds for %s:%s [1m] (DB latest: %d, Incoming oldest: %d). Triggering background repair.",
+                                oldest_incoming - latest_db_ts, exchange, symbol,
+                                latest_db_ts, oldest_incoming
+                            )
+                            threading.Thread(
+                                target=_gap_fill,
+                                args=(exchange, symbol, "1m"),
+                                name=f"auto-gap-fill-{symbol}-1m",
+                                daemon=True
+                            ).start()
+            except Exception as gap_err:
+                logger.error("[gap-detector] Failed to check gaps: %s", gap_err)
+
         candle_db.upsert_candles(exchange, symbol, timeframe, closed_candles)
         candle_db.log_refresh(exchange, symbol, timeframe, int(time.time()))
     
@@ -655,6 +691,50 @@ def _live_stream_worker(exchange: str, symbol: str):
                             
                     if raw_candles:
                         _seed_storage(exchange, symbol, "1m", raw_candles)
+
+                        # ── DIAGNOSTIC: WS_TICK ────────────────────────────
+                        latest = raw_candles[-1]
+                        logger.warning(
+                            "[WS_TICK] %s:%s price=%.5f ts=%s",
+                            exchange, symbol,
+                            float(latest.get("close", 0)),
+                            latest.get("timestamp", "?")
+                        )
+                        # ──────────────────────────────────────────────────
+
+                        # Track the true live (unclosed) tick in memory for /api/latest-prices
+                        key = f"{exchange}:{symbol}"
+                        ts_val = int(float(latest["timestamp"]))
+                        now_bucket = (ts_val // 60) * 60  # current 1m bucket
+
+                        existing = _live_tick.get(key)
+                        if existing and existing["time"] == now_bucket:
+                            _live_tick[key] = {
+                                "time": now_bucket,
+                                "open": existing["open"],
+                                "high": max(existing["high"], float(latest.get("high", existing["high"]))),
+                                "low": min(existing["low"], float(latest.get("low", existing["low"]))),
+                                "close": float(latest.get("close", existing["close"])),
+                                "volume": existing.get("volume", 0) + float(latest.get("volume", 0))
+                            }
+                        else:
+                            _live_tick[key] = {
+                                "time": now_bucket,
+                                "open": float(latest.get("open", latest.get("close", 0))),
+                                "high": float(latest.get("high", latest.get("close", 0))),
+                                "low": float(latest.get("low", latest.get("close", 0))),
+                                "close": float(latest.get("close", 0)),
+                                "volume": float(latest.get("volume", 0))
+                            }
+
+                        # ── DIAGNOSTIC: LIVE_TICK ──────────────────────────
+                        _lt = _live_tick[key]
+                        logger.warning(
+                            "[LIVE_TICK] %s:%s bucket=%d O=%.5f H=%.5f L=%.5f C=%.5f",
+                            exchange, symbol, _lt["time"],
+                            _lt["open"], _lt["high"], _lt["low"], _lt["close"]
+                        )
+                        # ──────────────────────────────────────────────────
                         
         except Exception as exc:
             logger.error("[ws-stream] Stream error for %s:%s : %s", exchange, symbol, exc)
@@ -662,6 +742,8 @@ def _live_stream_worker(exchange: str, symbol: str):
 
 
 _stop_refresh = threading.Event()
+_live_tick = {}  # Tracks the current open (unclosed) 1m bar per symbol
+
 
 def _periodic_refresh_loop():
     """
@@ -983,26 +1065,48 @@ def get_latest_prices(symbols: str = Query(..., description="Comma separated sym
         else:
             ex, sym = "OANDA", sym_pair
 
-        latest_1m = storage.get_candles(ex, sym, "1m", count=1)
-        if latest_1m:
-            c = latest_1m[0]
-            t_val = c.get("ts", c.get("time", c.get("timestamp", 0)))
-            if isinstance(t_val, str) and "-" in t_val:
-                import datetime as dt
-                if "T" in t_val:
-                    ts = int(dt.datetime.fromisoformat(t_val.replace("Z", "+00:00")).timestamp())
-                else:
-                    ts = int(dt.datetime.strptime(t_val[:10], "%Y-%m-%d").replace(tzinfo=dt.timezone.utc).timestamp())
-            else:
-                ts = int(float(t_val))
+        key = f"{ex}:{sym}"
+        live = _live_tick.get(key)
+
+        if live:
             result[sym_pair] = {
-                "price": float(c.get("close", 0)),
-                "timestamp": ts,
-                "volume": float(c.get("volume", 0)),
-                "color": "rgba(38,166,154,0.5)" if float(c.get("close", 0)) >= float(c.get("open", 0)) else "rgba(239,83,80,0.5)",
-                "backend_generation_ts": ts * 1000,
+                "price": live["close"],
+                "open": live["open"],
+                "high": live["high"],
+                "low": live["low"],
+                "timestamp": live["time"],
+                "volume": live["volume"],
+                "color": "rgba(38,166,154,0.5)" if live["close"] >= live["open"] else "rgba(239,83,80,0.5)",
+                "backend_generation_ts": int(time.time() * 1000),
             }
-            
+        else:
+            latest_1m = storage.get_candles(ex, sym, "1m", count=1)
+            if latest_1m:
+                c = latest_1m[0]
+                t_val = c.get("ts", c.get("time", c.get("timestamp", 0)))
+                if isinstance(t_val, str) and "-" in t_val:
+                    import datetime as dt
+                    if "T" in t_val:
+                        ts = int(dt.datetime.fromisoformat(t_val.replace("Z", "+00:00")).timestamp())
+                    else:
+                        ts = int(dt.datetime.strptime(t_val[:10], "%Y-%m-%d").replace(tzinfo=dt.timezone.utc).timestamp())
+                else:
+                    ts = int(float(t_val))
+                result[sym_pair] = {
+                    "price": float(c.get("close", 0)),
+                    "open": float(c.get("open", 0)),
+                    "high": float(c.get("high", 0)),
+                    "low": float(c.get("low", 0)),
+                    "timestamp": ts,
+                    "volume": float(c.get("volume", 0)),
+                    "color": "rgba(38,166,154,0.5)" if float(c.get("close", 0)) >= float(c.get("open", 0)) else "rgba(239,83,80,0.5)",
+                    "backend_generation_ts": ts * 1000,
+                }
+
+    # ── DIAGNOSTIC: API_LATEST ─────────────────────────────────────────
+    logger.warning("[API_LATEST] symbols=%s live_tick_keys=%s result=%s",
+                   symbols, list(_live_tick.keys()), result)
+    # ──────────────────────────────────────────────────────────────────
     return {"status": "success", "prices": result, "serverTime": now_ms}
 
 @app.get("/api/ohlc")
@@ -1187,7 +1291,7 @@ def get_consolidations_all():
     TTL-cached for 8 s so repeated frontend polls are instant.
     Returns: { status:'ok', zones:[{timeframe, timeStart(ms), timeEnd(ms), priceHigh, priceLow}] }
     """
-    cached = _cache_get("consolidations")
+    cached = _cache_get("consolidations", ttl_s=30.0)
     if cached is not None:
         return cached
 
@@ -1373,7 +1477,7 @@ def get_swings_all():
     and 3 closest below current price. Returns active + mitigated swings.
     TTL-cached 8s. Returns: { status:'ok', swings:[{timeframe, type, price, time_ms, active, mitigated}] }
     """
-    cached = _cache_get("swings")
+    cached = _cache_get("swings", ttl_s=30.0)
     if cached is not None:
         return cached
 
@@ -1711,7 +1815,7 @@ async def get_training_pending(limit: int = 50):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/training/needs_screenshot")
-async def get_needs_screenshot(symbol: str, timeframe: str):
+def get_needs_screenshot(symbol: str, timeframe: str):
     from training_db import training_db
     try:
         needs = training_db.get_needs_screenshot(symbol, timeframe)
@@ -1990,8 +2094,12 @@ async def sync_training_queue():
 
 
 @app.get("/api/nn/refined_zones")
-async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
+def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
     """Return consolidation zones enriched with NN-predicted refined box coordinates."""
+    cache_key = f"nn_refined_{symbol}_{timeframe}"
+    cached = _cache_get(cache_key, ttl_s=30.0)
+    if cached is not None:
+        return cached
     try:
         import pandas as pd
         from ml.nn_scorer import predict_box, is_nn_ready, load_nn_model
@@ -2076,6 +2184,7 @@ async def get_nn_refined_zones(symbol: str = "EURUSD", timeframe: str = "5m"):
             except:
                 pass
 
+        _cache_set(cache_key, zones_with_nn)
         return zones_with_nn
     except Exception as e:
         logger.error(f"[nn_zones] endpoint failed: {e}")

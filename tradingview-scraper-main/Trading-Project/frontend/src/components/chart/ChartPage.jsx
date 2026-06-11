@@ -65,31 +65,28 @@ const defaultPanes = [
  */
 function getSwingSettings(pane) {
   const ind = (pane?.indicators || []).find(i => i.type === 'swingLevels');
-  if (!ind) return null;
-  return { enabled: ind.enabled, settings: ind.settings };
+  return ind || null;
 }
 
 function getConsolidationSettings(pane) {
   const ind = (pane?.indicators || []).find(i => i.type === 'consolidationBoxes');
-  if (!ind) return null;
-  return { enabled: ind.enabled, settings: ind.settings };
+  return ind || null;
 }
 
 function getNeuralSettings(pane) {
   const ind = (pane?.indicators || []).find(i => i.type === 'neuralBoxes');
-  if (!ind) return null;
-  return { enabled: ind.enabled, settings: ind.settings };
+  return ind || null;
 }
 
 const ResizeHandle = ({ direction = 'horizontal', onDoubleClick }) => (
   <PanelResizeHandle 
     className={`group relative flex items-center justify-center ${
-      direction === 'horizontal' ? 'w-[5px] cursor-col-resize' : 'h-[5px] cursor-row-resize'
-    } bg-[#2A2E39] hover:bg-[#2962FF60] active:bg-[#2962FF] transition-colors`}
+      direction === 'horizontal' ? 'w-[2px] cursor-col-resize' : 'h-[2px] cursor-row-resize'
+    } bg-[#000000] hover:bg-[#2962FF60] active:bg-[#2962FF] transition-colors z-10`}
     onDoubleClick={onDoubleClick}
   >
     <div className={`${
-      direction === 'horizontal' ? 'w-[3px] h-8' : 'h-[3px] w-8'
+      direction === 'horizontal' ? 'w-[1px] h-8' : 'h-[1px] w-8'
     } rounded-full bg-[#363A45] group-hover:bg-[#2962FF] transition-colors`} />
   </PanelResizeHandle>
 );
@@ -154,9 +151,9 @@ const ChartPage = () => {
     const poll = async () => {
       try {
         const [cRes, sRes, aRes] = await Promise.all([
-          fetch('http://localhost:8000/consolidations'),
-          fetch('http://localhost:8000/swings'),
-          fetch('http://localhost:8000/api/ml/quality/auto-labels'),
+          fetch('http://127.0.0.1:8000/consolidations'),
+          fetch('http://127.0.0.1:8000/swings'),
+          fetch('http://127.0.0.1:8000/api/ml/quality/auto-labels'),
         ]);
         if (!cancelled) {
           if (cRes.ok) { const d = await cRes.json(); if (d.status === 'ok') setSharedConsolidations(d.zones || []); }
@@ -175,7 +172,7 @@ const ChartPage = () => {
     let cancelled = false;
     const fetchNN = async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/nn/refined_zones?symbol=${symbol}&timeframe=${timeframe}`);
+        const res = await fetch(`http://127.0.0.1:8000/api/nn/refined_zones?symbol=${symbol}&timeframe=${timeframe}`);
         if (res.ok && !cancelled) {
           const d = await res.json();
           setSharedNNZones(d || []);
@@ -444,7 +441,7 @@ const ChartPage = () => {
     return (
       <div
         key={`pane-${idx}-${effectivePane.timeframe}`}
-        className={`h-full w-full relative border border-[#2A2E39] ${
+        className={`h-full w-full relative ${
           activePaneIdx === idx && activeLayout !== '1' ? 'ring-1 ring-[#2962FF60]' : ''
         }`}
         onClick={() => setActivePaneIdx(idx)}

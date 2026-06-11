@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronsUp, ChevronUp, ChevronDown, ChevronsDown } from 'lucide-react';
 
-const API = 'http://localhost:8000/api/ml';
+const API = 'http://127.0.0.1:8000/api/ml';
 
 const fmtPct = (n) => (n * 100).toFixed(0) + '%';
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Activity, X, Terminal, AlertTriangle, Search } from 'lucide-react';
 
-const API = 'http://localhost:8000/api/ml';
+const API = 'http://127.0.0.1:8000/api/ml';
 
 function formatDt(dtStr, timeStartMs) {
   if (!timeStartMs) return dtStr || 'unknown';
@@ -147,7 +147,7 @@ export default function MLTrainingMonitor() {
 
   const fetchProgress = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/training/training_progress_nn');
+      const res = await fetch('http://127.0.0.1:8000/api/training/training_progress_nn');
       if (res.ok) setData(await res.json());
     } catch (e) { }
   };

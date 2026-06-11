@@ -537,15 +537,15 @@ const RefinementDashboard = () => {
     try {
       let data;
       if (filter === 'HARD_SAMPLES') {
-        const res = await fetch(`http://localhost:8000/api/training/hard_samples`);
+        const res = await fetch(`http://127.0.0.1:8000/api/training/hard_samples`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const d = await res.json();
         data = { status: d.status, boxes: d.samples || [] };
       } else if (filter === 'LABELED') {
         // Fetch both LABELED and ANALYZED for the LABELED tab
         const [res1, res2] = await Promise.all([
-          fetch(`http://localhost:8000/api/training/all_boxes?limit=5000&status=LABELED`),
-          fetch(`http://localhost:8000/api/training/all_boxes?limit=5000&status=ANALYZED`)
+          fetch(`http://127.0.0.1:8000/api/training/all_boxes?limit=5000&status=LABELED`),
+          fetch(`http://127.0.0.1:8000/api/training/all_boxes?limit=5000&status=ANALYZED`)
         ]);
         if (!res1.ok || !res2.ok) throw new Error(`HTTP Error`);
         const d1 = await res1.json();
@@ -553,7 +553,7 @@ const RefinementDashboard = () => {
         data = { status: 'ok', boxes: [...(d1.boxes || []), ...(d2.boxes || [])] };
       } else {
         const qs = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
-        const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
+        const res = await fetch(`http://127.0.0.1:8000/api/training/all_boxes${qs}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const txt = await res.text();
         data = JSON.parse(txt);
@@ -577,7 +577,7 @@ const RefinementDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/training/stats');
+      const res = await fetch('http://127.0.0.1:8000/api/training/stats');
       const d = await res.json();
       if (d.status === 'ok') setStats(d.stats);
     } catch (_) { }
@@ -585,7 +585,7 @@ const RefinementDashboard = () => {
 
   const fetchLessons = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/training/lessons');
+      const res = await fetch('http://127.0.0.1:8000/api/training/lessons');
       const d = await res.json();
       if (d.status === 'ok') setLessons(d.lessons || []);
     } catch (_) { }
@@ -593,7 +593,7 @@ const RefinementDashboard = () => {
 
   const fetchHardSamples = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/training/hard_samples');
+      const res = await fetch('http://127.0.0.1:8000/api/training/hard_samples');
       const d = await res.json();
       if (d.status === 'ok') setHardSamples(d.samples || []);
     } catch (_) { }
@@ -601,7 +601,7 @@ const RefinementDashboard = () => {
 
   const fetchLossGraphs = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/training/loss_graphs');
+      const res = await fetch('http://127.0.0.1:8000/api/training/loss_graphs');
       const d = await res.json();
       if (d.status === 'ok') setLossGraphs(d.graphs || []);
     } catch (_) { }
@@ -610,7 +610,7 @@ const RefinementDashboard = () => {
   const handleSync = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/training/sync', { method: 'POST' });
+      const res = await fetch('http://127.0.0.1:8000/api/training/sync', { method: 'POST' });
       const d = await res.json();
       if (d.status === 'ok') {
         showToast(`Synced ${d.synced} live boxes`, 'ok');
@@ -628,7 +628,7 @@ const RefinementDashboard = () => {
     if (!stats) return;
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:8000/api/training/retrain_nn', { method: 'POST' });
+      const res = await fetch('http://127.0.0.1:8000/api/training/retrain_nn', { method: 'POST' });
       const d = await res.clone().json();
       if (d.status === 'triggered' || d.status === 'already_running') {
         showToast('NN Training started', 'ok');
@@ -661,7 +661,7 @@ const RefinementDashboard = () => {
       if (!active || saving || filter === 'HARD_SAMPLES') return;
       try {
         const qs = filter ? `?limit=5000&status=${filter}` : '?limit=5000';
-        const res = await fetch(`http://localhost:8000/api/training/all_boxes${qs}`);
+        const res = await fetch(`http://127.0.0.1:8000/api/training/all_boxes${qs}`);
         if (!res.ok) return;
         const data = JSON.parse(await res.text());
         if (data.status === 'ok') {
@@ -714,7 +714,7 @@ const RefinementDashboard = () => {
           timeframe: box.timeframe
         });
         console.log("Sending V1 prediction request for", box.symbol, box.timeframe);
-        const resV1 = await fetch('http://localhost:8000/api/ml/predict_v1', {
+        const resV1 = await fetch('http://127.0.0.1:8000/api/ml/predict_v1', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: bodyV1
@@ -1116,7 +1116,7 @@ const RefinementDashboard = () => {
   const handleUndo = async () => {
     if (!lastBox) return;
     try {
-      const res = await fetch('http://localhost:8000/api/training/undo', {
+      const res = await fetch('http://127.0.0.1:8000/api/training/undo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ box_id: lastBox.box_id }),
@@ -1144,7 +1144,7 @@ const RefinementDashboard = () => {
           priceLow: box.price_low || box.priceLow
         }
       };
-      const res = await fetch('http://localhost:8000/api/training/label', {
+      const res = await fetch('http://127.0.0.1:8000/api/training/label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -1201,7 +1201,7 @@ const RefinementDashboard = () => {
         user_box: userBoxes.length === 1 ? userBoxes[0] : userBoxes
       };
 
-      const res = await fetch('http://localhost:8000/api/training/label', {
+      const res = await fetch('http://127.0.0.1:8000/api/training/label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -1221,7 +1221,7 @@ const RefinementDashboard = () => {
     if (!box || saving) return;
     setSaving(true);
     try {
-      const res = await fetch('http://localhost:8000/api/training/label', {
+      const res = await fetch('http://127.0.0.1:8000/api/training/label', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ box_id: box.box_id, is_skip: true }),
@@ -1512,7 +1512,7 @@ const RefinementDashboard = () => {
               {lossGraphs.map(graph => (
                 <div key={graph.filename} className="bg-[#0B0E14] p-4 rounded-xl border border-[#2A2E39]">
                   <div className="relative h-48 bg-[#131722] rounded-lg overflow-hidden mb-2">
-                    <img src={`http://localhost:8000${graph.path}`} alt={`Loss Graph ${graph.version}`} className="w-full h-full object-contain cursor-pointer" onClick={() => setExpandedImage(graph.path)} />
+                    <img src={`http://127.0.0.1:8000${graph.path}`} alt={`Loss Graph ${graph.version}`} className="w-full h-full object-contain cursor-pointer" onClick={() => setExpandedImage(graph.path)} />
                   </div>
                   <div className="text-xs font-mono text-[#787B86] text-center">{graph.version}</div>
                 </div>
@@ -1525,7 +1525,7 @@ const RefinementDashboard = () => {
         {expandedImage && (
           <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" onClick={() => setExpandedImage(null)}>
             <div className="relative max-w-4xl max-h-[90vh]" onClick={e => e.stopPropagation()}>
-              <img src={`http://localhost:8000${expandedImage}`} className="w-full h-full object-contain rounded-lg" />
+              <img src={`http://127.0.0.1:8000${expandedImage}`} className="w-full h-full object-contain rounded-lg" />
               <button className="absolute top-4 right-4 text-white text-2xl font-bold" onClick={() => setExpandedImage(null)}>&times;</button>
             </div>
           </div>

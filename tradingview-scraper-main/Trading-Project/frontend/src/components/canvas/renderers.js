@@ -77,12 +77,17 @@ export function drawCandles(ctx, candles, viewport) {
 
     const bodyTop = Math.min(yOpen, yClose);
     const bodyH   = Math.max(1, Math.abs(yOpen - yClose));
+    const bodyBottom = bodyTop + bodyH;
 
     // Wick
     ctx.strokeStyle = color;
     ctx.lineWidth   = wickW;
     ctx.beginPath();
+    // Top wick
     ctx.moveTo(x, yHigh);
+    ctx.lineTo(x, bodyTop);
+    // Bottom wick
+    ctx.moveTo(x, bodyBottom);
     ctx.lineTo(x, yLow);
     ctx.stroke();
 

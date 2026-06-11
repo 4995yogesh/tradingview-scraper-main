@@ -1,5 +1,5 @@
 // API base URL – the FastAPI backend
-const API_BASE = "http://localhost:8000/api";
+const API_BASE = "http://127.0.0.1:8000/api";
 
 // ── Initial candle budget ────────────────────────────────────────────────────
 // Total candles to load across ALL panes on first paint. Callers divide this
@@ -27,7 +27,7 @@ const TF_CONFIG = {
 
 const candleCache = new Map();
 const activeRequests = new Map();
-const CACHE_TTL_MS = 30000; // 30 seconds — server refreshes every 5s, client caches longer
+const CACHE_TTL_MS = 5000; // 5 seconds (was 30s, reduced to keep live chart reloads fresh) — server refreshes every 5s, client caches longer
 
 // ── Hot candle store ─────────────────────────────────────────────────────────
 // Session-lifetime Map (no TTL). Keyed by "symbol-timeframe".
@@ -318,6 +318,10 @@ export class LivePriceFeed {
   }
 
   static async poll() {
+    // ── DIAGNOSTIC: POLL ──────────────────────────────────────────────
+    console.log("[POLL]", Date.now(), this.subscribers.size);
+    // ──────────────────────────────────────────────────────────────────
+
     if (!this.isPolling || this.subscribers.size === 0) {
       this.isPolling = false;
       return;
@@ -338,7 +342,11 @@ export class LivePriceFeed {
       const data = await res.json();
       const end = performance.now();
       const latency = end - start;
-      
+
+      // ── DIAGNOSTIC: POLL_RESPONSE ───────────────────────────────────
+      console.log("[POLL_RESPONSE]", data);
+      // ────────────────────────────────────────────────────────────────
+
       if (latency > 5000) {
         console.warn(`[LivePriceFeed] High latency detected: ${latency.toFixed(0)}ms. Overlapping polls may occur.`);
       }
@@ -361,15 +369,24 @@ export class LivePriceFeed {
           for (const sub of this.subscribers) {
             // Need to match exactly, or match the symbol suffix (e.g. OANDA:EURUSD matches EURUSD)
             if (sub.symbol === sym || sub.symbol.split(':').pop() === sym.split(':').pop()) {
-              sub.callback({
+              const updatePayload = {
                  price: current.price,
+                 open: current.open,
+                 high: current.high,
+                 low: current.low,
                  timestamp: current.timestamp,
                  volume: current.volume,
                  color: current.color,
                  latency,
                  dataAge: data.serverTime - current.backend_generation_ts,
                  error: null
-              });
+              };
+              
+              // ── DIAGNOSTIC: DISPATCH ───────────────────────────────────────
+              console.log("[DISPATCH]", sym, updatePayload);
+              // ───────────────────────────────────────────────────────────────
+              
+              sub.callback(updatePayload);
             }
           }
         }
@@ -388,7 +405,7 @@ export class LivePriceFeed {
 
     } catch (e) {
       console.error('[LivePriceFeed] Fetch failed:', e);
-      this.currentDelay = Math.min(this.currentDelay * 2, 60000); 
+      this.currentDelay = Math.min(this.currentDelay * 2, 5000); 
     }
     
     setTimeout(() => this.poll(), this.currentDelay);

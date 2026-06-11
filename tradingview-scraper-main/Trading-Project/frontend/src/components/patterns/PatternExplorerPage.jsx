@@ -6,7 +6,7 @@ import {
   BarChart2, Activity, Brain
 } from 'lucide-react';
 
-const API = 'http://localhost:8000';
+const API = 'http://127.0.0.1:8000';
 
 // ── Colour tokens ──────────────────────────────────────────────────────────────
 const C = {

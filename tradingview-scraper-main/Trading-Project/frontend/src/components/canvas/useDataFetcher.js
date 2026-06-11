@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const API_URL       = process.env.REACT_APP_API_URL || 'http://localhost:8001';
+const API_URL       = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001';
 const POLL_MS       = 5_000;
 const USE_MOCK      = true;   // Set false when backend is live
 

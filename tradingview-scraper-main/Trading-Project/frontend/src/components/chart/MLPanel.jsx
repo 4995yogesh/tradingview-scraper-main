@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Bot, ChevronRight } from 'lucide-react';
 
-const API = 'http://localhost:8000/api/ml';
+const API = 'http://127.0.0.1:8000/api/ml';
 
 const LABEL_COLORS = {
   very_good: { bg: '#00BFA520', border: '#00BFA560', text: '#00BFA5', dot: '#00BFA5' },

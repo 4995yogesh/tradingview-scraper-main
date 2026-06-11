@@ -97,7 +97,7 @@ class HistoricalFetcher:
         # Pagination state
         consecutive_empty_responses = 0
 
-        logger.info(f"Starting historical fetch for {exchange_symbol} | TF: {timeframe} | Limit: {limit} | Start: {start_date}")
+        logger.info(f"Fetching historical data for {exchange_symbol} | TF: {timeframe} | Limit: {limit} | Start: {start_date}")
 
         try:
             # Set a timeout so we don't hang forever if TV stops responding to pagination requests

@@ -91,7 +91,7 @@ def _open_browser():
     import urllib.request
     for i in range(120):
         try:
-            urllib.request.urlopen("http://localhost:8000/api/health", timeout=1)
+            urllib.request.urlopen("http://localhost:8000/api/health", timeout=5)
             _log("Backend healthy — opening browser")
             webbrowser.open("http://localhost:3000")
             return

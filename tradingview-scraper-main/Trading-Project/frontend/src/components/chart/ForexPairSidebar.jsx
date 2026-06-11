@@ -7,7 +7,7 @@ const MAJOR_PAIRS = [
   { symbol: 'XAUUSD', label: 'XAU/USD', flag: '🪙🇺🇸', base: 'XAU', quote: 'USD' },
 ];
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = 'http://127.0.0.1:8000/api';
 const STORAGE_KEY = 'forex_sidebar_v2';
 
 function loadState() {
