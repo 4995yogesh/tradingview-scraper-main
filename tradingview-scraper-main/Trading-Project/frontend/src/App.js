@@ -9,6 +9,7 @@ import ChartPage from './components/chart/ChartPage';
 import InfiniteCanvasPage from './components/canvas/InfiniteCanvasPage';
 import RefinementDashboard from './components/training/RefinementDashboard';
 import PatternExplorerPage from './components/patterns/PatternExplorerPage';
+import ResearchDashboard from './components/research/ResearchDashboard';
 
 const HomePage = () => {
   return (
@@ -28,13 +29,15 @@ function App() {
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<ResearchDashboard />} />
+          <Route path="/research" element={<ResearchDashboard />} />
+          <Route path="/home" element={<HomePage />} />
           <Route path="/chart" element={<ChartPage />} />
           <Route path="/chart/:symbol" element={<ChartPage />} />
           <Route path="/canvas" element={<InfiniteCanvasPage />} />
           <Route path="/training" element={<RefinementDashboard />} />
           <Route path="/patterns" element={<PatternExplorerPage />} />
-          <Route path="*" element={<HomePage />} />
+          <Route path="*" element={<ResearchDashboard />} />
         </Routes>
       </BrowserRouter>
     </div>
